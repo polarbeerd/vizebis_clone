@@ -28,6 +28,13 @@
     "total": "Total"
   },
   "nav": {
+    "main": "Main",
+    "management": "Management",
+    "financeGroup": "Finance",
+    "reports": "Reports",
+    "ai": "AI",
+    "emailGroup": "Email",
+    "system": "System",
     "dashboard": "Dashboard",
     "applications": "Applications",
     "addApplication": "Add Application",
@@ -68,8 +75,15 @@
     "logout": "Logout",
     "email": "Email",
     "password": "Password",
+    "fullName": "Full Name",
     "forgotPassword": "Forgot Password",
-    "register": "Register"
+    "register": "Register",
+    "loginTitle": "Sign in to your account",
+    "registerTitle": "Create a new account",
+    "noAccount": "Don't have an account?",
+    "hasAccount": "Already have an account?",
+    "loginDescription": "Continue by signing in to your VizeBis account",
+    "registerDescription": "Create a new VizeBis account"
   },
   "dashboard": {
     "totalApplications": "Total Applications",

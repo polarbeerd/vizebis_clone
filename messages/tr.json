@@ -28,6 +28,13 @@
     "total": "Toplam"
   },
   "nav": {
+    "main": "Ana Menü",
+    "management": "Yönetim",
+    "financeGroup": "Finans",
+    "reports": "Raporlar",
+    "ai": "Yapay Zeka",
+    "emailGroup": "E-posta",
+    "system": "Sistem",
     "dashboard": "Dashboard",
     "applications": "Başvurular",
     "addApplication": "Başvuru Ekle",
@@ -68,8 +75,15 @@
     "logout": "Çıkış Yap",
     "email": "E-posta",
     "password": "Şifre",
+    "fullName": "Ad Soyad",
     "forgotPassword": "Şifremi Unuttum",
-    "register": "Kayıt Ol"
+    "register": "Kayıt Ol",
+    "loginTitle": "Hesabınıza giriş yapın",
+    "registerTitle": "Yeni hesap oluşturun",
+    "noAccount": "Hesabınız yok mu?",
+    "hasAccount": "Zaten hesabınız var mı?",
+    "loginDescription": "VizeBis hesabınıza giriş yaparak devam edin",
+    "registerDescription": "Yeni bir VizeBis hesabı oluşturun"
   },
   "dashboard": {
     "totalApplications": "Toplam Başvuru",
