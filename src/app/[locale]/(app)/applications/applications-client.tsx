@@ -3,11 +3,14 @@
 import * as React from "react";
 import { ColumnDef } from "@tanstack/react-table";
 import { useTranslations } from "next-intl";
+import { useRouter } from "@/i18n/navigation";
+import { toast } from "sonner";
 import {
   AlertTriangle,
   Calendar,
   Edit,
   Eye,
+  MessageSquare,
   MoreHorizontal,
   Plus,
   Trash2,
@@ -25,6 +28,7 @@ import {
   isBefore,
 } from "date-fns";
 
+import { createClient } from "@/lib/supabase/client";
 import { DataTable } from "@/components/data-table";
 import { DataTableColumnHeader } from "@/components/data-table/data-table-column-header";
 import type { FilterableColumn } from "@/components/data-table/data-table-toolbar";
@@ -34,13 +38,28 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import type { ApplicationRow } from "./page";
 
-// ── Visa status → translation key map ──────────────────────────
+import { ApplicationForm } from "@/components/applications/application-form";
+import type { ApplicationForForm } from "@/components/applications/application-form";
+import { ApplicationDetailSheet } from "@/components/applications/application-detail";
+import { SmsModal } from "@/components/applications/sms-modal";
+import { DeletedApplications } from "@/components/applications/deleted-applications";
+
+// ── Visa status -> translation key map ──────────────────────────
 const visaStatusKeyMap: Record<string, string> = {
   beklemede: "pending",
   hazirlaniyor: "preparing",
@@ -50,14 +69,14 @@ const visaStatusKeyMap: Record<string, string> = {
   pasaport_teslim: "passportDelivered",
 };
 
-// ── Invoice status → translation key map ────────────────────────
+// ── Invoice status -> translation key map ────────────────────────
 const invoiceStatusKeyMap: Record<string, string> = {
   fatura_yok: "none",
   fatura_var: "exists",
   fatura_kesildi: "issued",
 };
 
-// ── Payment status → translation key map ────────────────────────
+// ── Payment status -> translation key map ────────────────────────
 const paymentStatusKeyMap: Record<string, string> = {
   odenmedi: "unpaid",
   odendi: "paid",
@@ -82,11 +101,121 @@ export function ApplicationsClient({ data }: ApplicationsClientProps) {
   const tInvoice = useTranslations("invoiceStatus");
   const tPayment = useTranslations("paymentStatus");
   const tCommon = useTranslations("common");
+  const router = useRouter();
 
   // ── Date quick-filter state ──────────────────────────────────
   const [dateFilter, setDateFilter] = React.useState<DateFilterType>("all");
   const [customStart, setCustomStart] = React.useState("");
   const [customEnd, setCustomEnd] = React.useState("");
+
+  // ── Modal/Sheet states ────────────────────────────────────────
+  const [formOpen, setFormOpen] = React.useState(false);
+  const [formApplication, setFormApplication] = React.useState<
+    ApplicationForForm | undefined
+  >(undefined);
+
+  const [detailOpen, setDetailOpen] = React.useState(false);
+  const [detailId, setDetailId] = React.useState<number | null>(null);
+
+  const [smsOpen, setSmsOpen] = React.useState(false);
+  const [smsApplication, setSmsApplication] = React.useState<{
+    id: number;
+    full_name: string | null;
+    phone: string | null;
+  } | null>(null);
+
+  const [deletedOpen, setDeletedOpen] = React.useState(false);
+
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = React.useState(false);
+  const [deleteTarget, setDeleteTarget] = React.useState<ApplicationRow | null>(
+    null
+  );
+  const [deleting, setDeleting] = React.useState(false);
+
+  const supabase = React.useMemo(() => createClient(), []);
+
+  // ── Handlers ──────────────────────────────────────────────────
+  function handleNewApplication() {
+    setFormApplication(undefined);
+    setFormOpen(true);
+  }
+
+  function handleEditApplication(app: ApplicationRow) {
+    // Fetch full application for editing
+    fetchFullApplicationForEdit(app.id);
+  }
+
+  async function fetchFullApplicationForEdit(id: number) {
+    const { data: fullApp, error } = await supabase
+      .from("applications")
+      .select("*")
+      .eq("id", id)
+      .single();
+
+    if (error) {
+      console.error("Error fetching application for edit:", error);
+      toast.error(t("fetchError"));
+      return;
+    }
+
+    setFormApplication(fullApp as unknown as ApplicationForForm);
+    setFormOpen(true);
+  }
+
+  function handleViewApplication(app: ApplicationRow) {
+    setDetailId(app.id);
+    setDetailOpen(true);
+  }
+
+  function handleSmsApplication(app: ApplicationRow) {
+    setSmsApplication({
+      id: app.id,
+      full_name: app.full_name,
+      phone: app.phone,
+    });
+    setSmsOpen(true);
+  }
+
+  function handleDeleteApplication(app: ApplicationRow) {
+    setDeleteTarget(app);
+    setDeleteConfirmOpen(true);
+  }
+
+  async function confirmDelete() {
+    if (!deleteTarget) return;
+    setDeleting(true);
+
+    const { error } = await supabase
+      .from("applications")
+      .update({ is_deleted: true, deleted_at: new Date().toISOString() })
+      .eq("id", deleteTarget.id);
+
+    if (error) {
+      console.error("Error deleting application:", error);
+      toast.error(t("deleteError"));
+    } else {
+      toast.success(t("deleteSuccess"));
+      router.refresh();
+    }
+
+    setDeleting(false);
+    setDeleteConfirmOpen(false);
+    setDeleteTarget(null);
+  }
+
+  function handleFormSuccess() {
+    router.refresh();
+  }
+
+  function handleDetailEdit(app: unknown) {
+    const detail = app as ApplicationForForm;
+    setFormApplication(detail);
+    setFormOpen(true);
+  }
+
+  function handleRestoreFromDeleted() {
+    router.refresh();
+  }
 
   // ── Filter data by appointment_date ──────────────────────────
   const filteredData = React.useMemo(() => {
@@ -365,29 +494,27 @@ export function ApplicationsClient({ data }: ApplicationsClientProps) {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem
-                  onClick={() => {
-                    // TODO: View application detail
-                    console.log("View", application.id);
-                  }}
+                  onClick={() => handleViewApplication(application)}
                 >
                   <Eye className="mr-2 size-3.5" />
                   {tCommon("view")}
                 </DropdownMenuItem>
                 <DropdownMenuItem
-                  onClick={() => {
-                    // TODO: Edit application
-                    console.log("Edit", application.id);
-                  }}
+                  onClick={() => handleEditApplication(application)}
                 >
                   <Edit className="mr-2 size-3.5" />
                   {tCommon("edit")}
                 </DropdownMenuItem>
                 <DropdownMenuItem
+                  onClick={() => handleSmsApplication(application)}
+                >
+                  <MessageSquare className="mr-2 size-3.5" />
+                  {t("sendSms")}
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
                   variant="destructive"
-                  onClick={() => {
-                    // TODO: Delete application
-                    console.log("Delete", application.id);
-                  }}
+                  onClick={() => handleDeleteApplication(application)}
                 >
                   <Trash2 className="mr-2 size-3.5" />
                   {tCommon("delete")}
@@ -535,12 +662,17 @@ export function ApplicationsClient({ data }: ApplicationsClientProps) {
       </div>
       <div className="flex items-center gap-2">
         <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setDeletedOpen(true)}
+        >
+          <Trash2 className="mr-1 size-4" />
+          {t("deletedApplications")}
+        </Button>
+        <Button
           variant="default"
           size="sm"
-          onClick={() => {
-            // TODO: Navigate to new application form
-            console.log("New application");
-          }}
+          onClick={handleNewApplication}
         >
           <Plus className="mr-1 size-4" />
           {t("addNew")}
@@ -611,6 +743,65 @@ export function ApplicationsClient({ data }: ApplicationsClientProps) {
           </div>
         }
       />
+
+      {/* ── Application Form Modal ──────────────────────────── */}
+      <ApplicationForm
+        open={formOpen}
+        onOpenChange={setFormOpen}
+        application={formApplication}
+        onSuccess={handleFormSuccess}
+      />
+
+      {/* ── Application Detail Sheet ────────────────────────── */}
+      <ApplicationDetailSheet
+        applicationId={detailId}
+        open={detailOpen}
+        onOpenChange={setDetailOpen}
+        onEdit={handleDetailEdit}
+      />
+
+      {/* ── SMS Modal ───────────────────────────────────────── */}
+      <SmsModal
+        application={smsApplication}
+        open={smsOpen}
+        onOpenChange={setSmsOpen}
+      />
+
+      {/* ── Deleted Applications Viewer ─────────────────────── */}
+      <DeletedApplications
+        open={deletedOpen}
+        onOpenChange={setDeletedOpen}
+        onRestore={handleRestoreFromDeleted}
+      />
+
+      {/* ── Delete Confirmation Dialog ──────────────────────── */}
+      <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{t("deleteConfirmTitle")}</DialogTitle>
+            <DialogDescription>
+              {t("deleteConfirmDescription", {
+                name: deleteTarget?.full_name ?? "",
+              })}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setDeleteConfirmOpen(false)}
+            >
+              {tCommon("cancel")}
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={confirmDelete}
+              disabled={deleting}
+            >
+              {deleting ? tCommon("loading") : tCommon("delete")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
