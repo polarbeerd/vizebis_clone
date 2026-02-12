@@ -25,7 +25,8 @@
     "actions": "Actions",
     "description": "Description",
     "date": "Date",
-    "total": "Total"
+    "total": "Total",
+    "view": "View"
   },
   "nav": {
     "main": "Main",
@@ -95,6 +96,20 @@
     "thisWeekAppointments": "This Week's Appointments",
     "lastWeekAppointments": "Last Week's Appointments"
   },
+  "dataTable": {
+    "search": "Search...",
+    "noResults": "No results found.",
+    "noEntries": "No entries found",
+    "showingEntries": "Showing {start} to {end} of {total} entries",
+    "rowsPerPage": "Rows per page:",
+    "pageOf": "Page {current} of {total}",
+    "selected": "selected",
+    "columns": "Columns",
+    "toggleColumns": "Toggle Columns",
+    "exportCsv": "Export CSV",
+    "resetFilters": "Reset",
+    "clearFilter": "Clear Filter"
+  },
   "applications": {
     "title": "Application List",
     "addNew": "New Application",
@@ -104,6 +119,7 @@
     "phone": "Phone",
     "email": "Email",
     "subCompany": "Sub-Company",
+    "company": "Company",
     "passportNo": "Passport No",
     "passportExpiry": "Passport Expiry",
     "visaStart": "Visa Start",
@@ -117,6 +133,7 @@
     "travelDate": "Travel Date",
     "consulateFee": "Consulate Fee",
     "serviceFee": "Service Fee",
+    "fee": "Fee",
     "currency": "Currency",
     "invoiceStatus": "Invoice Status",
     "invoiceDate": "Invoice Date",
@@ -140,7 +157,18 @@
     "feeInfo": "Fee Info",
     "consulateInfo": "Consulate Info",
     "files": "Files",
-    "other": "Other"
+    "other": "Other",
+    "searchPlaceholder": "Search by name...",
+    "today": "Today",
+    "thisMonth": "This Month",
+    "lastMonth": "Last Month",
+    "nextMonth": "Next Month",
+    "dateRange": "Date Range",
+    "startDate": "Start Date",
+    "endDate": "End Date",
+    "allDates": "All Dates",
+    "appointmentWarning": "Appointment within 10 days!",
+    "pastAppointment": "Past appointment"
   },
   "visaStatus": {
     "pending": "Pending",
@@ -157,6 +185,10 @@
     "tourist": "Tourist",
     "visit": "Visit",
     "other": "Other"
+  },
+  "paymentStatus": {
+    "unpaid": "Unpaid",
+    "paid": "Paid"
   },
   "paymentMethod": {
     "select": "Select Method",

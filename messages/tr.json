@@ -25,7 +25,8 @@
     "actions": "İşlemler",
     "description": "Açıklama",
     "date": "Tarih",
-    "total": "Toplam"
+    "total": "Toplam",
+    "view": "Görüntüle"
   },
   "nav": {
     "main": "Ana Menü",
@@ -95,6 +96,20 @@
     "thisWeekAppointments": "Bu Haftanın Randevuları",
     "lastWeekAppointments": "Geçen Haftanın Randevuları"
   },
+  "dataTable": {
+    "search": "Ara...",
+    "noResults": "Sonuç bulunamadı.",
+    "noEntries": "Kayıt bulunamadı",
+    "showingEntries": "{start} - {end} arası, toplam {total} kayıt",
+    "rowsPerPage": "Sayfa başına:",
+    "pageOf": "Sayfa {current} / {total}",
+    "selected": "seçili",
+    "columns": "Sütunlar",
+    "toggleColumns": "Sütun Görünürlüğü",
+    "exportCsv": "CSV İndir",
+    "resetFilters": "Sıfırla",
+    "clearFilter": "Filtreyi Temizle"
+  },
   "applications": {
     "title": "Başvuru Listesi",
     "addNew": "Yeni Başvuru",
@@ -104,6 +119,7 @@
     "phone": "Telefon",
     "email": "E-posta",
     "subCompany": "Alt Firma",
+    "company": "Firma",
     "passportNo": "Pasaport No",
     "passportExpiry": "Pasaport Bitiş",
     "visaStart": "Vize Başlangıç",
@@ -117,6 +133,7 @@
     "travelDate": "Seyahat Tarihi",
     "consulateFee": "Konsolosluk Ücreti",
     "serviceFee": "Servis Ücreti",
+    "fee": "Ücret",
     "currency": "Döviz",
     "invoiceStatus": "Fatura Durumu",
     "invoiceDate": "Fatura Tarihi",
@@ -140,7 +157,18 @@
     "feeInfo": "Ücret Bilgileri",
     "consulateInfo": "Konsolosluk Bilgileri",
     "files": "Dosyalar",
-    "other": "Diğer"
+    "other": "Diğer",
+    "searchPlaceholder": "Ad soyad ile ara...",
+    "today": "Bugün",
+    "thisMonth": "Bu Ay",
+    "lastMonth": "Geçen Ay",
+    "nextMonth": "Önümüzdeki Ay",
+    "dateRange": "Tarih Aralığı",
+    "startDate": "Başlangıç",
+    "endDate": "Bitiş",
+    "allDates": "Tüm Tarihler",
+    "appointmentWarning": "Randevu 10 gün içinde!",
+    "pastAppointment": "Randevu tarihi geçmiş"
   },
   "visaStatus": {
     "pending": "Beklemede",
@@ -157,6 +185,10 @@
     "tourist": "Turistik",
     "visit": "Ziyaret",
     "other": "Diğer"
+  },
+  "paymentStatus": {
+    "unpaid": "Ödenmedi",
+    "paid": "Ödendi"
   },
   "paymentMethod": {
     "select": "Yöntem Seçin",
