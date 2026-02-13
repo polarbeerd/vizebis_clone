@@ -36,6 +36,8 @@ import {
   HardDrive,
   LifeBuoy,
   Headphones,
+  CheckSquare,
+  BookOpen,
   type LucideIcon,
 } from "lucide-react";
 
@@ -68,6 +70,7 @@ export function useNavGroups(): NavGroup[] {
       title: t("management"),
       items: [
         { label: t("documents"), href: "/documents", icon: FolderOpen },
+        { label: t("documentChecklists"), href: "/document-checklists", icon: CheckSquare },
         { label: t("tags"), href: "/tags", icon: Tags },
         { label: t("forms"), href: "/forms", icon: ClipboardList },
         { label: t("passwords"), href: "/passwords", icon: KeyRound },
@@ -105,6 +108,12 @@ export function useNavGroups(): NavGroup[] {
       items: [
         { label: t("emailHosting"), href: "/email-hosting", icon: Mail },
         { label: t("emailManagement"), href: "/email-management", icon: MailCheck },
+      ],
+    },
+    {
+      title: t("portalGroup"),
+      items: [
+        { label: t("portalContent"), href: "/portal-content", icon: BookOpen },
       ],
     },
     {
