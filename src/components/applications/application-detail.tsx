@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useTranslations } from "next-intl";
-import { Edit, Loader2 } from "lucide-react";
+import { Copy, Edit, Loader2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { formatDate, formatCurrency } from "@/lib/utils";
 
@@ -17,10 +17,12 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { toast } from "sonner";
 
 // ── Types ─────────────────────────────────────────────────────────
 interface ApplicationDetail {
   id: number;
+  tracking_code: string | null;
   full_name: string | null;
   id_number: string | null;
   date_of_birth: string | null;
@@ -131,6 +133,7 @@ export function ApplicationDetailSheet({
   const tPayment = useTranslations("paymentStatus");
   const tPaymentMethod = useTranslations("paymentMethod");
   const tCommon = useTranslations("common");
+  const tPortal = useTranslations("portal");
 
   const [application, setApplication] =
     React.useState<ApplicationDetail | null>(null);
@@ -204,6 +207,26 @@ export function ApplicationDetailSheet({
           </div>
         ) : application ? (
           <ScrollArea className="flex-1 px-4 pb-4">
+            {/* Tracking code + portal link */}
+            {application.tracking_code && (
+              <div className="mb-3 flex items-center gap-2 rounded-lg border border-dashed border-blue-200 bg-blue-50/50 px-3 py-2 dark:border-blue-800 dark:bg-blue-950/30">
+                <span className="text-xs text-muted-foreground">{tPortal("trackingCode")}:</span>
+                <code className="flex-1 truncate text-xs font-mono">{application.tracking_code}</code>
+                <Button
+                  variant="ghost"
+                  size="icon-xs"
+                  onClick={() => {
+                    const url = `${window.location.origin}/portal/${application.tracking_code}`;
+                    navigator.clipboard.writeText(url);
+                    toast.success(tPortal("portalLinkCopied"));
+                  }}
+                  title={tPortal("copyPortalLink")}
+                >
+                  <Copy className="size-3.5" />
+                </Button>
+              </div>
+            )}
+
             {/* Visa status badge */}
             <div className="mb-4">
               {application.visa_status && (

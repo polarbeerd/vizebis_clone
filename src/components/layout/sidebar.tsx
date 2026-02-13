@@ -168,11 +168,8 @@ export function Sidebar() {
   return (
     <aside className="hidden md:flex h-screen w-64 shrink-0 flex-col border-r bg-background">
       {/* Logo */}
-      <div className="flex h-14 items-center gap-2 border-b px-4">
-        <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary text-primary-foreground text-sm font-bold">
-          VB
-        </div>
-        <span className="text-lg font-semibold tracking-tight">VizeBis</span>
+      <div className="flex h-14 items-center border-b px-4">
+        <img src="/logo.jpg" alt="Unusual Consulting" className="h-9 w-full object-contain object-left" />
       </div>
 
       {/* Navigation */}

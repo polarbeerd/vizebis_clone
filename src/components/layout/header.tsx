@@ -104,11 +104,8 @@ export function Header({ userName }: HeaderProps) {
       <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
         <SheetContent side="left" className="w-64 p-0">
           <SheetHeader className="border-b px-4 py-3">
-            <SheetTitle className="flex items-center gap-2">
-              <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary text-primary-foreground text-sm font-bold">
-                VB
-              </div>
-              <span className="text-lg font-semibold tracking-tight">VizeBis</span>
+            <SheetTitle className="flex items-center">
+              <img src="/logo.jpg" alt="Unusual Consulting" className="h-9 w-full object-contain object-left" />
             </SheetTitle>
           </SheetHeader>
           <MobileSidebarContent onClose={() => setMobileOpen(false)} />

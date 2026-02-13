@@ -902,7 +902,7 @@ export function SettingsClient({ settingsMap, users: initialUsers }: SettingsCli
                 <Label>{t("telegramBotName")}</Label>
                 <div className="flex items-center gap-2">
                   <Badge variant="secondary" className="text-sm px-3 py-1">
-                    @VizeBisV2Bot
+                    @UnusualConsultingBot
                   </Badge>
                   <Badge
                     variant="outline"

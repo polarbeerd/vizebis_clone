@@ -42,7 +42,10 @@ export default function LoginPage() {
     <div className="flex min-h-screen items-center justify-center bg-muted/40 px-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl font-bold">VizeBis</CardTitle>
+          <div className="flex justify-center mb-2">
+            <img src="/logo.jpg" alt="Unusual Consulting" className="h-12 w-auto rounded-lg" />
+          </div>
+          <CardTitle className="text-2xl font-bold">Unusual Consulting</CardTitle>
           <CardDescription>
             {mode === "login" ? t("loginDescription") : t("registerDescription")}
           </CardDescription>

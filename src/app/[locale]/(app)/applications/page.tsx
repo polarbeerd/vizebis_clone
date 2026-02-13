@@ -17,6 +17,7 @@ export interface ApplicationRow {
   visa_status: string | null;
   notes: string | null;
   company_name: string | null;
+  tracking_code: string | null;
 }
 
 export default async function ApplicationsPage() {
@@ -40,6 +41,7 @@ export default async function ApplicationsPage() {
       payment_status,
       visa_status,
       notes,
+      tracking_code,
       companies ( company_name )
     `
     )
@@ -63,6 +65,7 @@ export default async function ApplicationsPage() {
     visa_status: app.visa_status as string | null,
     notes: app.notes as string | null,
     company_name: (app.companies as { company_name: string } | null)?.company_name ?? null,
+    tracking_code: app.tracking_code as string | null,
   }));
 
   if (error) {

@@ -8,8 +8,10 @@ import { toast } from "sonner";
 import {
   AlertTriangle,
   Calendar,
+  Copy,
   Edit,
   Eye,
+  Link2,
   MessageSquare,
   MoreHorizontal,
   Plus,
@@ -101,6 +103,7 @@ export function ApplicationsClient({ data }: ApplicationsClientProps) {
   const tInvoice = useTranslations("invoiceStatus");
   const tPayment = useTranslations("paymentStatus");
   const tCommon = useTranslations("common");
+  const tPortal = useTranslations("portal");
   const router = useRouter();
 
   // ── Date quick-filter state ──────────────────────────────────
@@ -336,6 +339,34 @@ export function ApplicationsClient({ data }: ApplicationsClientProps) {
         enableSorting: true,
       },
       {
+        accessorKey: "tracking_code",
+        header: () => tPortal("trackingCode"),
+        cell: ({ row }) => {
+          const code = row.getValue("tracking_code") as string | null;
+          if (!code) return "-";
+          return (
+            <div className="flex items-center gap-1">
+              <span className="max-w-[100px] truncate font-mono text-xs" title={code}>
+                {code.slice(0, 8)}...
+              </span>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  const url = `${window.location.origin}/portal/${code}`;
+                  navigator.clipboard.writeText(url);
+                  toast.success(tPortal("portalLinkCopied"));
+                }}
+                className="text-muted-foreground hover:text-foreground transition-colors"
+                title={tPortal("copyPortalLink")}
+              >
+                <Copy className="size-3.5" />
+              </button>
+            </div>
+          );
+        },
+        enableSorting: false,
+      },
+      {
         accessorKey: "full_name",
         header: ({ column }) => (
           <DataTableColumnHeader column={column} title={t("fullName")} />
@@ -528,7 +559,7 @@ export function ApplicationsClient({ data }: ApplicationsClientProps) {
       },
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [t, tVisa, tInvoice, tPayment, tCommon]
+    [t, tVisa, tInvoice, tPayment, tCommon, tPortal]
   );
 
   // ── Filterable columns config ─────────────────────────────────
