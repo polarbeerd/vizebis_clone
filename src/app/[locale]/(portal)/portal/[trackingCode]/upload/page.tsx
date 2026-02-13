@@ -1,4 +1,5 @@
-import { lookupApplication } from "../../actions";
+import { lookupApplication, getApplicationDocuments } from "../../actions";
+import type { ApplicationDocument } from "../../actions";
 import { UploadClient } from "./upload-client";
 import { redirect } from "next/navigation";
 
@@ -14,5 +15,7 @@ export default async function UploadPage({ params }: Props) {
     redirect(`/${locale === "tr" ? "" : locale + "/"}portal`);
   }
 
-  return <UploadClient application={data} />;
+  const { documents } = await getApplicationDocuments(trackingCode);
+
+  return <UploadClient application={data} documents={documents} />;
 }
