@@ -38,6 +38,7 @@ import {
   Headphones,
   CheckSquare,
   BookOpen,
+  Flag,
   type LucideIcon,
 } from "lucide-react";
 
@@ -70,7 +71,6 @@ export function useNavGroups(): NavGroup[] {
       title: t("management"),
       items: [
         { label: t("documents"), href: "/documents", icon: FolderOpen },
-        { label: t("documentChecklists"), href: "/document-checklists", icon: CheckSquare },
         { label: t("tags"), href: "/tags", icon: Tags },
         { label: t("forms"), href: "/forms", icon: ClipboardList },
         { label: t("passwords"), href: "/passwords", icon: KeyRound },
@@ -113,7 +113,9 @@ export function useNavGroups(): NavGroup[] {
     {
       title: t("portalGroup"),
       items: [
+        { label: t("documentChecklists"), href: "/document-checklists", icon: CheckSquare },
         { label: t("portalContent"), href: "/portal-content", icon: BookOpen },
+        { label: t("countriesManagement"), href: "/countries", icon: Flag },
       ],
     },
     {
