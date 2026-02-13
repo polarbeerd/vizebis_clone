@@ -20,10 +20,12 @@ export default function LoginPage() {
   const [mode, setMode] = useState<"login" | "register">("login");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [email, setEmail] = useState("");
 
   async function handleSubmit(formData: FormData) {
     setError(null);
     setLoading(true);
+    setEmail(formData.get("email") as string ?? "");
 
     try {
       const action = mode === "login" ? login : register;
@@ -72,6 +74,8 @@ export default function LoginPage() {
                 type="email"
                 required
                 placeholder={t("email")}
+                defaultValue={email}
+                key={email}
               />
             </div>
             <div className="space-y-2">

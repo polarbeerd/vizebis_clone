@@ -5,7 +5,7 @@
 - **Project:** Visa consulting management platform — "Unusual Consulting"
 - **Brand:** "our experience is your power" — modern, playful, professional
 - **Logo:** `public/logo.jpg` (black bg, pink/cream "UNUSUAL CONSULTING" text)
-- **Status:** 40 routes total — 27 fully functional, 7 UI-only, 1 broken, 5 portal (new)
+- **Status:** 46 routes total — 34 fully functional, 7 UI-only, 1 broken, 4 portal
 - **Run:** `npm run dev` → http://localhost:3000
 - **Build:** `npm run build` (passing clean)
 - **Supabase project:** `vizebiscopy` — anon key connected, service role key placeholder
@@ -63,6 +63,10 @@ src/
 │   │   │   ├── consulate-metrics/  # Charts (bar, pie, line)
 │   │   │   ├── country-metrics/    # Charts with date filter
 │   │   │   ├── referral-report/    # Referral CRUD + performance
+│   │   │   ├── document-checklists/ # Per-country per-visa doc requirements
+│   │   │   ├── portal-form-fields/  # Dynamic form field config per country+visa
+│   │   │   ├── portal-content/      # Guides/articles for portal
+│   │   │   ├── countries/           # Country management (flags, sort, active)
 │   │   │   ├── ai-analysis/       # Natural language data query chat
 │   │   │   ├── ai-assistant/      # Visa letter generator form
 │   │   │   ├── ai-prompts/        # Prompt template CRUD
@@ -84,6 +88,7 @@ src/
 │   │       └── portal/
 │   │           ├── page.tsx + portal-client.tsx     # Landing: tracking code entry
 │   │           ├── actions.ts                       # Server actions (service role client)
+│   │           ├── apply/page.tsx + apply-client.tsx # 5-step apply wizard (dynamic fields)
 │   │           └── [trackingCode]/
 │   │               ├── page.tsx + status-client.tsx  # Animated status timeline + details
 │   │               ├── edit/page.tsx + edit-client.tsx   # Personal info form
@@ -105,10 +110,13 @@ src/
 │   ├── tags/                      # tag-form
 │   ├── forms/                     # form-builder
 │   ├── chat/                      # chat-widget (floating realtime)
-│   └── portal/                    # Portal-specific components
-│       ├── portal-header.tsx      # Minimal header: logo + locale switcher
-│       ├── status-timeline.tsx    # Animated horizontal/vertical stepper
-│       └── animated-background.tsx # Floating gradient orbs
+│   ├── portal/                    # Portal-specific components
+│   │   ├── portal-header.tsx      # Minimal header: logo + locale switcher
+│   │   ├── status-timeline.tsx    # Animated horizontal/vertical stepper
+│   │   ├── document-upload-card.tsx # Drag-drop upload card
+│   │   └── animated-background.tsx # Floating gradient orbs
+│   ├── document-checklists/       # checklist-item-form.tsx
+│   └── portal-form-fields/        # field-form.tsx
 ├── lib/
 │   ├── utils.ts                   # cn(), formatCurrency(), formatDate(), formatDateTime()
 │   └── supabase/
@@ -122,25 +130,27 @@ src/
 │   └── navigation.ts             # Locale-aware Link, redirect, usePathname, useRouter
 └── middleware.ts                  # Combined next-intl + Supabase session (skips portal)
 messages/
-├── tr.json                        # Turkish translations (~836 keys, 46 namespaces)
-└── en.json                        # English translations (~836 keys, 46 namespaces)
+├── tr.json                        # Turkish translations (~880 keys, 49 namespaces)
+└── en.json                        # English translations (~880 keys, 49 namespaces)
 public/
 └── logo.jpg                       # Unusual Consulting brand logo
 supabase/
 └── migrations/
     ├── 001_core_schema.sql        # Full schema (746 lines, 23 tables, 10 enums)
-    └── 002_portal_schema.sql      # Portal additions (tracking_code, portal-uploads bucket)
+    ├── 002_portal_schema.sql      # Portal additions (tracking_code, portal-uploads bucket)
+    ├── 003_portal_v2_schema.sql   # Checklists, documents, content, countries enhancements
+    └── 004_portal_form_fields.sql # Dynamic form fields + custom_fields JSONB
 ```
 
 ---
 
-## Database Schema (23 Tables + 2 Portal Columns)
+## Database Schema (27 Tables)
 
 | Table | Purpose | Key Fields |
 |-------|---------|------------|
 | `profiles` | Users (extends auth.users) | full_name, role, permissions JSONB, telegram_chat_id |
 | `companies` | Client companies | company_name, company_code, tax info, is_active |
-| `applications` | Visa applications (CORE) | 40+ fields + `tracking_code` (UUID, unique) + `portal_last_accessed` |
+| `applications` | Visa applications (CORE) | 40+ fields + `tracking_code` + `portal_last_accessed` + `custom_fields` JSONB |
 | `appointments` | Consulate appointments | full_name, passport, country, visa_type, dates |
 | `documents` | Document templates | name, html_content, type, status, priority, access_level |
 | `tags` | Color-coded labels | name, color hex |
@@ -160,7 +170,11 @@ supabase/
 | `email_templates` | Notification templates | name, subject, html_content |
 | `settings` | Key-value config | key TEXT PK, value JSONB |
 | `cdn_files` | Uploaded files | file_name, file_path, file_size, mime_type |
-| `countries` | Country dropdown | name (29 seeded) |
+| `countries` | Country dropdown | name, flag_emoji, is_active, sort_order (29 seeded) |
+| `document_checklists` | Per-country per-visa doc requirements | country, visa_type, name, is_required, sort_order |
+| `application_documents` | Document tracking per application | application_id, checklist_item_id, status, file_path |
+| `portal_content` | Guides/articles for portal | country, visa_type, title, content, content_type |
+| `portal_form_fields` | Dynamic portal form fields | country, visa_type, field_key, field_label, field_type, is_standard |
 
 **Enums:** visa_status, visa_type, currency_type, payment_status, payment_method, invoice_status, document_type, document_status, priority_type, access_level, user_role
 
@@ -196,11 +210,17 @@ Server components: `getTranslations("namespace")`. Client components: `useTransl
 ### Portal Pattern
 Portal uses **service role client** (bypasses RLS) since visitors are unauthenticated. Server actions validate tracking codes. Middleware skips Supabase session refresh for `/portal` routes.
 
+### Per-Country Config Pattern
+Tables like `document_checklists` and `portal_form_fields` share the same pattern: filter by `country` + `visa_type`, admin CRUD via DataTable with country/visa dropdowns, "copy from" feature to clone configs between combos. Follow this pattern for any new per-country per-visa config.
+
+### Dynamic Form Pattern
+`portal_form_fields` defines fields with `is_standard` (maps to `applications` column) vs custom (stored in `applications.custom_fields` JSONB). Zod schema is built dynamically at runtime from fetched field definitions. Use `zodResolver(schema) as any` to avoid TS generic mismatch with `useForm`.
+
 ---
 
 ## Current Status — What Works vs What Doesn't
 
-### FULLY FUNCTIONAL (27 routes) — Connected to Supabase
+### FULLY FUNCTIONAL (34 routes) — Connected to Supabase
 - Authentication (login, register, logout, session management)
 - Dashboard (live stats, recent activity)
 - Applications (full CRUD, 40+ fields, tracking code, CSV export, color coding)
@@ -211,6 +231,8 @@ Portal uses **service role client** (bypasses RLS) since visitors are unauthenti
 - Referral report (CRUD + performance)
 - Settings (7 tabs), Email management, Profile, Notifications, Logs, CDN files
 - Customer Portal (tracking lookup, status timeline, edit info, upload docs)
+- Portal Apply Wizard (5-step: country select, guides, dynamic form, document upload, confirmation)
+- Portal Admin (document checklists, form fields, portal content, countries management)
 
 ### UI-ONLY SHELLS (7 routes) — Need backend integration
 - **AI Analysis** — placeholder responses, needs OpenAI API
@@ -237,8 +259,6 @@ Portal uses **service role client** (bypasses RLS) since visitors are unauthenti
 ## What to Implement Next — Prioritized Roadmap
 
 ### Tier 1: Quick Wins (< 1 hour each)
-These fix broken things and connect existing UI to existing tables.
-
 1. **Fix support page** — change `support_tickets` → `tickets` in query
 2. **Connect AI Prompts** — replace hardcoded array with Supabase query to `ai_prompts` table
 3. **Connect AI Settings** — wire settings form to `ai_settings` table
@@ -247,31 +267,27 @@ These fix broken things and connect existing UI to existing tables.
 6. **Generate TypeScript types** — `npx supabase gen types typescript` for full type safety
 
 ### Tier 2: High-Impact Features (hours)
-Features that differentiate the platform and add real value.
-
-7. **WhatsApp Business API integration** — the #1 communication channel for visa consultants. Clients expect updates on WhatsApp. Send appointment reminders, status changes, document requests. Modern immigration CRMs (SmartX, SAN Softwares) all offer this as a core feature.
-8. **AI-powered document assistant** — connect AI Analysis + AI Assistant to OpenAI/Anthropic API. Let admins query application data in natural language ("show me all pending Germany applications") and auto-generate visa support letters. Docketwise pioneered this approach.
-9. **Automated notifications & reminders** — trigger email/SMS when: application status changes, appointment is within 7 days, passport is expiring soon, payment is overdue. Use Supabase Edge Functions + database webhooks.
-10. **Smart document checklist** — per-country, per-visa-type checklists that tell customers exactly what documents they need. Track completion status per application. This is a massive UX win that most competitors lack.
-11. **Public shareable forms** — the `forms` table already has `share_token`. Build a public `/forms/{token}` route where customers can fill intake forms without login, with data flowing directly into `form_submissions`.
+7. **Video guide system** — per-country per-visa instructional videos embedded in portal wizard Step 2. Use `react-player` for YouTube/Vimeo embeds (free hosting, adaptive quality). Extend `portal_content` table with `content_type = 'video'` and video URL field. Add animated tips section below video with Framer Motion `whileInView` stagger animations + `canvas-confetti` for emphasis. Film videos with Loom or ScreenStudio.
+8. **WhatsApp Business API integration** — #1 communication channel for visa consultants. Send appointment reminders, status changes, document requests.
+9. **AI-powered document assistant** — connect AI Analysis + AI Assistant to OpenAI/Anthropic API for natural language data queries and auto-generated visa support letters.
+10. **Automated notifications & reminders** — trigger email/SMS on status changes, upcoming appointments, expiring passports. Use Supabase Edge Functions + database webhooks.
+11. **Public shareable forms** — `/forms/{token}` route for customer intake without login, data flows into `form_submissions`.
 
 ### Tier 3: Competitive Advantages (days)
-Features that make Unusual Consulting best-in-class.
-
-12. **Customer portal SMS/email notifications** — when an admin changes visa status, automatically send the customer a link to their portal page with a personalized message. Close the loop.
-13. **Analytics dashboard v2** — conversion funnel (lead → application → approved → delivered), average processing time per country/visa type, revenue forecasting. These metrics help consultants optimize their business.
-14. **OCR document scanning** — auto-extract passport data (name, number, expiry) from uploaded passport photos. Reduces manual data entry by 80%. Use Google Vision API or Tesseract.
-15. **Multi-currency invoicing** — generate professional invoices (PDF) from application fee data. The `invoices` page already exists as a shell. Support TL/USD/EUR with automatic exchange rates.
-16. **Appointment calendar sync** — Google Calendar / Outlook integration so appointments appear in the consultant's personal calendar. iCal export at minimum.
-17. **Supabase Realtime chat** — the `chat_widget.tsx` exists but uses no Realtime subscription. Wire it up to Supabase Realtime for live internal messaging between team members.
-18. **Role-based access control** — the `profiles` table has `role` and `permissions` JSONB fields. Implement proper RBAC so admins, managers, and agents see different things. Important for scaling the team.
+12. **Customer portal SMS/email notifications** — auto-send portal link on visa status change.
+13. **Analytics dashboard v2** — conversion funnel, processing time metrics, revenue forecasting.
+14. **OCR document scanning** — auto-extract passport data from uploaded photos. Google Vision API or Tesseract.
+15. **Multi-currency invoicing** — PDF invoice generation from application fee data. TL/USD/EUR.
+16. **Appointment calendar sync** — Google Calendar / Outlook / iCal export.
+17. **Supabase Realtime chat** — wire `chat_widget.tsx` to Realtime for live internal messaging.
+18. **Role-based access control** — implement proper RBAC using existing `profiles.role` + `permissions` JSONB.
 
 ### Tier 4: Future Vision
-19. **Mobile app** — React Native or Expo app for consultants on the go
-20. **Telegram bot** — automated status updates to customers via Telegram
-21. **Email hosting integration** — connect to mail provider (Postmark, SendGrid) for branded emails
+19. **Mobile app** — React Native or Expo
+20. **Telegram bot** — automated status updates
+21. **Email hosting integration** — Postmark or SendGrid
 22. **2FA** — Supabase Auth MFA with TOTP/SMS
-23. **Audit trail improvements** — log every admin action automatically via Supabase triggers
+23. **Audit trail improvements** — automatic logging via Supabase triggers
 
 ---
 
@@ -283,7 +299,7 @@ The visa consulting software market in 2025-2026 is dominated by:
 - **SAN e-Visa** — lead management, bulk SMS, multi-channel comms
 - **INSZoom** — 90+ country form templates, e-filing, compliance tracking
 
-What separates the best platforms: **WhatsApp integration**, **AI-powered automation**, **client self-service portals**, **real-time status tracking**, and **smart document checklists**. Unusual Consulting already has the portal and status tracking — the next differentiators are WhatsApp, AI, and automated notifications.
+What separates the best platforms: **WhatsApp integration**, **AI-powered automation**, **client self-service portals**, **real-time status tracking**, and **smart document checklists**. Unusual Consulting already has the portal, status tracking, smart checklists, dynamic form fields, and a full apply wizard — the next differentiators are video guides, WhatsApp, AI, and automated notifications.
 
 ---
 
@@ -298,3 +314,41 @@ SUPABASE_SERVICE_ROLE_KEY=your-service-role-key-here                  # ❌ Plac
 # WHATSAPP_API_TOKEN=...                                             # For WhatsApp Business API
 # NETGSM_API_KEY=...                                                 # For SMS sending
 ```
+
+---
+
+## Portal Design Language
+
+The customer portal uses a distinct design language from the admin panel. Use these principles when building customer-facing or public pages:
+
+### Glassmorphism Cards
+Semi-transparent backgrounds with backdrop blur: `bg-white/70 backdrop-blur-md border-slate-200/60 dark:bg-slate-900/70 dark:border-slate-700/60`. Creates depth without heaviness.
+
+### Gradient Accents
+Primary actions use `bg-gradient-to-r from-blue-500 to-violet-600` with matching `shadow-lg shadow-blue-500/25`. Success states use `from-emerald-500 to-teal-600`. Never flat solid colors for important CTAs.
+
+### Motion Choreography (Framer Motion)
+- Page transitions: `initial={{ opacity: 0, x: 50 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -50 }}` for wizard steps
+- Staggered lists: `transition={{ delay: i * 0.03 }}` on mapped items
+- Interactive feedback: `whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}` on cards/buttons
+- Spring physics for celebratory moments: `type: "spring", stiffness: 200, damping: 12`
+- `AnimatePresence mode="wait"` for step transitions
+- `layoutId` for shared element transitions (e.g. selection checkmarks)
+
+### Selection Pattern
+Selected items get: gradient bg (`from-blue-50 to-violet-50`), blue border, and a floating checkmark badge (`absolute -right-1 -top-1 rounded-full bg-blue-500`). Unselected items are neutral glass cards with hover border change.
+
+### Progress Indicators
+Horizontal stepper with: circles (icon inside), connecting lines, color states (emerald=complete, blue gradient=active, slate=pending). Scale animation on active step (`scale: 1.1`).
+
+### Rounded Everything
+`rounded-2xl` on cards, `rounded-xl` on inputs and buttons. Larger radius = more friendly/modern feel. Never sharp corners on portal.
+
+### Gradient Border Trick
+For highlighted elements (e.g. tracking code box): outer div with gradient bg + `p-[2px]`, inner div with solid bg and slightly smaller border-radius. Creates a gradient border effect.
+
+### Dark Mode
+Always include dark variants. Pattern: `dark:from-blue-950/30 dark:to-violet-950/30` for gradient bgs. Use `/30` opacity for subtle dark tints.
+
+### Spacing
+Generous whitespace. `gap-3` minimum between grid items, `p-6` on card content, `mb-8` between sections. Portal should feel spacious, not cramped.
