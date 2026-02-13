@@ -3,8 +3,8 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { useTranslations } from "next-intl";
-import { useRouter } from "@/i18n/navigation";
-import { Search, ArrowRight } from "lucide-react";
+import { useRouter, Link } from "@/i18n/navigation";
+import { Search, ArrowRight, PlusCircle } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { lookupApplication } from "./actions";
@@ -12,6 +12,7 @@ import { toast } from "sonner";
 
 export function PortalClient() {
   const t = useTranslations("portal");
+  const tApply = useTranslations("portalApply");
   const router = useRouter();
   const [code, setCode] = useState("");
   const [loading, setLoading] = useState(false);
@@ -33,12 +34,12 @@ export function PortalClient() {
   }
 
   return (
-    <div className="flex min-h-[calc(100vh-8rem)] flex-col items-center justify-center">
+    <div className="flex min-h-[calc(100vh-8rem)] flex-col items-center justify-center px-4">
       <motion.div
         initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.7, ease: "easeOut" }}
-        className="w-full max-w-lg text-center"
+        className="w-full max-w-3xl text-center"
       >
         {/* Icon */}
         <motion.div
@@ -70,53 +71,107 @@ export function PortalClient() {
           {t("subtitle")}
         </motion.p>
 
-        {/* Form */}
-        <motion.form
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.6, duration: 0.6 }}
-          onSubmit={handleSubmit}
-          className="space-y-4"
-        >
-          <div className="relative">
-            <Input
-              type="text"
-              value={code}
-              onChange={(e) => setCode(e.target.value)}
-              placeholder={t("trackingCodePlaceholder")}
-              className="h-14 rounded-xl border-slate-200/80 bg-white/80 pl-5 pr-14 text-lg shadow-lg shadow-slate-200/50 backdrop-blur-sm transition-shadow focus:shadow-xl focus:shadow-blue-200/30 dark:border-slate-700/80 dark:bg-slate-900/80 dark:shadow-none dark:focus:shadow-blue-900/20"
-              disabled={loading}
-            />
-            <div className="absolute right-2 top-1/2 -translate-y-1/2">
-              <Button
-                type="submit"
-                size="icon"
-                disabled={loading || !code.trim()}
-                className="h-10 w-10 rounded-lg bg-gradient-to-r from-blue-500 to-violet-600 shadow-md transition-transform hover:scale-105 active:scale-95 disabled:opacity-50"
-              >
-                <motion.div
-                  animate={loading ? { rotate: 360 } : {}}
-                  transition={loading ? { duration: 1, repeat: Infinity, ease: "linear" } : {}}
-                >
-                  <ArrowRight className="h-5 w-5 text-white" />
-                </motion.div>
-              </Button>
-            </div>
-          </div>
-
+        {/* Two-path cards */}
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+          {/* Card 1: I have a tracking code */}
           <motion.div
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
+            initial={{ opacity: 0, x: -30 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.6, duration: 0.6 }}
+            className="rounded-2xl border border-slate-200/60 bg-white/70 p-6 shadow-sm backdrop-blur-md dark:border-slate-700/60 dark:bg-slate-900/70"
           >
-            <Button
-              type="submit"
-              disabled={loading || !code.trim()}
-              className="h-12 w-full rounded-xl bg-gradient-to-r from-blue-500 to-violet-600 text-base font-medium shadow-lg shadow-blue-500/25 transition-all hover:shadow-xl hover:shadow-blue-500/30 sm:hidden"
-            >
-              {loading ? t("searching") : t("trackButton")}
-            </Button>
+            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-violet-600 shadow-md shadow-blue-500/20">
+              <Search className="h-6 w-6 text-white" />
+            </div>
+            <h2 className="mb-4 text-left text-xl font-semibold text-slate-900 dark:text-white">
+              {tApply("haveCode")}
+            </h2>
+            <form onSubmit={handleSubmit} className="space-y-3">
+              <div className="relative">
+                <Input
+                  type="text"
+                  value={code}
+                  onChange={(e) => setCode(e.target.value)}
+                  placeholder={t("trackingCodePlaceholder")}
+                  className="h-12 rounded-xl border-slate-200/80 bg-white/80 pl-4 pr-12 text-base shadow-sm backdrop-blur-sm transition-shadow focus:shadow-md focus:shadow-blue-200/30 dark:border-slate-700/80 dark:bg-slate-800/80 dark:shadow-none dark:focus:shadow-blue-900/20"
+                  disabled={loading}
+                />
+                <div className="absolute right-2 top-1/2 -translate-y-1/2">
+                  <Button
+                    type="submit"
+                    size="icon"
+                    disabled={loading || !code.trim()}
+                    className="h-8 w-8 rounded-lg bg-gradient-to-r from-blue-500 to-violet-600 shadow-sm transition-transform hover:scale-105 active:scale-95 disabled:opacity-50"
+                  >
+                    <motion.div
+                      animate={loading ? { rotate: 360 } : {}}
+                      transition={
+                        loading
+                          ? { duration: 1, repeat: Infinity, ease: "linear" }
+                          : {}
+                      }
+                    >
+                      <ArrowRight className="h-4 w-4 text-white" />
+                    </motion.div>
+                  </Button>
+                </div>
+              </div>
+
+              <motion.div
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                <Button
+                  type="submit"
+                  disabled={loading || !code.trim()}
+                  className="h-11 w-full rounded-xl bg-gradient-to-r from-blue-500 to-violet-600 text-base font-medium shadow-lg shadow-blue-500/25 transition-all hover:shadow-xl hover:shadow-blue-500/30"
+                >
+                  {loading ? t("searching") : t("trackButton")}
+                </Button>
+              </motion.div>
+            </form>
           </motion.div>
-        </motion.form>
+
+          {/* Mobile divider with "or" */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.7, duration: 0.5 }}
+            className="flex items-center justify-center md:hidden"
+          >
+            <div className="h-px flex-1 bg-slate-200 dark:bg-slate-700" />
+            <span className="px-4 text-sm font-medium text-slate-400 dark:text-slate-500">
+              {tApply("or")}
+            </span>
+            <div className="h-px flex-1 bg-slate-200 dark:bg-slate-700" />
+          </motion.div>
+
+          {/* Card 2: Start new application */}
+          <motion.div
+            initial={{ opacity: 0, x: 30 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.7, duration: 0.6 }}
+            className="flex flex-col rounded-2xl border border-slate-200/60 bg-white/70 p-6 shadow-sm backdrop-blur-md dark:border-slate-700/60 dark:bg-slate-900/70"
+          >
+            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 shadow-md shadow-emerald-500/20">
+              <PlusCircle className="h-6 w-6 text-white" />
+            </div>
+            <h2 className="mb-2 text-left text-xl font-semibold text-slate-900 dark:text-white">
+              {tApply("startNew")}
+            </h2>
+            <p className="mb-6 flex-1 text-left text-sm text-slate-500 dark:text-slate-400">
+              {tApply("selectCountrySubtitle")}
+            </p>
+            <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+              <Link href="/portal/apply" className="block">
+                <Button className="h-11 w-full rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 text-base font-medium shadow-lg shadow-emerald-500/25 transition-all hover:shadow-xl hover:shadow-emerald-500/30">
+                  {tApply("startNew")}
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              </Link>
+            </motion.div>
+          </motion.div>
+        </div>
       </motion.div>
 
       {/* Footer */}
