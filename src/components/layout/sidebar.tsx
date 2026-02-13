@@ -39,6 +39,7 @@ import {
   CheckSquare,
   BookOpen,
   Flag,
+  FormInput,
   type LucideIcon,
 } from "lucide-react";
 
@@ -115,6 +116,7 @@ export function useNavGroups(): NavGroup[] {
       items: [
         { label: t("documentChecklists"), href: "/document-checklists", icon: CheckSquare },
         { label: t("portalContent"), href: "/portal-content", icon: BookOpen },
+        { label: t("portalFormFields"), href: "/portal-form-fields", icon: FormInput },
         { label: t("countriesManagement"), href: "/countries", icon: Flag },
       ],
     },

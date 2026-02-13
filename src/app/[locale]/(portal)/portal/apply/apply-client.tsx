@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
@@ -22,13 +22,22 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { DocumentUploadCard } from "@/components/portal/document-upload-card";
 import { toast } from "sonner";
 import {
   getChecklist,
   getPortalContent,
+  getFormFields,
   createPortalApplication,
   uploadPortalDocument,
   getApplicationDocuments,
@@ -38,6 +47,7 @@ import type {
   ChecklistItem,
   PortalContentItem,
   ApplicationDocument,
+  FormField,
 } from "../actions";
 
 // ──────────────────────────────────────────────────────────────
@@ -63,19 +73,31 @@ const STEPS = [
 ] as const;
 
 // ──────────────────────────────────────────────────────────────
-// Personal info schema
+// Build Zod schema from dynamic fields
 // ──────────────────────────────────────────────────────────────
-const personalInfoSchema = z.object({
-  full_name: z.string().min(1),
-  id_number: z.string(),
-  date_of_birth: z.string(),
-  phone: z.string().min(1),
-  email: z.string().email().or(z.literal("")),
-  passport_no: z.string(),
-  passport_expiry: z.string(),
-});
+function buildDynamicSchema(fields: FormField[]) {
+  const shape: Record<string, z.ZodTypeAny> = {};
+  for (const field of fields) {
+    if (field.field_type === "email") {
+      shape[field.field_key] = field.is_required
+        ? z.string().email().min(1)
+        : z.string().email().or(z.literal(""));
+    } else if (field.is_required) {
+      shape[field.field_key] = z.string().min(1);
+    } else {
+      shape[field.field_key] = z.string().default("");
+    }
+  }
+  return z.object(shape);
+}
 
-type PersonalInfoValues = z.infer<typeof personalInfoSchema>;
+function buildDefaultValues(fields: FormField[]): Record<string, string> {
+  const defaults: Record<string, string> = {};
+  for (const field of fields) {
+    defaults[field.field_key] = "";
+  }
+  return defaults;
+}
 
 // ──────────────────────────────────────────────────────────────
 // Component
@@ -94,76 +116,106 @@ export function ApplyClient({ countries }: ApplyClientProps) {
   const [step, setStep] = useState(1);
   const [selectedCountry, setSelectedCountry] = useState("");
   const [selectedVisaType, setSelectedVisaType] = useState("");
+  const [formFields, setFormFields] = useState<FormField[]>([]);
   const [checklist, setChecklist] = useState<ChecklistItem[]>([]);
   const [guides, setGuides] = useState<PortalContentItem[]>([]);
   const [guideAcknowledged, setGuideAcknowledged] = useState(false);
-  const [personalInfo, setPersonalInfo] = useState<PersonalInfoValues | null>(null);
+  const [formData, setFormData] = useState<Record<string, string> | null>(null);
   const [trackingCode, setTrackingCode] = useState("");
   const [applicationId, setApplicationId] = useState<number | null>(null);
-  const [uploadedFiles, setUploadedFiles] = useState<Map<number, File>>(new Map());
+  const [uploadedFiles, setUploadedFiles] = useState<Map<number, File>>(
+    new Map()
+  );
   const [submitting, setSubmitting] = useState(false);
-  const [loadingChecklist, setLoadingChecklist] = useState(false);
+  const [loadingFields, setLoadingFields] = useState(false);
+  const [loadingGuides, setLoadingGuides] = useState(false);
   const [codeCopied, setCodeCopied] = useState(false);
 
-  // ── Form ──
-  const form = useForm<PersonalInfoValues>({
-    resolver: zodResolver(personalInfoSchema),
-    defaultValues: {
-      full_name: "",
-      id_number: "",
-      date_of_birth: "",
-      phone: "",
-      email: "",
-      passport_no: "",
-      passport_expiry: "",
-    },
+  // ── Dynamic schema + form ──
+  const dynamicSchema = useMemo(() => buildDynamicSchema(formFields), [formFields]);
+  const defaultValues = useMemo(() => buildDefaultValues(formFields), [formFields]);
+
+  const form = useForm<Record<string, string>>({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    resolver: zodResolver(dynamicSchema) as any,
+    defaultValues,
   });
+
+  // Reset form when fields change
+  const resetFormWithFields = useCallback(
+    (fields: FormField[]) => {
+      const defaults = buildDefaultValues(fields);
+      form.reset(defaults);
+    },
+    [form]
+  );
 
   // ── Country selection handler ──
   const handleCountrySelect = useCallback((countryName: string) => {
     setSelectedCountry(countryName);
     setSelectedVisaType("");
+    setFormFields([]);
     setChecklist([]);
     setGuides([]);
+    setGuideAcknowledged(false);
   }, []);
 
-  // ── Visa type selection handler ──
-  const handleVisaTypeSelect = useCallback(
+  // ── Visa type selection in Step 3 ──
+  const handleVisaTypeChange = useCallback(
     async (visaType: string) => {
       setSelectedVisaType(visaType);
-      setLoadingChecklist(true);
+      setLoadingFields(true);
+      setFormFields([]);
 
       try {
-        const [checklistData, guidesData] = await Promise.all([
-          getChecklist(selectedCountry, visaType),
-          getPortalContent(selectedCountry, visaType),
-        ]);
-        setChecklist(checklistData);
-        setGuides(guidesData);
+        const fields = await getFormFields(selectedCountry, visaType);
+        setFormFields(fields);
+        resetFormWithFields(fields);
       } catch {
         toast.error(t("uploadError"));
       } finally {
-        setLoadingChecklist(false);
+        setLoadingFields(false);
       }
     },
-    [selectedCountry, t]
+    [selectedCountry, t, resetFormWithFields]
   );
 
+  // ── Fetch guides when moving to Step 2 ──
+  const fetchGuidesForCountry = useCallback(async () => {
+    setLoadingGuides(true);
+    try {
+      const guidesData = await getPortalContent(selectedCountry, null);
+      setGuides(guidesData);
+      return guidesData;
+    } catch {
+      toast.error(t("uploadError"));
+      return [];
+    } finally {
+      setLoadingGuides(false);
+    }
+  }, [selectedCountry, t]);
+
   // ── Step navigation ──
-  const canProceedStep1 = selectedCountry && selectedVisaType && checklist.length > 0;
+  const canProceedStep1 = !!selectedCountry;
+
+  const goNextFromStep1 = async () => {
+    if (!canProceedStep1) return;
+
+    // Fetch guides for the selected country
+    const guidesData = await fetchGuidesForCountry();
+
+    if (guidesData.length === 0) {
+      // Skip guide step, go directly to Step 3
+      setStep(3);
+    } else {
+      setStep(2);
+    }
+  };
 
   const goNext = () => {
-    if (step === 1 && canProceedStep1) {
-      // If no guides, skip step 2
-      if (guides.length === 0) {
-        setStep(3);
-      } else {
-        setStep(2);
-      }
-    } else if (step === 2 && guideAcknowledged) {
+    if (step === 2 && guideAcknowledged) {
       setStep(3);
     }
-    // Steps 3 and 4 are handled by form submit / upload submit
   };
 
   const goBack = () => {
@@ -180,10 +232,25 @@ export function ApplyClient({ countries }: ApplyClientProps) {
     }
   };
 
-  // ── Personal info submit ──
-  const onPersonalInfoSubmit = (data: PersonalInfoValues) => {
-    setPersonalInfo(data);
-    setStep(4);
+  // ── Form submit in Step 3 ──
+  const onFormSubmit = async (data: Record<string, string>) => {
+    setFormData(data);
+
+    // Fetch checklist for this country+visa combo
+    try {
+      const checklistData = await getChecklist(selectedCountry, selectedVisaType);
+      setChecklist(checklistData);
+
+      if (checklistData.length > 0) {
+        // Has documents to upload → go to Step 4
+        setStep(4);
+      } else {
+        // No documents needed → submit directly
+        await submitApplication(data, []);
+      }
+    } catch {
+      toast.error(t("uploadError"));
+    }
   };
 
   // ── File selection handler (stores locally) ──
@@ -201,20 +268,30 @@ export function ApplyClient({ countries }: ApplyClientProps) {
   );
 
   // ── Submit application + upload files ──
-  const handleSubmitApplication = async () => {
-    if (!personalInfo) return;
+  const submitApplication = async (
+    data: Record<string, string>,
+    checklistItems: ChecklistItem[]
+  ) => {
     setSubmitting(true);
 
     try {
+      // Separate standard vs custom fields
+      const standardFields: Record<string, string> = {};
+      const customFields: Record<string, string> = {};
+
+      for (const field of formFields) {
+        const value = data[field.field_key] ?? "";
+        if (field.is_standard) {
+          standardFields[field.field_key] = value;
+        } else {
+          customFields[field.field_key] = value;
+        }
+      }
+
       // 1. Create the application
       const result = await createPortalApplication({
-        full_name: personalInfo.full_name,
-        id_number: personalInfo.id_number || "",
-        date_of_birth: personalInfo.date_of_birth || "",
-        phone: personalInfo.phone,
-        email: personalInfo.email || "",
-        passport_no: personalInfo.passport_no || "",
-        passport_expiry: personalInfo.passport_expiry || "",
+        standardFields,
+        customFields,
         country: selectedCountry,
         visa_type: selectedVisaType,
       });
@@ -248,10 +325,10 @@ export function ApplyClient({ countries }: ApplyClientProps) {
         for (const doc of documents) {
           const file = uploadedFiles.get(doc.checklist_item_id ?? -1);
           if (file) {
-            const formData = new FormData();
-            formData.append("file", file);
+            const fd = new FormData();
+            fd.append("file", file);
             uploadPromises.push(
-              uploadPortalDocument(result.trackingCode, doc.id, formData).then(
+              uploadPortalDocument(result.trackingCode, doc.id, fd).then(
                 (res) => {
                   if (!res.success) {
                     console.error(
@@ -277,6 +354,12 @@ export function ApplyClient({ countries }: ApplyClientProps) {
     }
   };
 
+  // ── Submit from Step 4 (upload page) ──
+  const handleSubmitFromUpload = async () => {
+    if (!formData) return;
+    await submitApplication(formData, checklist);
+  };
+
   // ── Copy tracking code ──
   const handleCopyCode = async () => {
     try {
@@ -285,7 +368,6 @@ export function ApplyClient({ countries }: ApplyClientProps) {
       toast.success(t("codeCopied"));
       setTimeout(() => setCodeCopied(false), 2000);
     } catch {
-      // Fallback
       toast.error("Could not copy");
     }
   };
@@ -295,6 +377,92 @@ export function ApplyClient({ countries }: ApplyClientProps) {
   const uploadedRequiredCount = requiredChecklist.filter((c) =>
     uploadedFiles.has(c.id)
   ).length;
+
+  // ── Render a dynamic field ──
+  const renderField = (field: FormField) => {
+    const error = form.formState.errors[field.field_key];
+
+    if (field.field_type === "select" && field.options) {
+      const options = field.options.split(",").map((o) => o.trim()).filter(Boolean);
+      return (
+        <div key={field.field_key}>
+          <Label className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">
+            {field.field_label}
+            {field.is_required && <span className="text-red-500"> *</span>}
+          </Label>
+          <Select
+            value={form.watch(field.field_key) || ""}
+            onValueChange={(val) => form.setValue(field.field_key, val, { shouldValidate: true })}
+          >
+            <SelectTrigger className="h-11 rounded-xl">
+              <SelectValue placeholder={field.placeholder || field.field_label} />
+            </SelectTrigger>
+            <SelectContent>
+              {options.map((opt) => (
+                <SelectItem key={opt} value={opt}>
+                  {opt}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {error && (
+            <p className="mt-1 text-xs text-red-500">{tPortal("required")}</p>
+          )}
+        </div>
+      );
+    }
+
+    if (field.field_type === "textarea") {
+      return (
+        <div key={field.field_key} className="sm:col-span-2">
+          <Label className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">
+            {field.field_label}
+            {field.is_required && <span className="text-red-500"> *</span>}
+          </Label>
+          <Textarea
+            {...form.register(field.field_key)}
+            className="min-h-[80px] rounded-xl"
+            placeholder={field.placeholder || ""}
+          />
+          {error && (
+            <p className="mt-1 text-xs text-red-500">{tPortal("required")}</p>
+          )}
+        </div>
+      );
+    }
+
+    // Default: text, email, date, tel, number
+    const inputType =
+      field.field_type === "email"
+        ? "email"
+        : field.field_type === "date"
+          ? "date"
+          : field.field_type === "tel"
+            ? "tel"
+            : field.field_type === "number"
+              ? "number"
+              : "text";
+
+    return (
+      <div key={field.field_key}>
+        <Label className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">
+          {field.field_label}
+          {field.is_required && <span className="text-red-500"> *</span>}
+        </Label>
+        <Input
+          type={inputType}
+          {...form.register(field.field_key)}
+          className="h-11 rounded-xl"
+          placeholder={field.placeholder || ""}
+        />
+        {error && (
+          <p className="mt-1 text-xs text-red-500">
+            {field.field_type === "email" ? tPortal("invalidEmail") : tPortal("required")}
+          </p>
+        )}
+      </div>
+    );
+  };
 
   // ────────────────────────────────────────────────────────────
   // RENDER
@@ -362,7 +530,7 @@ export function ApplyClient({ countries }: ApplyClientProps) {
       {/* ── Steps ── */}
       <AnimatePresence mode="wait">
         {/* ══════════════════════════════════════════════════════
-            STEP 1 — Country + Visa Type Selection
+            STEP 1 — Country Selection (only)
            ══════════════════════════════════════════════════════ */}
         {step === 1 && (
           <motion.div
@@ -398,7 +566,7 @@ export function ApplyClient({ countries }: ApplyClientProps) {
                   }`}
                 >
                   <span className="mb-2 text-3xl">
-                    {country.flag_emoji || "🏳️"}
+                    {country.flag_emoji || "\u{1F3F3}\u{FE0F}"}
                   </span>
                   <span
                     className={`text-sm font-medium ${
@@ -421,86 +589,25 @@ export function ApplyClient({ countries }: ApplyClientProps) {
               ))}
             </div>
 
-            {/* Visa type selection (appears after country is selected) */}
-            <AnimatePresence>
-              {selectedCountry && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: "auto" }}
-                  exit={{ opacity: 0, height: 0 }}
-                  transition={{ duration: 0.3 }}
-                  className="mt-8"
-                >
-                  <h3 className="mb-4 text-center text-xl font-semibold text-slate-900 dark:text-white">
-                    {t("selectVisaTypeTitle")}
-                  </h3>
-                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-                    {VISA_TYPES.map((vt) => (
-                      <motion.button
-                        key={vt.value}
-                        whileHover={{ scale: 1.03 }}
-                        whileTap={{ scale: 0.97 }}
-                        onClick={() => handleVisaTypeSelect(vt.value)}
-                        className={`rounded-xl border p-4 text-center transition-all ${
-                          selectedVisaType === vt.value
-                            ? "border-blue-500 bg-gradient-to-br from-blue-50 to-violet-50 shadow-md dark:from-blue-950/30 dark:to-violet-950/30"
-                            : "border-slate-200/60 bg-white/70 backdrop-blur-md hover:border-blue-300 dark:border-slate-700/60 dark:bg-slate-900/70"
-                        }`}
-                      >
-                        <span
-                          className={`text-sm font-medium ${
-                            selectedVisaType === vt.value
-                              ? "text-blue-700 dark:text-blue-300"
-                              : "text-slate-700 dark:text-slate-300"
-                          }`}
-                        >
-                          {tVisa(vt.labelKey)}
-                        </span>
-                      </motion.button>
-                    ))}
-                  </div>
-
-                  {/* Loading indicator */}
-                  {loadingChecklist && (
-                    <motion.div
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      className="mt-6 flex items-center justify-center gap-2 text-blue-500"
-                    >
-                      <Loader2 className="h-5 w-5 animate-spin" />
-                      <span className="text-sm">{tCommon("loading")}</span>
-                    </motion.div>
-                  )}
-
-                  {/* No checklist warning */}
-                  {!loadingChecklist &&
-                    selectedVisaType &&
-                    checklist.length === 0 && (
-                      <motion.div
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="mt-6 flex items-center gap-3 rounded-xl border border-amber-200 bg-amber-50/80 p-4 dark:border-amber-800 dark:bg-amber-950/30"
-                      >
-                        <AlertTriangle className="h-5 w-5 shrink-0 text-amber-500" />
-                        <p className="text-sm text-amber-700 dark:text-amber-300">
-                          {t("noChecklistWarning")}
-                        </p>
-                      </motion.div>
-                    )}
-                </motion.div>
-              )}
-            </AnimatePresence>
-
             {/* Next button */}
             <div className="mt-8 flex justify-end">
               <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
                 <Button
-                  onClick={goNext}
-                  disabled={!canProceedStep1}
+                  onClick={goNextFromStep1}
+                  disabled={!canProceedStep1 || loadingGuides}
                   className="h-12 rounded-xl bg-gradient-to-r from-blue-500 to-violet-600 px-8 text-base font-medium shadow-lg shadow-blue-500/25 transition-all hover:shadow-xl hover:shadow-blue-500/30 disabled:opacity-50"
                 >
-                  {tCommon("next")}
-                  <ArrowRight className="ml-2 h-4 w-4" />
+                  {loadingGuides ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      {tCommon("loading")}
+                    </>
+                  ) : (
+                    <>
+                      {tCommon("next")}
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </>
+                  )}
                 </Button>
               </motion.div>
             </div>
@@ -594,7 +701,7 @@ export function ApplyClient({ countries }: ApplyClientProps) {
         )}
 
         {/* ══════════════════════════════════════════════════════
-            STEP 3 — Personal Info Form
+            STEP 3 — Visa Type + Dynamic Form
            ══════════════════════════════════════════════════════ */}
         {step === 3 && (
           <motion.div
@@ -613,142 +720,109 @@ export function ApplyClient({ countries }: ApplyClientProps) {
               </p>
             </div>
 
-            <form
-              onSubmit={form.handleSubmit(onPersonalInfoSubmit)}
-              className="rounded-2xl border border-slate-200/60 bg-white/70 p-6 shadow-sm backdrop-blur-md dark:border-slate-700/60 dark:bg-slate-900/70"
-            >
-              <div className="grid gap-5 sm:grid-cols-2">
-                {/* Full Name */}
-                <div className="sm:col-span-2">
-                  <Label htmlFor="full_name" className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">
-                    {t("fullName")} <span className="text-red-500">*</span>
-                  </Label>
-                  <Input
-                    id="full_name"
-                    {...form.register("full_name")}
-                    className="h-11 rounded-xl"
-                    placeholder={t("fullName")}
-                  />
-                  {form.formState.errors.full_name && (
-                    <p className="mt-1 text-xs text-red-500">
-                      {tPortal("required")}
-                    </p>
-                  )}
-                </div>
-
-                {/* ID Number */}
-                <div>
-                  <Label htmlFor="id_number" className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">
-                    {t("idNumber")}
-                  </Label>
-                  <Input
-                    id="id_number"
-                    {...form.register("id_number")}
-                    className="h-11 rounded-xl"
-                    placeholder={t("idNumber")}
-                  />
-                </div>
-
-                {/* Date of Birth */}
-                <div>
-                  <Label htmlFor="date_of_birth" className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">
-                    {t("dateOfBirth")}
-                  </Label>
-                  <Input
-                    id="date_of_birth"
-                    type="date"
-                    {...form.register("date_of_birth")}
-                    className="h-11 rounded-xl"
-                  />
-                </div>
-
-                {/* Phone */}
-                <div>
-                  <Label htmlFor="phone" className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">
-                    {t("phone")} <span className="text-red-500">*</span>
-                  </Label>
-                  <Input
-                    id="phone"
-                    type="tel"
-                    {...form.register("phone")}
-                    className="h-11 rounded-xl"
-                    placeholder="+90 5XX XXX XXXX"
-                  />
-                  {form.formState.errors.phone && (
-                    <p className="mt-1 text-xs text-red-500">
-                      {tPortal("required")}
-                    </p>
-                  )}
-                </div>
-
-                {/* Email */}
-                <div>
-                  <Label htmlFor="email" className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">
-                    {t("email")}
-                  </Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    {...form.register("email")}
-                    className="h-11 rounded-xl"
-                    placeholder="email@example.com"
-                  />
-                  {form.formState.errors.email && (
-                    <p className="mt-1 text-xs text-red-500">
-                      {tPortal("invalidEmail")}
-                    </p>
-                  )}
-                </div>
-
-                {/* Passport No */}
-                <div>
-                  <Label htmlFor="passport_no" className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">
-                    {t("passportNo")}
-                  </Label>
-                  <Input
-                    id="passport_no"
-                    {...form.register("passport_no")}
-                    className="h-11 rounded-xl"
-                    placeholder={t("passportNo")}
-                  />
-                </div>
-
-                {/* Passport Expiry */}
-                <div>
-                  <Label htmlFor="passport_expiry" className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">
-                    {t("passportExpiry")}
-                  </Label>
-                  <Input
-                    id="passport_expiry"
-                    type="date"
-                    {...form.register("passport_expiry")}
-                    className="h-11 rounded-xl"
-                  />
-                </div>
-              </div>
-
-              {/* Navigation */}
-              <div className="mt-8 flex items-center justify-between">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={goBack}
-                  className="h-12 rounded-xl px-6"
+            <div className="rounded-2xl border border-slate-200/60 bg-white/70 p-6 shadow-sm backdrop-blur-md dark:border-slate-700/60 dark:bg-slate-900/70">
+              {/* Visa type dropdown */}
+              <div className="mb-6">
+                <Label className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">
+                  {t("selectVisaTypeTitle")} <span className="text-red-500">*</span>
+                </Label>
+                <Select
+                  value={selectedVisaType}
+                  onValueChange={handleVisaTypeChange}
                 >
-                  <ArrowLeft className="mr-2 h-4 w-4" />
-                  {tCommon("back")}
-                </Button>
-                <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-                  <Button
-                    type="submit"
-                    className="h-12 rounded-xl bg-gradient-to-r from-blue-500 to-violet-600 px-8 text-base font-medium shadow-lg shadow-blue-500/25 transition-all hover:shadow-xl hover:shadow-blue-500/30"
-                  >
-                    {tCommon("next")}
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </Button>
-                </motion.div>
+                  <SelectTrigger className="h-11 rounded-xl">
+                    <SelectValue placeholder={t("selectVisaTypeTitle")} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {VISA_TYPES.map((vt) => (
+                      <SelectItem key={vt.value} value={vt.value}>
+                        {tVisa(vt.labelKey)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
-            </form>
+
+              {/* Loading indicator */}
+              {loadingFields && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="flex items-center justify-center gap-2 py-8 text-blue-500"
+                >
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                  <span className="text-sm">{tCommon("loading")}</span>
+                </motion.div>
+              )}
+
+              {/* No fields warning */}
+              {!loadingFields && selectedVisaType && formFields.length === 0 && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="flex items-center gap-3 rounded-xl border border-amber-200 bg-amber-50/80 p-4 dark:border-amber-800 dark:bg-amber-950/30"
+                >
+                  <AlertTriangle className="h-5 w-5 shrink-0 text-amber-500" />
+                  <p className="text-sm text-amber-700 dark:text-amber-300">
+                    {t("noChecklistWarning")}
+                  </p>
+                </motion.div>
+              )}
+
+              {/* Dynamic form fields */}
+              {!loadingFields && formFields.length > 0 && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <form onSubmit={form.handleSubmit(onFormSubmit)}>
+                    <div className="grid gap-5 sm:grid-cols-2">
+                      {formFields.map((field) => renderField(field))}
+                    </div>
+
+                    {/* Navigation */}
+                    <div className="mt-8 flex items-center justify-between">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={goBack}
+                        className="h-12 rounded-xl px-6"
+                      >
+                        <ArrowLeft className="mr-2 h-4 w-4" />
+                        {tCommon("back")}
+                      </Button>
+                      <motion.div
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                      >
+                        <Button
+                          type="submit"
+                          className="h-12 rounded-xl bg-gradient-to-r from-blue-500 to-violet-600 px-8 text-base font-medium shadow-lg shadow-blue-500/25 transition-all hover:shadow-xl hover:shadow-blue-500/30"
+                        >
+                          {tCommon("next")}
+                          <ArrowRight className="ml-2 h-4 w-4" />
+                        </Button>
+                      </motion.div>
+                    </div>
+                  </form>
+                </motion.div>
+              )}
+
+              {/* Back button when no visa type selected or no fields */}
+              {!loadingFields && formFields.length === 0 && (
+                <div className="mt-8 flex items-center justify-between">
+                  <Button
+                    variant="outline"
+                    onClick={goBack}
+                    className="h-12 rounded-xl px-6"
+                  >
+                    <ArrowLeft className="mr-2 h-4 w-4" />
+                    {tCommon("back")}
+                  </Button>
+                </div>
+              )}
+            </div>
           </motion.div>
         )}
 
@@ -830,7 +904,7 @@ export function ApplyClient({ countries }: ApplyClientProps) {
               </Button>
               <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
                 <Button
-                  onClick={handleSubmitApplication}
+                  onClick={handleSubmitFromUpload}
                   disabled={submitting}
                   className="h-12 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 px-8 text-base font-medium shadow-lg shadow-emerald-500/25 transition-all hover:shadow-xl hover:shadow-emerald-500/30 disabled:opacity-50"
                 >

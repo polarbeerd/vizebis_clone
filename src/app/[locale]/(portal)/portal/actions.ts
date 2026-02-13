@@ -234,6 +234,18 @@ export interface ApplicationDocument {
   checklist_description: string | null;
 }
 
+export interface FormField {
+  id: number;
+  field_key: string;
+  field_label: string;
+  field_type: string;
+  placeholder: string;
+  options: string;
+  is_required: boolean;
+  is_standard: boolean;
+  sort_order: number;
+}
+
 export interface PortalContentItem {
   id: number;
   title: string;
@@ -315,14 +327,46 @@ export async function getPortalContent(
   return filtered as PortalContentItem[];
 }
 
+export async function getFormFields(
+  country: string,
+  visaType: string
+): Promise<FormField[]> {
+  const supabase = createServiceClient();
+
+  // JOIN portal_field_assignments + portal_field_definitions
+  const { data, error } = await supabase
+    .from("portal_field_assignments")
+    .select(
+      "id, is_required, sort_order, definition:portal_field_definitions(id, field_key, field_label, field_type, placeholder, options, is_standard)"
+    )
+    .eq("country", country)
+    .eq("visa_type", visaType)
+    .order("sort_order", { ascending: true });
+
+  if (error) {
+    console.error("Error fetching form fields:", error);
+    return [];
+  }
+
+  return (data ?? []).map((row: Record<string, unknown>) => {
+    const def = row.definition as Record<string, unknown> | null;
+    return {
+      id: def?.id as number ?? 0,
+      field_key: def?.field_key as string ?? "",
+      field_label: def?.field_label as string ?? "",
+      field_type: def?.field_type as string ?? "text",
+      placeholder: (def?.placeholder as string) ?? "",
+      options: (def?.options as string) ?? "",
+      is_required: row.is_required as boolean,
+      is_standard: def?.is_standard as boolean ?? false,
+      sort_order: row.sort_order as number,
+    };
+  });
+}
+
 export async function createPortalApplication(data: {
-  full_name: string;
-  id_number: string;
-  date_of_birth: string;
-  phone: string;
-  email: string;
-  passport_no: string;
-  passport_expiry: string;
+  standardFields: Record<string, string>;
+  customFields: Record<string, string>;
   country: string;
   visa_type: string;
 }): Promise<{
@@ -330,23 +374,32 @@ export async function createPortalApplication(data: {
   applicationId: number | null;
   error: string | null;
 }> {
-  if (!data.full_name || !data.phone) {
-    return { trackingCode: null, applicationId: null, error: "MISSING_REQUIRED" };
-  }
-
   const supabase = createServiceClient();
+
+  // Build the insert object from standard fields
+  const ALLOWED_STANDARD_KEYS = [
+    "full_name",
+    "id_number",
+    "date_of_birth",
+    "phone",
+    "email",
+    "passport_no",
+    "passport_expiry",
+  ];
+
+  const standardInsert: Record<string, unknown> = {};
+  for (const key of ALLOWED_STANDARD_KEYS) {
+    if (data.standardFields[key] !== undefined) {
+      standardInsert[key] = data.standardFields[key] || null;
+    }
+  }
 
   // Insert the application
   const { data: app, error } = await supabase
     .from("applications")
     .insert({
-      full_name: data.full_name,
-      id_number: data.id_number || null,
-      date_of_birth: data.date_of_birth || null,
-      phone: data.phone,
-      email: data.email || null,
-      passport_no: data.passport_no || null,
-      passport_expiry: data.passport_expiry || null,
+      ...standardInsert,
+      custom_fields: Object.keys(data.customFields).length > 0 ? data.customFields : {},
       country: data.country,
       visa_type: data.visa_type,
       visa_status: "beklemede",
