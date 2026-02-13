@@ -104,6 +104,7 @@ export function ApplicationsClient({ data }: ApplicationsClientProps) {
   const tPayment = useTranslations("paymentStatus");
   const tCommon = useTranslations("common");
   const tPortal = useTranslations("portal");
+  const tAppDocs = useTranslations("applicationDocuments");
   const router = useRouter();
 
   // ── Date quick-filter state ──────────────────────────────────
@@ -512,6 +513,27 @@ export function ApplicationsClient({ data }: ApplicationsClientProps) {
         enableSorting: false,
       },
       {
+        accessorKey: "doc_total",
+        header: () => tAppDocs("progress"),
+        cell: ({ row }) => {
+          const total = row.original.doc_total;
+          const completed = row.original.doc_completed;
+          if (total === 0) return <span className="text-xs text-muted-foreground">-</span>;
+          const color =
+            completed === total
+              ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300"
+              : completed > 0
+                ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300"
+                : "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300";
+          return (
+            <Badge variant="outline" className={`text-xs ${color}`}>
+              {completed}/{total}
+            </Badge>
+          );
+        },
+        enableSorting: false,
+      },
+      {
         id: "actions",
         header: () => tCommon("actions"),
         cell: ({ row }) => {
@@ -559,7 +581,7 @@ export function ApplicationsClient({ data }: ApplicationsClientProps) {
       },
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [t, tVisa, tInvoice, tPayment, tCommon, tPortal]
+    [t, tVisa, tInvoice, tPayment, tCommon, tPortal, tAppDocs]
   );
 
   // ── Filterable columns config ─────────────────────────────────

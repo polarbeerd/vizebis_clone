@@ -18,6 +18,8 @@ export interface ApplicationRow {
   notes: string | null;
   company_name: string | null;
   tracking_code: string | null;
+  doc_total: number;
+  doc_completed: number;
 }
 
 export default async function ApplicationsPage() {
@@ -48,6 +50,24 @@ export default async function ApplicationsPage() {
     .eq("is_deleted", false)
     .order("id", { ascending: false });
 
+  // Fetch document progress counts per application
+  const { data: docCounts } = await supabase
+    .from("application_documents")
+    .select("application_id, status");
+
+  // Build a map of application_id -> { total, completed }
+  const docMap = new Map<number, { total: number; completed: number }>();
+  if (docCounts) {
+    for (const row of docCounts as Array<{ application_id: number; status: string }>) {
+      const entry = docMap.get(row.application_id) || { total: 0, completed: 0 };
+      entry.total++;
+      if (row.status === "uploaded" || row.status === "approved") {
+        entry.completed++;
+      }
+      docMap.set(row.application_id, entry);
+    }
+  }
+
   // Flatten the company name from the joined relation
   const rows: ApplicationRow[] = (applications ?? []).map((app: Record<string, unknown>) => ({
     id: app.id as number,
@@ -66,6 +86,8 @@ export default async function ApplicationsPage() {
     notes: app.notes as string | null,
     company_name: (app.companies as { company_name: string } | null)?.company_name ?? null,
     tracking_code: app.tracking_code as string | null,
+    doc_total: docMap.get(app.id as number)?.total ?? 0,
+    doc_completed: docMap.get(app.id as number)?.completed ?? 0,
   }));
 
   if (error) {
