@@ -206,7 +206,12 @@
     "commercial": "Commercial",
     "tourist": "Tourist",
     "visit": "Visit",
-    "other": "Other"
+    "other": "Other",
+    "kultur": "Cultural",
+    "ticari": "Commercial",
+    "turistik": "Tourist",
+    "ziyaret": "Visit",
+    "diger": "Other"
   },
   "paymentStatus": {
     "unpaid": "Unpaid",
@@ -1265,7 +1270,12 @@
     "copyFrom": "Copy from another country/visa type",
     "copySuccess": "Checklist copied successfully",
     "deleteConfirmTitle": "Delete Document Requirement",
-    "deleteConfirmDescription": "Are you sure you want to delete \"{name}\"?"
+    "deleteConfirmDescription": "Are you sure you want to delete \"{name}\"?",
+    "addDescription": "Add a new document requirement.",
+    "editDescription": "Update the document requirement.",
+    "sourceCountry": "Source Country",
+    "sourceVisaType": "Source Visa Type",
+    "copy": "Copy"
   },
   "portalContent": {
     "title": "Portal Content",
@@ -1297,14 +1307,22 @@
     "description": "Manage countries available in the system",
     "addCountry": "Add Country",
     "editCountry": "Edit Country",
+    "addDescription": "Fill in the new country details.",
+    "editDescription": "Update the country details.",
     "countryName": "Country Name",
     "flagEmoji": "Flag Emoji",
+    "flagEmojiHint": "Paste a flag emoji (e.g. \ud83c\udde9\ud83c\uddea)",
     "isActive": "Active",
     "sortOrder": "Sort Order",
-    "createSuccess": "Country added",
-    "updateSuccess": "Country updated",
-    "deleteSuccess": "Country deleted",
-    "saveError": "Failed to save"
+    "searchPlaceholder": "Search countries...",
+    "createSuccess": "Country added successfully.",
+    "updateSuccess": "Country updated successfully.",
+    "deleteSuccess": "Country deleted successfully.",
+    "deleteError": "Error deleting country.",
+    "saveError": "Failed to save country.",
+    "deleteConfirmTitle": "Delete Country",
+    "deleteConfirmDescription": "Are you sure you want to delete {name}?",
+    "noCountries": "No countries added yet."
   },
   "portalApply": {
     "startNew": "Start New Application",

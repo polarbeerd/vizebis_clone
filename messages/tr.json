@@ -206,7 +206,12 @@
     "commercial": "Ticari",
     "tourist": "Turistik",
     "visit": "Ziyaret",
-    "other": "Diğer"
+    "other": "Diğer",
+    "kultur": "Kültür",
+    "ticari": "Ticari",
+    "turistik": "Turistik",
+    "ziyaret": "Ziyaret",
+    "diger": "Diğer"
   },
   "paymentStatus": {
     "unpaid": "Ödenmedi",
@@ -1265,7 +1270,12 @@
     "copyFrom": "Baska bir ulke/vize turundan kopyala",
     "copySuccess": "Liste basariyla kopyalandi",
     "deleteConfirmTitle": "Belge Gereksinimini Sil",
-    "deleteConfirmDescription": "\"{name}\" silinecek. Emin misiniz?"
+    "deleteConfirmDescription": "\"{name}\" silinecek. Emin misiniz?",
+    "addDescription": "Yeni bir belge gereksinimi ekleyin.",
+    "editDescription": "Belge gereksinimini güncelleyin.",
+    "sourceCountry": "Kaynak Ülke",
+    "sourceVisaType": "Kaynak Vize Türü",
+    "copy": "Kopyala"
   },
   "portalContent": {
     "title": "Portal Icerikleri",
@@ -1297,14 +1307,22 @@
     "description": "Sistemde kullanilan ulkeleri yonetin",
     "addCountry": "Ulke Ekle",
     "editCountry": "Ulke Duzenle",
+    "addDescription": "Yeni ulke bilgilerini doldurun.",
+    "editDescription": "Ulke bilgilerini guncelleyin.",
     "countryName": "Ulke Adi",
     "flagEmoji": "Bayrak Emojisi",
+    "flagEmojiHint": "Bayrak emojisi yapistin (orn. \ud83c\udde9\ud83c\uddea)",
     "isActive": "Aktif",
     "sortOrder": "Siralama",
-    "createSuccess": "Ulke eklendi",
-    "updateSuccess": "Ulke guncellendi",
-    "deleteSuccess": "Ulke silindi",
-    "saveError": "Kaydetme basarisiz"
+    "searchPlaceholder": "Ulke ara...",
+    "createSuccess": "Ulke basariyla eklendi.",
+    "updateSuccess": "Ulke basariyla guncellendi.",
+    "deleteSuccess": "Ulke basariyla silindi.",
+    "deleteError": "Ulke silinirken hata olustu.",
+    "saveError": "Ulke kaydedilirken hata olustu.",
+    "deleteConfirmTitle": "Ulkeyi Sil",
+    "deleteConfirmDescription": "{name} ulkesini silmek istediginize emin misiniz?",
+    "noCountries": "Henuz ulke eklenmemis."
   },
   "portalApply": {
     "startNew": "Yeni Basvuru Baslat",
