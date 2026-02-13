@@ -206,3 +206,356 @@ export async function uploadDocument(
 
   return { success: true, error: null };
 }
+
+// ──────────────────────────────────────────────────────────────
+// Portal V2 — Types
+// ──────────────────────────────────────────────────────────────
+
+export interface ChecklistItem {
+  id: number;
+  name: string;
+  description: string;
+  is_required: boolean;
+  sort_order: number;
+}
+
+export interface ApplicationDocument {
+  id: number;
+  checklist_item_id: number | null;
+  custom_name: string | null;
+  custom_description: string | null;
+  is_required: boolean;
+  file_path: string | null;
+  file_name: string | null;
+  status: string;
+  admin_note: string | null;
+  // Joined from checklist
+  checklist_name: string | null;
+  checklist_description: string | null;
+}
+
+export interface PortalContentItem {
+  id: number;
+  title: string;
+  content: string;
+  content_type: string;
+}
+
+export interface CountryOption {
+  id: number;
+  name: string;
+  flag_emoji: string | null;
+}
+
+// ──────────────────────────────────────────────────────────────
+// Portal V2 — Server Actions
+// ──────────────────────────────────────────────────────────────
+
+export async function getActiveCountries(): Promise<CountryOption[]> {
+  const supabase = createServiceClient();
+  const { data, error } = await supabase
+    .from("countries")
+    .select("id, name, flag_emoji")
+    .eq("is_active", true)
+    .order("sort_order", { ascending: true });
+
+  if (error) {
+    console.error("Error fetching countries:", error);
+    return [];
+  }
+
+  return (data ?? []) as CountryOption[];
+}
+
+export async function getChecklist(
+  country: string,
+  visaType: string
+): Promise<ChecklistItem[]> {
+  const supabase = createServiceClient();
+  const { data, error } = await supabase
+    .from("document_checklists")
+    .select("id, name, description, is_required, sort_order")
+    .eq("country", country)
+    .eq("visa_type", visaType)
+    .order("sort_order", { ascending: true });
+
+  if (error) {
+    console.error("Error fetching checklist:", error);
+    return [];
+  }
+
+  return (data ?? []) as ChecklistItem[];
+}
+
+export async function getPortalContent(
+  country: string,
+  visaType: string | null
+): Promise<PortalContentItem[]> {
+  const supabase = createServiceClient();
+
+  // Fetch content that matches this country/visa combo OR is global
+  const { data, error } = await supabase
+    .from("portal_content")
+    .select("id, title, content, content_type")
+    .eq("is_published", true)
+    .or(`country.is.null,country.eq.${country}`)
+    .order("sort_order", { ascending: true });
+
+  if (error) {
+    console.error("Error fetching portal content:", error);
+    return [];
+  }
+
+  // Filter by visa_type client-side (Supabase OR chains get complex)
+  const filtered = (data ?? []).filter((item: Record<string, unknown>) => {
+    const itemVisaType = item.visa_type as string | null;
+    return itemVisaType === null || itemVisaType === visaType;
+  });
+
+  return filtered as PortalContentItem[];
+}
+
+export async function createPortalApplication(data: {
+  full_name: string;
+  id_number: string;
+  date_of_birth: string;
+  phone: string;
+  email: string;
+  passport_no: string;
+  passport_expiry: string;
+  country: string;
+  visa_type: string;
+}): Promise<{
+  trackingCode: string | null;
+  applicationId: number | null;
+  error: string | null;
+}> {
+  if (!data.full_name || !data.phone) {
+    return { trackingCode: null, applicationId: null, error: "MISSING_REQUIRED" };
+  }
+
+  const supabase = createServiceClient();
+
+  // Insert the application
+  const { data: app, error } = await supabase
+    .from("applications")
+    .insert({
+      full_name: data.full_name,
+      id_number: data.id_number || null,
+      date_of_birth: data.date_of_birth || null,
+      phone: data.phone,
+      email: data.email || null,
+      passport_no: data.passport_no || null,
+      passport_expiry: data.passport_expiry || null,
+      country: data.country,
+      visa_type: data.visa_type,
+      visa_status: "beklemede",
+      source: "portal",
+      payment_status: "odenmedi",
+      invoice_status: "fatura_yok",
+      currency: "TL",
+      consulate_fee: 0,
+      service_fee: 0,
+    })
+    .select("id, tracking_code")
+    .single();
+
+  if (error || !app) {
+    console.error("Error creating portal application:", error);
+    return { trackingCode: null, applicationId: null, error: "CREATE_FAILED" };
+  }
+
+  const applicationId = (app as Record<string, unknown>).id as number;
+  const trackingCode = (app as Record<string, unknown>).tracking_code as string;
+
+  // Auto-populate application_documents from checklist
+  const { data: checklistItems } = await supabase
+    .from("document_checklists")
+    .select("id, is_required")
+    .eq("country", data.country)
+    .eq("visa_type", data.visa_type)
+    .order("sort_order");
+
+  if (checklistItems && checklistItems.length > 0) {
+    const docs = checklistItems.map((item: Record<string, unknown>) => ({
+      application_id: applicationId,
+      checklist_item_id: item.id as number,
+      is_required: item.is_required as boolean,
+      status: "pending",
+    }));
+
+    await supabase.from("application_documents").insert(docs);
+  }
+
+  return { trackingCode, applicationId, error: null };
+}
+
+export async function uploadPortalDocument(
+  trackingCode: string,
+  documentId: number,
+  formData: FormData
+): Promise<{ success: boolean; error: string | null }> {
+  if (!trackingCode || !documentId) {
+    return { success: false, error: "INVALID_PARAMS" };
+  }
+
+  const file = formData.get("file") as File | null;
+  if (!file) {
+    return { success: false, error: "MISSING_FILE" };
+  }
+
+  // Validate file size (10MB)
+  if (file.size > 10 * 1024 * 1024) {
+    return { success: false, error: "FILE_TOO_LARGE" };
+  }
+
+  // Validate file type
+  const allowedTypes = [
+    "image/jpeg",
+    "image/jpg",
+    "image/png",
+    "image/heic",
+    "image/heif",
+    "application/pdf",
+  ];
+  if (!allowedTypes.includes(file.type)) {
+    return { success: false, error: "INVALID_TYPE" };
+  }
+
+  const supabase = createServiceClient();
+
+  // Verify application exists and get application_id
+  const { data: appData } = await supabase
+    .from("applications")
+    .select("id")
+    .eq("tracking_code", trackingCode.trim())
+    .eq("is_deleted", false)
+    .single();
+
+  if (!appData) {
+    return { success: false, error: "NOT_FOUND" };
+  }
+
+  const applicationId = (appData as Record<string, unknown>).id as number;
+
+  // Verify document belongs to this application
+  const { data: docData } = await supabase
+    .from("application_documents")
+    .select("id")
+    .eq("id", documentId)
+    .eq("application_id", applicationId)
+    .single();
+
+  if (!docData) {
+    return { success: false, error: "DOC_NOT_FOUND" };
+  }
+
+  // Upload file to storage
+  const ext = file.name.split(".").pop() ?? "jpg";
+  const filePath = `${applicationId}/${documentId}/${Date.now()}.${ext}`;
+
+  const { error: uploadError } = await supabase.storage
+    .from("portal-uploads")
+    .upload(filePath, file, {
+      cacheControl: "3600",
+      upsert: true,
+    });
+
+  if (uploadError) {
+    console.error("Upload error:", uploadError);
+    return { success: false, error: "UPLOAD_FAILED" };
+  }
+
+  // Update application_documents row
+  const { error: updateError } = await supabase
+    .from("application_documents")
+    .update({
+      file_path: filePath,
+      file_name: file.name,
+      file_size: file.size,
+      mime_type: file.type,
+      status: "uploaded",
+      uploaded_at: new Date().toISOString(),
+    })
+    .eq("id", documentId);
+
+  if (updateError) {
+    console.error("Update error:", updateError);
+    return { success: false, error: "UPDATE_FAILED" };
+  }
+
+  return { success: true, error: null };
+}
+
+export async function getApplicationDocuments(
+  trackingCode: string
+): Promise<{ documents: ApplicationDocument[]; error: string | null }> {
+  if (!trackingCode) {
+    return { documents: [], error: "INVALID_CODE" };
+  }
+
+  const supabase = createServiceClient();
+
+  // Get application ID
+  const { data: appData } = await supabase
+    .from("applications")
+    .select("id")
+    .eq("tracking_code", trackingCode.trim())
+    .eq("is_deleted", false)
+    .single();
+
+  if (!appData) {
+    return { documents: [], error: "NOT_FOUND" };
+  }
+
+  const applicationId = (appData as Record<string, unknown>).id as number;
+
+  // Fetch documents with joined checklist data
+  const { data: docs, error } = await supabase
+    .from("application_documents")
+    .select(`
+      id,
+      checklist_item_id,
+      custom_name,
+      custom_description,
+      is_required,
+      file_path,
+      file_name,
+      status,
+      admin_note,
+      document_checklists (
+        name,
+        description
+      )
+    `)
+    .eq("application_id", applicationId)
+    .order("id", { ascending: true });
+
+  if (error) {
+    console.error("Error fetching documents:", error);
+    return { documents: [], error: "FETCH_FAILED" };
+  }
+
+  const documents: ApplicationDocument[] = (docs ?? []).map(
+    (d: Record<string, unknown>) => {
+      const checklist = d.document_checklists as Record<string, unknown> | null;
+      return {
+        id: d.id as number,
+        checklist_item_id: d.checklist_item_id as number | null,
+        custom_name: d.custom_name as string | null,
+        custom_description: d.custom_description as string | null,
+        is_required: d.is_required as boolean,
+        file_path: d.file_path as string | null,
+        file_name: d.file_name as string | null,
+        status: d.status as string,
+        admin_note: d.admin_note as string | null,
+        checklist_name: checklist ? (checklist.name as string) : null,
+        checklist_description: checklist
+          ? (checklist.description as string)
+          : null,
+      };
+    }
+  );
+
+  return { documents, error: null };
+}
