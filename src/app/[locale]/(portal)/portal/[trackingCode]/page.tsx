@@ -1,4 +1,5 @@
-import { lookupApplication } from "../actions";
+import { lookupApplication, getApplicationDocuments, getPortalContent } from "../actions";
+import type { ApplicationDocument, PortalContentItem } from "../actions";
 import { StatusClient } from "./status-client";
 import { redirect } from "next/navigation";
 
@@ -14,5 +15,9 @@ export default async function StatusPage({ params }: Props) {
     redirect(`/${locale === "tr" ? "" : locale + "/"}portal`);
   }
 
-  return <StatusClient application={data} />;
+  // Fetch additional V2 data
+  const { documents } = await getApplicationDocuments(trackingCode);
+  const guides = data.country ? await getPortalContent(data.country, data.visa_type) : [];
+
+  return <StatusClient application={data} documents={documents} guides={guides} />;
 }
