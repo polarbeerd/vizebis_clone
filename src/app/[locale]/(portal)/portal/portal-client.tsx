@@ -153,7 +153,7 @@ export function PortalClient() {
             transition={{ delay: 0.7, duration: 0.6 }}
             className="flex flex-col rounded-2xl border border-slate-200/60 bg-white/70 p-6 shadow-sm backdrop-blur-md dark:border-slate-700/60 dark:bg-slate-900/70"
           >
-            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-500 shadow-md shadow-emerald-500/20">
+            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-[#FEBEBF] shadow-md shadow-brand-400/20">
               <PlusCircle className="h-6 w-6 text-white" />
             </div>
             <h2 className="mb-2 text-left text-xl font-semibold text-slate-900 dark:text-white">
@@ -164,7 +164,7 @@ export function PortalClient() {
             </p>
             <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
               <Link href="/portal/apply" className="block">
-                <Button className="h-11 w-full rounded-xl bg-emerald-500 text-white text-base font-medium shadow-lg shadow-emerald-500/25 transition-all hover:bg-emerald-600 hover:shadow-xl hover:shadow-emerald-500/30">
+                <Button className="h-11 w-full rounded-xl bg-[#FEBEBF] text-white text-base font-medium shadow-lg shadow-brand-400/25 transition-all hover:bg-brand-400 hover:shadow-xl hover:shadow-brand-400/30">
                   {tApply("startNew")}
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>

@@ -89,7 +89,7 @@ function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
 const statusConfig: Record<string, { icon: React.ComponentType<{ className?: string }>; bg: string; text: string }> = {
   pending: { icon: Clock, bg: "bg-slate-100 dark:bg-slate-800", text: "text-slate-600 dark:text-slate-400" },
   uploaded: { icon: Upload, bg: "bg-brand-50 dark:bg-brand-950", text: "text-brand-600 dark:text-brand-400" },
-  approved: { icon: CheckCircle2, bg: "bg-emerald-50 dark:bg-emerald-950", text: "text-emerald-600 dark:text-emerald-400" },
+  approved: { icon: CheckCircle2, bg: "bg-brand-50 dark:bg-brand-950", text: "text-brand-600 dark:text-brand-400" },
   rejected: { icon: XCircle, bg: "bg-red-50 dark:bg-red-950", text: "text-red-600 dark:text-red-400" },
 };
 
@@ -465,7 +465,7 @@ export function StatusClient({ application, documents, guides }: StatusClientPro
             <div className="flex items-center justify-between">
               <span className="text-sm text-slate-500 dark:text-slate-400">{t("passportPhoto")}</span>
               {application.passport_photo ? (
-                <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                <span className="text-xs font-medium text-brand-600 dark:text-brand-400">
                   {t("viewDocument")}
                 </span>
               ) : (
@@ -475,7 +475,7 @@ export function StatusClient({ application, documents, guides }: StatusClientPro
             <div className="flex items-center justify-between">
               <span className="text-sm text-slate-500 dark:text-slate-400">{t("visaPhoto")}</span>
               {application.visa_photo ? (
-                <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                <span className="text-xs font-medium text-brand-600 dark:text-brand-400">
                   {t("viewDocument")}
                 </span>
               ) : (

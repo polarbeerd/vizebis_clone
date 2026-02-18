@@ -71,7 +71,7 @@ export function DocumentUploadCard({
   const statusConfig: Record<string, { color: string; label: string }> = {
     pending: { color: "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400", label: "" },
     uploaded: { color: "bg-brand-100 text-brand-700 dark:bg-brand-900 dark:text-brand-300", label: t("uploaded") },
-    approved: { color: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300", label: "✓" },
+    approved: { color: "bg-brand-100 text-brand-700 dark:bg-brand-900 dark:text-brand-300", label: "✓" },
     rejected: { color: "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300", label: t("adminRejected") },
   };
 
@@ -288,7 +288,7 @@ export function DocumentUploadCard({
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
                 transition={{ type: "spring", stiffness: 200 }}
-                className="flex items-center justify-center gap-2 text-emerald-600"
+                className="flex items-center justify-center gap-2 text-brand-600"
               >
                 <Check className="h-5 w-5" />
                 <span className="text-sm font-medium">{t("uploadSuccess")}</span>
@@ -318,11 +318,11 @@ export function DocumentUploadCard({
             key="existing"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="flex items-center justify-between rounded-xl border border-emerald-200 bg-emerald-50/50 p-4 dark:border-emerald-800 dark:bg-emerald-950/20"
+            className="flex items-center justify-between rounded-xl border border-brand-200 bg-brand-50/50 p-4 dark:border-brand-800 dark:bg-brand-950/20"
           >
             <div className="flex items-center gap-2">
-              <Check className="h-5 w-5 text-emerald-600" />
-              <span className="text-sm font-medium text-emerald-700 dark:text-emerald-300">
+              <Check className="h-5 w-5 text-brand-600" />
+              <span className="text-sm font-medium text-brand-700 dark:text-brand-300">
                 {existingFileName || t("uploaded")}
               </span>
             </div>

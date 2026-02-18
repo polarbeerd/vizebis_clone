@@ -114,7 +114,7 @@ export function UploadClient({ application, documents: initialDocuments }: Uploa
               <span
                 className={`font-semibold ${
                   progressPercent === 100
-                    ? "text-emerald-600 dark:text-emerald-400"
+                    ? "text-brand-600 dark:text-brand-400"
                     : "text-brand-600 dark:text-brand-400"
                 }`}
               >
@@ -128,7 +128,7 @@ export function UploadClient({ application, documents: initialDocuments }: Uploa
                 transition={{ delay: 0.4, duration: 0.8, ease: "easeOut" }}
                 className={`h-full rounded-full ${
                   progressPercent === 100
-                    ? "bg-emerald-500"
+                    ? "bg-brand-400"
                     : "bg-brand-400"
                 }`}
               />
@@ -138,7 +138,7 @@ export function UploadClient({ application, documents: initialDocuments }: Uploa
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: 1 }}
-                className="mt-2 flex items-center justify-center gap-1.5 text-sm text-emerald-600 dark:text-emerald-400"
+                className="mt-2 flex items-center justify-center gap-1.5 text-sm text-brand-600 dark:text-brand-400"
               >
                 <FileCheck2 className="h-4 w-4" />
                 <span>{t("docsComplete")}</span>

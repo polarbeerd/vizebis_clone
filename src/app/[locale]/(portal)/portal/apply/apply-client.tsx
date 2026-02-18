@@ -683,7 +683,7 @@ export function ApplyClient({ countries, visaTypes }: ApplyClientProps) {
       <Button
         type="submit"
         disabled={submitting || (formSubmitted && Object.keys(form.formState.errors).length > 0)}
-        className="h-10 rounded-xl bg-brand-300 text-slate-700 px-6 text-sm font-semibold shadow-md shadow-brand-400/25 transition-all hover:bg-brand-400 hover:text-slate-800 disabled:opacity-50 sm:h-11 sm:px-8"
+        className="h-10 rounded-xl bg-[#FEBEBF] text-white px-6 text-sm font-semibold shadow-md shadow-brand-400/25 transition-all hover:bg-brand-400 disabled:opacity-50 sm:h-11 sm:px-8"
       >
         {submitting ? (
           <>
@@ -730,9 +730,9 @@ export function ApplyClient({ countries, visaTypes }: ApplyClientProps) {
                     transition={{ type: "spring", stiffness: 300, damping: 20 }}
                     className={`flex h-9 w-9 items-center justify-center rounded-full border-2 transition-colors duration-300 sm:h-11 sm:w-11 ${
                       isComplete
-                        ? "border-emerald-500 bg-emerald-500 text-white"
+                        ? "border-brand-400 bg-brand-400 text-white"
                         : isActive
-                          ? "border-brand-400 bg-brand-300 text-slate-700 shadow-md shadow-brand-400/25"
+                          ? "border-brand-400 bg-[#FEBEBF] text-white shadow-md shadow-brand-400/25"
                           : "border-slate-300 bg-white text-slate-400 dark:border-slate-600 dark:bg-slate-800"
                     }`}
                   >
@@ -753,7 +753,7 @@ export function ApplyClient({ countries, visaTypes }: ApplyClientProps) {
                       isActive
                         ? "text-brand-600 dark:text-brand-400"
                         : isComplete
-                          ? "text-emerald-600 dark:text-emerald-400"
+                          ? "text-brand-600 dark:text-brand-400"
                           : "text-slate-400 dark:text-slate-500"
                     }`}
                   >
@@ -764,7 +764,7 @@ export function ApplyClient({ countries, visaTypes }: ApplyClientProps) {
                 {i < activeSteps.length - 1 && (
                   <div className="relative mx-1.5 h-0.5 flex-1 overflow-hidden rounded-full bg-slate-200 sm:mx-3 dark:bg-slate-700">
                     <motion.div
-                      className="absolute inset-y-0 left-0 rounded-full bg-emerald-500"
+                      className="absolute inset-y-0 left-0 rounded-full bg-brand-400"
                       initial={{ width: "0%" }}
                       animate={{ width: isComplete ? "100%" : "0%" }}
                       transition={{ duration: 0.5, ease: "easeInOut" }}
@@ -832,7 +832,7 @@ export function ApplyClient({ countries, visaTypes }: ApplyClientProps) {
                   {selectedCountry === country.name && (
                     <motion.div
                       layoutId="country-check"
-                      className="absolute -right-1.5 -top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-brand-300 text-slate-700 shadow-md"
+                      className="absolute -right-1.5 -top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-[#FEBEBF] text-white shadow-md"
                     >
                       <Check className="h-3.5 w-3.5" />
                     </motion.div>
@@ -847,7 +847,7 @@ export function ApplyClient({ countries, visaTypes }: ApplyClientProps) {
                 <Button
                   onClick={goNextFromStep1}
                   disabled={!canProceedStep1 || loadingGuides}
-                  className="h-11 w-full rounded-xl bg-brand-300 text-slate-700 px-8 text-sm font-semibold shadow-md shadow-brand-400/25 transition-all hover:bg-brand-400 hover:text-slate-800 disabled:cursor-not-allowed disabled:opacity-50 sm:h-12 sm:w-auto sm:text-base"
+                  className="h-11 w-full rounded-xl bg-[#FEBEBF] text-white px-8 text-sm font-semibold shadow-md shadow-brand-400/25 transition-all hover:bg-brand-400 disabled:cursor-not-allowed disabled:opacity-50 sm:h-12 sm:w-auto sm:text-base"
                 >
                   {loadingGuides ? (
                     <>
@@ -937,7 +937,7 @@ export function ApplyClient({ countries, visaTypes }: ApplyClientProps) {
                           transition={{ delay: i * 0.08, duration: 0.3 }}
                           className="flex items-start gap-4 rounded-2xl border border-slate-200/60 bg-white/70 p-5 shadow-sm backdrop-blur-md dark:border-slate-700/60 dark:bg-slate-900/70"
                         >
-                          <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-brand-300 text-sm font-bold text-slate-700 shadow-md shadow-brand-400/20">
+                          <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-[#FEBEBF] text-sm font-bold text-white shadow-md shadow-brand-400/20">
                             {i + 1}
                           </div>
                           <div className="min-w-0 flex-1">
@@ -994,7 +994,7 @@ export function ApplyClient({ countries, visaTypes }: ApplyClientProps) {
                 <Button
                   onClick={goNext}
                   disabled={!guideAcknowledged}
-                  className="h-10 rounded-xl bg-brand-300 text-slate-700 px-6 text-sm font-semibold shadow-md shadow-brand-400/25 transition-all hover:bg-brand-400 hover:text-slate-800 disabled:opacity-50 sm:h-11 sm:px-8"
+                  className="h-10 rounded-xl bg-[#FEBEBF] text-white px-6 text-sm font-semibold shadow-md shadow-brand-400/25 transition-all hover:bg-brand-400 disabled:opacity-50 sm:h-11 sm:px-8"
                 >
                   {tCommon("next")}
                   <ArrowRight className="ml-2 h-4 w-4" />
@@ -1222,7 +1222,7 @@ export function ApplyClient({ countries, visaTypes }: ApplyClientProps) {
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
               transition={{ type: "spring", stiffness: 200, damping: 12, delay: 0.2 }}
-              className="mb-6 flex h-24 w-24 items-center justify-center rounded-full bg-emerald-500 shadow-xl shadow-emerald-500/30"
+              className="mb-6 flex h-24 w-24 items-center justify-center rounded-full bg-brand-400 shadow-xl shadow-brand-400/30"
             >
               <motion.div
                 initial={{ pathLength: 0, opacity: 0 }}
