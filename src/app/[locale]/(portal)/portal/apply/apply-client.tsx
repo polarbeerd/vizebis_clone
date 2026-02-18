@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useMemo, useRef } from "react";
+import React, { useState, useCallback, useMemo, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTranslations, useLocale } from "next-intl";
 import { useForm } from "react-hook-form";
@@ -696,7 +696,7 @@ export function ApplyClient({ countries, visaTypes }: ApplyClientProps) {
     <div className="mx-auto w-full max-w-2xl px-1 py-4 sm:px-0 sm:py-6">
       {/* ── Stepper ── */}
       <div className="mb-8 sm:mb-10">
-        <div className="mx-auto flex max-w-xs items-center justify-between sm:max-w-xl">
+        <div className="mx-auto flex max-w-xs items-center sm:max-w-xl">
           {activeSteps.map((s, i) => {
             const stepId = s.id;
             const isActive =
@@ -711,8 +711,9 @@ export function ApplyClient({ countries, visaTypes }: ApplyClientProps) {
             const Icon = s.icon;
 
             return (
-              <div key={s.key} className="flex flex-1 items-center">
-                <div className="flex flex-col items-center">
+              <React.Fragment key={s.key}>
+                {/* Step icon + label — fixed width so lines are equal */}
+                <div className="flex w-16 shrink-0 flex-col items-center sm:w-24">
                   <motion.div
                     initial={false}
                     animate={{ scale: isActive ? 1.1 : 1 }}
@@ -738,7 +739,7 @@ export function ApplyClient({ countries, visaTypes }: ApplyClientProps) {
                     )}
                   </motion.div>
                   <span
-                    className={`mt-2 hidden text-xs font-semibold sm:block transition-colors duration-300 ${
+                    className={`mt-2 hidden text-center text-xs font-semibold sm:block transition-colors duration-300 ${
                       isActive
                         ? "text-brand-600 dark:text-brand-400"
                         : isComplete
@@ -749,9 +750,9 @@ export function ApplyClient({ countries, visaTypes }: ApplyClientProps) {
                     {t(s.key)}
                   </span>
                 </div>
-                {/* Connecting line */}
+                {/* Connecting line — flex-1 so all lines are equal width */}
                 {i < activeSteps.length - 1 && (
-                  <div className="relative mx-1.5 h-0.5 flex-1 overflow-hidden rounded-full bg-slate-200 sm:mx-3 dark:bg-slate-700">
+                  <div className="relative mx-1 h-0.5 flex-1 overflow-hidden rounded-full bg-slate-200 sm:mx-2 dark:bg-slate-700">
                     <motion.div
                       className="absolute inset-y-0 left-0 rounded-full bg-[#FEBEBF]"
                       initial={{ width: "0%" }}
@@ -760,7 +761,7 @@ export function ApplyClient({ countries, visaTypes }: ApplyClientProps) {
                     />
                   </div>
                 )}
-              </div>
+              </React.Fragment>
             );
           })}
         </div>
