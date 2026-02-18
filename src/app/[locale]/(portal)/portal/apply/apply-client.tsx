@@ -254,7 +254,7 @@ export function ApplyClient({ countries, visaTypes }: ApplyClientProps) {
   );
 
   // ── Country selection handler ──
-  const handleCountrySelect = useCallback((countryName: string) => {
+  const handleCountrySelect = useCallback(async (countryName: string) => {
     setSelectedCountry(countryName);
     setSelectedCity("");
     setSelectedVisaType("");
@@ -262,7 +262,24 @@ export function ApplyClient({ countries, visaTypes }: ApplyClientProps) {
     setGuides([]);
     setHasGuides(null);
     setGuideAcknowledged(false);
-  }, []);
+
+    // Single-click navigation: go directly to guide or form
+    setLoadingGuides(true);
+    try {
+      const guidesData = await getPortalContent(countryName);
+      setGuides(guidesData);
+      setHasGuides(guidesData.length > 0);
+      if (guidesData.length === 0) {
+        setStep(3);
+      } else {
+        setStep(2);
+      }
+    } catch {
+      toast.error(t("uploadError"));
+    } finally {
+      setLoadingGuides(false);
+    }
+  }, [t]);
 
   // ── Visa type selection in Step 3 ──
   const handleVisaTypeChange = useCallback(
@@ -293,35 +310,7 @@ export function ApplyClient({ countries, visaTypes }: ApplyClientProps) {
     [selectedCountry, t, resetFormWithFields]
   );
 
-  // ── Fetch guides when moving to Step 2 ──
-  const fetchGuidesForCountry = useCallback(async () => {
-    setLoadingGuides(true);
-    try {
-      const guidesData = await getPortalContent(selectedCountry);
-      setGuides(guidesData);
-      setHasGuides(guidesData.length > 0);
-      return guidesData;
-    } catch {
-      toast.error(t("uploadError"));
-      return [];
-    } finally {
-      setLoadingGuides(false);
-    }
-  }, [selectedCountry, t]);
-
   // ── Step navigation ──
-  const canProceedStep1 = !!selectedCountry;
-
-  const goNextFromStep1 = async () => {
-    if (!canProceedStep1) return;
-    const guidesData = await fetchGuidesForCountry();
-    if (guidesData.length === 0) {
-      setStep(3);
-    } else {
-      setStep(2);
-    }
-  };
-
   const goNext = () => {
     if (step === 2 && guideAcknowledged) {
       setStep(3);
@@ -841,28 +830,12 @@ export function ApplyClient({ countries, visaTypes }: ApplyClientProps) {
               ))}
             </div>
 
-            {/* Next button */}
-            <div className="mt-8 flex justify-end sm:mt-10">
-              <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} className="w-full sm:w-auto">
-                <Button
-                  onClick={goNextFromStep1}
-                  disabled={!canProceedStep1 || loadingGuides}
-                  className="h-11 w-full rounded-xl bg-[#FEBEBF] text-white px-8 text-sm font-semibold shadow-md shadow-brand-400/25 transition-all hover:brightness-90 disabled:cursor-not-allowed disabled:opacity-50 sm:h-12 sm:w-auto sm:text-base"
-                >
-                  {loadingGuides ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      {tCommon("loading")}
-                    </>
-                  ) : (
-                    <>
-                      {tCommon("next")}
-                      <ArrowRight className="ml-2 h-4 w-4" />
-                    </>
-                  )}
-                </Button>
-              </motion.div>
-            </div>
+            {/* Loading indicator when transitioning */}
+            {loadingGuides && (
+              <div className="mt-8 flex justify-center">
+                <Loader2 className="h-6 w-6 animate-spin text-[#FEBEBF]" />
+              </div>
+            )}
           </motion.div>
         )}
 
@@ -875,6 +848,24 @@ export function ApplyClient({ countries, visaTypes }: ApplyClientProps) {
             exit={{ opacity: 0, x: -50 }}
             transition={{ duration: 0.25 }}
           >
+            {/* Country indicator */}
+            {(() => {
+              const c = countries.find((c) => c.name === selectedCountry);
+              if (!c) return null;
+              return (
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="mb-4 flex items-center justify-center gap-2 sm:mb-5"
+                >
+                  <span className="text-3xl">{c.flag_emoji || "\u{1F3F3}\u{FE0F}"}</span>
+                  <span className="text-lg font-semibold text-slate-800 dark:text-slate-200">
+                    {countryDisplayName(c)}
+                  </span>
+                </motion.div>
+              );
+            })()}
+
             <div className="mb-6 text-center sm:mb-8">
               <h2 className="text-xl font-bold tracking-tight text-slate-900 sm:text-3xl dark:text-white">
                 {t("guideTitle")}
