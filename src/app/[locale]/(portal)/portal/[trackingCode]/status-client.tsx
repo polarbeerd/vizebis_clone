@@ -61,8 +61,8 @@ function PortalCard({
       className="rounded-2xl border border-slate-200/60 bg-white/70 p-6 shadow-sm backdrop-blur-md transition-shadow hover:shadow-md dark:border-slate-700/60 dark:bg-slate-900/70"
     >
       <div className="mb-4 flex items-center gap-2">
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-rose-500/10 to-pink-500/10 dark:from-rose-500/20 dark:to-pink-500/20">
-          <Icon className="h-4 w-4 text-rose-600 dark:text-rose-400" />
+        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-brand-500/10 to-brand-500/10 dark:from-brand-500/20 dark:to-brand-500/20">
+          <Icon className="h-4 w-4 text-brand-600 dark:text-brand-400" />
         </div>
         <h3 className="font-semibold text-slate-900 dark:text-white">{title}</h3>
       </div>
@@ -88,7 +88,7 @@ function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
 
 const statusConfig: Record<string, { icon: React.ComponentType<{ className?: string }>; bg: string; text: string }> = {
   pending: { icon: Clock, bg: "bg-slate-100 dark:bg-slate-800", text: "text-slate-600 dark:text-slate-400" },
-  uploaded: { icon: Upload, bg: "bg-rose-50 dark:bg-rose-950", text: "text-rose-600 dark:text-rose-400" },
+  uploaded: { icon: Upload, bg: "bg-brand-50 dark:bg-brand-950", text: "text-brand-600 dark:text-brand-400" },
   approved: { icon: CheckCircle2, bg: "bg-emerald-50 dark:bg-emerald-950", text: "text-emerald-600 dark:text-emerald-400" },
   rejected: { icon: XCircle, bg: "bg-red-50 dark:bg-red-950", text: "text-red-600 dark:text-red-400" },
 };
@@ -139,8 +139,8 @@ function DocumentProgressSection({
         className="flex w-full items-center justify-between"
       >
         <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-rose-500/10 to-pink-500/10 dark:from-rose-500/20 dark:to-pink-500/20">
-            <FileText className="h-4.5 w-4.5 text-rose-600 dark:text-rose-400" />
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-brand-500/10 to-brand-500/10 dark:from-brand-500/20 dark:to-brand-500/20">
+            <FileText className="h-4.5 w-4.5 text-brand-600 dark:text-brand-400" />
           </div>
           <div className="text-left">
             <h3 className="font-semibold text-slate-900 dark:text-white">
@@ -171,7 +171,7 @@ function DocumentProgressSection({
           initial={{ width: 0 }}
           animate={{ width: `${progressPct}%` }}
           transition={{ delay: 0.5, duration: 0.8, ease: "easeOut" }}
-          className="h-full rounded-full bg-gradient-to-r from-rose-500 to-pink-400"
+          className="h-full rounded-full bg-gradient-to-r from-brand-500 to-brand-400"
         />
       </div>
 
@@ -211,7 +211,7 @@ function DocumentProgressSection({
                             {name}
                           </span>
                           {doc.is_required ? (
-                            <Badge variant="outline" className="text-[10px] border-rose-200 text-rose-600 dark:border-rose-800 dark:text-rose-400">
+                            <Badge variant="outline" className="text-[10px] border-brand-200 text-brand-600 dark:border-brand-800 dark:text-brand-400">
                               {tApply("required")}
                             </Badge>
                           ) : (
@@ -220,7 +220,7 @@ function DocumentProgressSection({
                             </Badge>
                           )}
                           {isCustom && (
-                            <Badge className="text-[10px] bg-pink-100 text-pink-700 dark:bg-pink-900/40 dark:text-pink-400">
+                            <Badge className="text-[10px] bg-brand-100 text-brand-700 dark:bg-brand-900/40 dark:text-brand-400">
                               <Sparkles className="h-2.5 w-2.5" />
                               {tApply("newRequirement")}
                             </Badge>
@@ -251,7 +251,7 @@ function DocumentProgressSection({
                             <Button
                               variant="ghost"
                               size="sm"
-                              className="h-7 gap-1 px-2 text-xs text-rose-600 hover:text-rose-700 dark:text-rose-400 dark:hover:text-rose-300"
+                              className="h-7 gap-1 px-2 text-xs text-brand-600 hover:text-brand-700 dark:text-brand-400 dark:hover:text-brand-300"
                             >
                               <Upload className="h-3 w-3" />
                               {isRejected ? tApply("reupload") : tApply("uploaded").replace(/^./, "")}
@@ -293,8 +293,8 @@ function GuidesSection({ guides }: { guides: PortalContentItem[] }) {
         className="flex w-full items-center justify-between"
       >
         <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-rose-500/10 to-pink-500/10 dark:from-rose-500/20 dark:to-pink-500/20">
-            <BookOpen className="h-4.5 w-4.5 text-rose-600 dark:text-rose-400" />
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-brand-500/10 to-brand-500/10 dark:from-brand-500/20 dark:to-brand-500/20">
+            <BookOpen className="h-4.5 w-4.5 text-brand-600 dark:text-brand-400" />
           </div>
           <h3 className="font-semibold text-slate-900 dark:text-white">
             {tApply("guidesSection")}
@@ -500,7 +500,7 @@ export function StatusClient({ application, documents, guides }: StatusClientPro
           <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
             <Button
               size="lg"
-              className="w-full rounded-xl bg-gradient-to-r from-rose-500 to-pink-400 px-8 shadow-lg shadow-rose-500/25 hover:shadow-xl hover:shadow-rose-500/30 sm:w-auto"
+              className="w-full rounded-xl bg-gradient-to-r from-brand-500 to-brand-400 px-8 shadow-lg shadow-brand-500/25 hover:shadow-xl hover:shadow-brand-500/30 sm:w-auto"
             >
               <Edit className="mr-2 h-4 w-4" />
               {t("editInfo")}

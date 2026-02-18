@@ -5,11 +5,11 @@ import { motion } from "framer-motion";
 export function AnimatedBackground() {
   return (
     <div className="fixed inset-0 -z-10 overflow-hidden">
-      <div className="absolute inset-0 bg-gradient-to-br from-slate-50 via-rose-50/30 to-amber-50/40 dark:from-slate-950 dark:via-rose-950/30 dark:to-amber-950/40" />
+      <div className="absolute inset-0 bg-gradient-to-br from-slate-50 via-brand-50/30 to-warm-50/40 dark:from-slate-950 dark:via-brand-950/30 dark:to-warm-950/40" />
 
       {/* Floating orbs */}
       <motion.div
-        className="absolute top-1/4 -left-20 h-72 w-72 rounded-full bg-rose-200/30 blur-3xl dark:bg-rose-800/20"
+        className="absolute top-1/4 -left-20 h-72 w-72 rounded-full bg-brand-200/30 blur-3xl dark:bg-brand-800/20"
         animate={{
           x: [0, 60, 0],
           y: [0, -40, 0],
@@ -21,7 +21,7 @@ export function AnimatedBackground() {
         }}
       />
       <motion.div
-        className="absolute top-2/3 right-0 h-96 w-96 rounded-full bg-amber-200/30 blur-3xl dark:bg-amber-800/20"
+        className="absolute top-2/3 right-0 h-96 w-96 rounded-full bg-warm-200/30 blur-3xl dark:bg-warm-800/20"
         animate={{
           x: [0, -50, 0],
           y: [0, 30, 0],

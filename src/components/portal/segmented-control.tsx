@@ -59,7 +59,7 @@ export function SegmentedControl({
             {isActive && (
               <motion.span
                 layoutId={layoutId}
-                className="absolute inset-0 rounded-lg bg-gradient-to-r from-rose-600 to-amber-500 shadow-md shadow-rose-600/20"
+                className="absolute inset-0 rounded-lg bg-gradient-to-r from-brand-600 to-warm-500 shadow-md shadow-brand-600/20"
                 transition={{ type: "spring", stiffness: 400, damping: 30 }}
               />
             )}

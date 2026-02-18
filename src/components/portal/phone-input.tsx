@@ -118,7 +118,7 @@ export function PhoneInput({
                 }}
                 className={cn(
                   "flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm transition-colors hover:bg-slate-100 dark:hover:bg-slate-800",
-                  isSelected && "bg-rose-50 dark:bg-rose-950/30"
+                  isSelected && "bg-brand-50 dark:bg-brand-950/30"
                 )}
               >
                 <FlagImage
