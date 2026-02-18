@@ -1604,23 +1604,6 @@
       "cityRequired": "Dogum sehri zorunludur",
       "countryLabel": "Dogum Ulkesi"
     },
-    "civilStatus": {
-      "label": "Medeni Durum",
-      "placeholder": "Medeni durumunuzu secin...",
-      "required": "Medeni durum zorunludur",
-      "otherLabel": "Lutfen belirtin",
-      "otherPlaceholder": "Medeni durumunuzu girin...",
-      "otherRequired": "Lutfen medeni durumunuzu belirtin",
-      "options": {
-        "divorced": "Bosanmis",
-        "married": "Evli",
-        "registered_partnership": "Kayitli Birliktelik",
-        "separated": "Ayri Yasiyor",
-        "single": "Bekar",
-        "widower": "Dul",
-        "other": "Diger"
-      }
-    },
     "addressInfo": {
       "addressLabel": "Adres",
       "addressPlaceholder": "Tam adresinizi girin...",

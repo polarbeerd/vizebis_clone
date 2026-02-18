@@ -1,29 +1,37 @@
 "use client";
 
-import { useLocale } from "next-intl";
-import { useRouter, usePathname } from "@/i18n/navigation";
-import { Button } from "@/components/ui/button";
-import { Globe } from "lucide-react";
+import { useAdminLocale } from "./admin-locale-provider";
+
+const LOCALES = [
+  { code: "tr", label: "TR" },
+  { code: "en", label: "EN" },
+] as const;
 
 export function LocaleSwitcher() {
-  const locale = useLocale();
-  const router = useRouter();
-  const pathname = usePathname();
-
-  function toggleLocale() {
-    const nextLocale = locale === "tr" ? "en" : "tr";
-    router.replace(pathname, { locale: nextLocale });
-  }
+  const { locale, setLocale } = useAdminLocale();
 
   return (
-    <Button
-      variant="ghost"
-      size="sm"
-      onClick={toggleLocale}
-      className="gap-1.5"
-    >
-      <Globe className="h-4 w-4" />
-      <span className="text-xs font-medium uppercase">{locale}</span>
-    </Button>
+    <div className="flex items-center gap-1">
+      {LOCALES.map((l, i) => {
+        const isActive = locale === l.code;
+        return (
+          <span key={l.code} className="flex items-center">
+            {i > 0 && (
+              <span className="mx-1.5 text-slate-300 dark:text-slate-600 text-sm select-none">/</span>
+            )}
+            <button
+              onClick={() => setLocale(l.code)}
+              className={`text-sm font-semibold transition-colors duration-150 ${
+                isActive
+                  ? "text-slate-900 dark:text-white"
+                  : "text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300"
+              }`}
+            >
+              {l.label}
+            </button>
+          </span>
+        );
+      })}
+    </div>
   );
 }

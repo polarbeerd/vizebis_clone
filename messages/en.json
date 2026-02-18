@@ -1604,23 +1604,6 @@
       "cityRequired": "Birth city is required",
       "countryLabel": "Birth Country"
     },
-    "civilStatus": {
-      "label": "Civil Status",
-      "placeholder": "Select your civil status...",
-      "required": "Civil status is required",
-      "otherLabel": "Please specify",
-      "otherPlaceholder": "Enter your civil status...",
-      "otherRequired": "Please specify your civil status",
-      "options": {
-        "divorced": "Divorced",
-        "married": "Married",
-        "registered_partnership": "Registered Partnership",
-        "separated": "Separated",
-        "single": "Single",
-        "widower": "Widower",
-        "other": "Other"
-      }
-    },
     "addressInfo": {
       "addressLabel": "Address",
       "addressPlaceholder": "Enter your full address...",
