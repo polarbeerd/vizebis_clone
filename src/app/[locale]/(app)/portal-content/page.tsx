@@ -1,16 +1,15 @@
 import { createClient } from "@/lib/supabase/server";
-import { PortalContentClient } from "./portal-content-client";
+import { CountryGuidesClient } from "./portal-content-client";
 
-export interface ContentRow {
+export interface GuideRow {
   id: number;
   title: string;
   content: string;
   content_type: string;
   country: string | null;
-  visa_type: string | null;
+  video_url: string | null;
   sort_order: number;
   is_published: boolean;
-  created_at: string | null;
 }
 
 export interface CountryOption {
@@ -19,31 +18,24 @@ export interface CountryOption {
   flag_emoji: string | null;
 }
 
-export default async function PortalContentPage() {
+export default async function CountryGuidesPage() {
   const supabase = await createClient();
 
   const [contentRes, countriesRes] = await Promise.all([
-    supabase.from("portal_content").select("*").order("sort_order", { ascending: true }),
-    supabase.from("countries").select("id, name, flag_emoji").eq("is_active", true).order("sort_order"),
+    supabase
+      .from("portal_content")
+      .select("id, title, content, content_type, country, video_url, sort_order, is_published")
+      .in("content_type", ["video", "key_point"])
+      .order("sort_order", { ascending: true }),
+    supabase
+      .from("countries")
+      .select("id, name, flag_emoji")
+      .eq("is_active", true)
+      .order("sort_order"),
   ]);
 
-  const content: ContentRow[] = (contentRes.data ?? []).map((c: Record<string, unknown>) => ({
-    id: c.id as number,
-    title: c.title as string,
-    content: c.content as string,
-    content_type: c.content_type as string,
-    country: c.country as string | null,
-    visa_type: c.visa_type as string | null,
-    sort_order: c.sort_order as number,
-    is_published: c.is_published as boolean,
-    created_at: c.created_at as string | null,
-  }));
+  const content: GuideRow[] = (contentRes.data ?? []) as GuideRow[];
+  const countries: CountryOption[] = (countriesRes.data ?? []) as CountryOption[];
 
-  const countries: CountryOption[] = (countriesRes.data ?? []).map((c: Record<string, unknown>) => ({
-    id: c.id as number,
-    name: c.name as string,
-    flag_emoji: c.flag_emoji as string | null,
-  }));
-
-  return <PortalContentClient data={content} countries={countries} />;
+  return <CountryGuidesClient data={content} countries={countries} />;
 }
