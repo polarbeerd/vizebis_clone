@@ -238,12 +238,17 @@ export interface FormField {
   id: number;
   field_key: string;
   field_label: string;
+  field_label_tr: string;
   field_type: string;
   placeholder: string;
+  placeholder_tr: string;
   options: string;
+  options_tr: string;
   is_required: boolean;
   is_standard: boolean;
+  max_chars: number | null;
   sort_order: number;
+  section: string;
 }
 
 export interface PortalContentItem {
@@ -251,11 +256,30 @@ export interface PortalContentItem {
   title: string;
   content: string;
   content_type: string;
+  video_url: string | null;
+}
+
+export interface SmartFieldTemplate {
+  template_key: string;
+  label: string;
+  description: string;
+}
+
+export interface SmartFieldAssignment {
+  template_key: string;
+  is_required: boolean;
+  sort_order: number;
+  section: string;
+  label: string;
+  label_tr: string;
+  description: string;
+  description_tr: string;
 }
 
 export interface CountryOption {
   id: number;
   name: string;
+  name_en: string | null;
   flag_emoji: string | null;
 }
 
@@ -267,7 +291,7 @@ export async function getActiveCountries(): Promise<CountryOption[]> {
   const supabase = createServiceClient();
   const { data, error } = await supabase
     .from("countries")
-    .select("id, name, flag_emoji")
+    .select("id, name, name_en, flag_emoji")
     .eq("is_active", true)
     .order("sort_order", { ascending: true });
 
@@ -277,6 +301,28 @@ export async function getActiveCountries(): Promise<CountryOption[]> {
   }
 
   return (data ?? []) as CountryOption[];
+}
+
+export interface VisaTypeOption {
+  value: string;
+  label_en: string;
+  label_tr: string;
+}
+
+export async function getActiveVisaTypes(): Promise<VisaTypeOption[]> {
+  const supabase = createServiceClient();
+  const { data, error } = await supabase
+    .from("visa_types")
+    .select("value, label_en, label_tr")
+    .eq("is_active", true)
+    .order("sort_order", { ascending: true });
+
+  if (error) {
+    console.error("Error fetching visa types:", error);
+    return [];
+  }
+
+  return (data ?? []) as VisaTypeOption[];
 }
 
 export async function getChecklist(
@@ -300,16 +346,16 @@ export async function getChecklist(
 }
 
 export async function getPortalContent(
-  country: string,
-  visaType: string | null
+  country: string
 ): Promise<PortalContentItem[]> {
   const supabase = createServiceClient();
 
-  // Fetch content that matches this country/visa combo OR is global
+  // Fetch content that matches this country OR is global
   const { data, error } = await supabase
     .from("portal_content")
-    .select("id, title, content, content_type")
+    .select("id, title, content, content_type, video_url")
     .eq("is_published", true)
+    .in("content_type", ["video", "key_point"])
     .or(`country.is.null,country.eq.${country}`)
     .order("sort_order", { ascending: true });
 
@@ -318,13 +364,7 @@ export async function getPortalContent(
     return [];
   }
 
-  // Filter by visa_type client-side (Supabase OR chains get complex)
-  const filtered = (data ?? []).filter((item: Record<string, unknown>) => {
-    const itemVisaType = item.visa_type as string | null;
-    return itemVisaType === null || itemVisaType === visaType;
-  });
-
-  return filtered as PortalContentItem[];
+  return (data ?? []) as PortalContentItem[];
 }
 
 export async function getFormFields(
@@ -337,7 +377,7 @@ export async function getFormFields(
   const { data, error } = await supabase
     .from("portal_field_assignments")
     .select(
-      "id, is_required, sort_order, definition:portal_field_definitions(id, field_key, field_label, field_type, placeholder, options, is_standard)"
+      "id, is_required, sort_order, section, definition:portal_field_definitions(id, field_key, field_label, field_label_tr, field_type, placeholder, placeholder_tr, options, options_tr, max_chars)"
     )
     .eq("country", country)
     .eq("visa_type", visaType)
@@ -354,12 +394,52 @@ export async function getFormFields(
       id: def?.id as number ?? 0,
       field_key: def?.field_key as string ?? "",
       field_label: def?.field_label as string ?? "",
+      field_label_tr: (def?.field_label_tr as string) ?? "",
       field_type: def?.field_type as string ?? "text",
       placeholder: (def?.placeholder as string) ?? "",
+      placeholder_tr: (def?.placeholder_tr as string) ?? "",
       options: (def?.options as string) ?? "",
+      options_tr: (def?.options_tr as string) ?? "",
       is_required: row.is_required as boolean,
-      is_standard: def?.is_standard as boolean ?? false,
+      is_standard: false,
+      max_chars: (def?.max_chars as number) ?? null,
       sort_order: row.sort_order as number,
+      section: (row.section as string) ?? "other",
+    };
+  });
+}
+
+export async function getSmartFieldAssignments(
+  country: string,
+  visaType: string
+): Promise<SmartFieldAssignment[]> {
+  const supabase = createServiceClient();
+
+  const { data, error } = await supabase
+    .from("portal_smart_field_assignments")
+    .select(
+      "template_key, is_required, sort_order, section, template:portal_smart_field_templates(label, label_tr, description, description_tr)"
+    )
+    .eq("country", country)
+    .eq("visa_type", visaType)
+    .order("sort_order", { ascending: true });
+
+  if (error) {
+    console.error("Error fetching smart field assignments:", error);
+    return [];
+  }
+
+  return (data ?? []).map((row: Record<string, unknown>) => {
+    const tmpl = row.template as Record<string, unknown> | null;
+    return {
+      template_key: row.template_key as string,
+      is_required: row.is_required as boolean,
+      sort_order: row.sort_order as number,
+      section: (row.section as string) ?? "other",
+      label: (tmpl?.label as string) ?? "",
+      label_tr: (tmpl?.label_tr as string) ?? "",
+      description: (tmpl?.description as string) ?? "",
+      description_tr: (tmpl?.description_tr as string) ?? "",
     };
   });
 }
@@ -367,6 +447,7 @@ export async function getFormFields(
 export async function createPortalApplication(data: {
   standardFields: Record<string, string>;
   customFields: Record<string, string>;
+  smartFieldData?: Record<string, unknown>;
   country: string;
   visa_type: string;
 }): Promise<{
@@ -376,30 +457,39 @@ export async function createPortalApplication(data: {
 }> {
   const supabase = createServiceClient();
 
-  // Build the insert object from standard fields
-  const ALLOWED_STANDARD_KEYS = [
-    "full_name",
-    "id_number",
-    "date_of_birth",
-    "phone",
-    "email",
-    "passport_no",
-    "passport_expiry",
-  ];
+  // Extract standard column values from custom fields
+  // Portal form fields use keys like "name", "surname", "phone" etc.
+  // Map them to the actual applications table columns
+  const cf = data.customFields;
+  const allFields = { ...data.standardFields, ...cf };
 
-  const standardInsert: Record<string, unknown> = {};
-  for (const key of ALLOWED_STANDARD_KEYS) {
-    if (data.standardFields[key] !== undefined) {
-      standardInsert[key] = data.standardFields[key] || null;
-    }
-  }
+  const fullName = [allFields.name, allFields.surname]
+    .filter(Boolean)
+    .join(" ") || allFields.full_name || null;
+
+  const standardInsert: Record<string, unknown> = {
+    ...(fullName ? { full_name: fullName } : {}),
+    ...(allFields.phone ? { phone: allFields.phone } : {}),
+    ...(allFields.email ? { email: allFields.email } : {}),
+    ...(allFields.id_number ? { id_number: allFields.id_number } : {}),
+    ...(allFields.date_of_birth ? { date_of_birth: allFields.date_of_birth } : {}),
+    ...(allFields.passport_no ? { passport_no: allFields.passport_no } : {}),
+    ...((allFields.passport_expiry || allFields.date_expiry)
+      ? { passport_expiry: allFields.passport_expiry || allFields.date_expiry }
+      : {}),
+  };
 
   // Insert the application
   const { data: app, error } = await supabase
     .from("applications")
     .insert({
       ...standardInsert,
-      custom_fields: Object.keys(data.customFields).length > 0 ? data.customFields : {},
+      custom_fields: {
+        ...(Object.keys(data.customFields).length > 0 ? data.customFields : {}),
+        ...(data.smartFieldData && Object.keys(data.smartFieldData).length > 0
+          ? { _smart: data.smartFieldData }
+          : {}),
+      },
       country: data.country,
       visa_type: data.visa_type,
       visa_status: "beklemede",
