@@ -465,7 +465,7 @@ export function ApplyClient({ countries, visaTypes }: ApplyClientProps) {
             value={form.watch(field.field_key) || ""}
             onValueChange={(val) => form.setValue(field.field_key, val, { shouldValidate: formSubmitted })}
           >
-            <SelectTrigger className="h-11 rounded-xl border-slate-200/80 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 dark:border-slate-700/80">
+            <SelectTrigger className="h-11 rounded-xl border-slate-200/80 focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 dark:border-slate-700/80">
               <SelectValue placeholder={placeholder || label} />
             </SelectTrigger>
             <SelectContent>
@@ -501,7 +501,7 @@ export function ApplyClient({ countries, visaTypes }: ApplyClientProps) {
           )}
           <Textarea
             {...form.register(field.field_key)}
-            className="min-h-[100px] rounded-xl border-slate-200/80 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 dark:border-slate-700/80"
+            className="min-h-[100px] rounded-xl border-slate-200/80 focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 dark:border-slate-700/80"
             placeholder={placeholder || ""}
             maxLength={charLimit}
           />
@@ -561,7 +561,7 @@ export function ApplyClient({ countries, visaTypes }: ApplyClientProps) {
         <Input
           type={inputType}
           {...form.register(field.field_key)}
-          className="h-11 rounded-xl border-slate-200/80 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 dark:border-slate-700/80"
+          className="h-11 rounded-xl border-slate-200/80 focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 dark:border-slate-700/80"
           placeholder={placeholder || ""}
           maxLength={field.max_chars ?? undefined}
         />
@@ -683,7 +683,7 @@ export function ApplyClient({ countries, visaTypes }: ApplyClientProps) {
       <Button
         type="submit"
         disabled={submitting || (formSubmitted && Object.keys(form.formState.errors).length > 0)}
-        className="h-10 rounded-xl bg-gradient-to-r from-blue-600 to-teal-500 px-6 text-sm font-medium shadow-lg shadow-blue-600/20 transition-all hover:shadow-xl disabled:opacity-50 sm:h-11 sm:px-8"
+        className="h-10 rounded-xl bg-gradient-to-r from-rose-600 to-amber-500 px-6 text-sm font-medium shadow-lg shadow-rose-600/20 transition-all hover:shadow-xl disabled:opacity-50 sm:h-11 sm:px-8"
       >
         {submitting ? (
           <>
@@ -707,7 +707,7 @@ export function ApplyClient({ countries, visaTypes }: ApplyClientProps) {
     <div className="w-full px-1 py-4 sm:px-0 sm:py-6">
       {/* ── Stepper ── */}
       <div className="mb-8 sm:mb-10">
-        <div className="flex items-center justify-between">
+        <div className="mx-auto flex max-w-xs items-center justify-between sm:max-w-none">
           {activeSteps.map((s, i) => {
             const stepId = s.id;
             const isActive =
@@ -732,7 +732,7 @@ export function ApplyClient({ countries, visaTypes }: ApplyClientProps) {
                       isComplete
                         ? "border-emerald-500 bg-emerald-500 text-white"
                         : isActive
-                          ? "border-blue-600 bg-gradient-to-r from-blue-600 to-teal-500 text-white shadow-lg shadow-blue-600/25"
+                          ? "border-rose-600 bg-gradient-to-r from-rose-600 to-amber-500 text-white shadow-lg shadow-rose-600/25"
                           : "border-slate-300 bg-white text-slate-400 dark:border-slate-600 dark:bg-slate-800"
                     }`}
                   >
@@ -751,7 +751,7 @@ export function ApplyClient({ countries, visaTypes }: ApplyClientProps) {
                   <span
                     className={`mt-2 hidden text-xs font-semibold sm:block transition-colors duration-300 ${
                       isActive
-                        ? "text-blue-700 dark:text-blue-400"
+                        ? "text-rose-700 dark:text-rose-400"
                         : isComplete
                           ? "text-emerald-600 dark:text-emerald-400"
                           : "text-slate-400 dark:text-slate-500"
@@ -776,7 +776,7 @@ export function ApplyClient({ countries, visaTypes }: ApplyClientProps) {
           })}
         </div>
         {/* Mobile: show current step name */}
-        <p className="mt-3 text-center text-xs font-medium text-blue-600 sm:hidden dark:text-blue-400">
+        <p className="mt-3 text-center text-xs font-medium text-rose-600 sm:hidden dark:text-rose-400">
           {t(activeStepLabel.key)}
         </p>
       </div>
@@ -813,8 +813,8 @@ export function ApplyClient({ countries, visaTypes }: ApplyClientProps) {
                   onClick={() => handleCountrySelect(country.name)}
                   className={`group relative flex flex-col items-center justify-center rounded-2xl border p-4 shadow-sm transition-all duration-200 ${
                     selectedCountry === country.name
-                      ? "border-blue-500 bg-gradient-to-br from-blue-50 to-teal-50 shadow-lg shadow-blue-500/10 dark:from-blue-950/30 dark:to-teal-950/30"
-                      : "border-slate-200/60 bg-white/70 backdrop-blur-md hover:border-blue-400 dark:border-slate-700/60 dark:bg-slate-900/70 dark:hover:border-blue-600"
+                      ? "border-rose-500 bg-gradient-to-br from-rose-50 to-amber-50 shadow-lg shadow-rose-500/10 dark:from-rose-950/30 dark:to-amber-950/30"
+                      : "border-slate-200/60 bg-white/70 backdrop-blur-md hover:border-rose-400 dark:border-slate-700/60 dark:bg-slate-900/70 dark:hover:border-rose-600"
                   }`}
                 >
                   <span className="mb-2 text-3xl">
@@ -823,7 +823,7 @@ export function ApplyClient({ countries, visaTypes }: ApplyClientProps) {
                   <span
                     className={`text-sm font-medium transition-colors ${
                       selectedCountry === country.name
-                        ? "text-blue-700 dark:text-blue-300"
+                        ? "text-rose-700 dark:text-rose-300"
                         : "text-slate-700 dark:text-slate-300"
                     }`}
                   >
@@ -832,7 +832,7 @@ export function ApplyClient({ countries, visaTypes }: ApplyClientProps) {
                   {selectedCountry === country.name && (
                     <motion.div
                       layoutId="country-check"
-                      className="absolute -right-1.5 -top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-gradient-to-r from-blue-600 to-teal-500 text-white shadow-md"
+                      className="absolute -right-1.5 -top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-gradient-to-r from-rose-600 to-amber-500 text-white shadow-md"
                     >
                       <Check className="h-3.5 w-3.5" />
                     </motion.div>
@@ -847,7 +847,7 @@ export function ApplyClient({ countries, visaTypes }: ApplyClientProps) {
                 <Button
                   onClick={goNextFromStep1}
                   disabled={!canProceedStep1 || loadingGuides}
-                  className="h-11 w-full rounded-xl bg-gradient-to-r from-blue-600 to-teal-500 px-8 text-sm font-medium shadow-lg shadow-blue-600/20 transition-all hover:shadow-xl hover:shadow-blue-600/25 disabled:cursor-not-allowed disabled:opacity-50 sm:h-12 sm:w-auto sm:text-base"
+                  className="h-11 w-full rounded-xl bg-gradient-to-r from-rose-600 to-amber-500 px-8 text-sm font-medium shadow-lg shadow-rose-600/20 transition-all hover:shadow-xl hover:shadow-rose-600/25 disabled:cursor-not-allowed disabled:opacity-50 sm:h-12 sm:w-auto sm:text-base"
                 >
                   {loadingGuides ? (
                     <>
@@ -937,7 +937,7 @@ export function ApplyClient({ countries, visaTypes }: ApplyClientProps) {
                           transition={{ delay: i * 0.08, duration: 0.3 }}
                           className="flex items-start gap-4 rounded-2xl border border-slate-200/60 bg-white/70 p-5 shadow-sm backdrop-blur-md dark:border-slate-700/60 dark:bg-slate-900/70"
                         >
-                          <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-violet-600 text-sm font-bold text-white shadow-lg shadow-blue-500/25">
+                          <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-rose-500 to-pink-400 text-sm font-bold text-white shadow-lg shadow-rose-500/25">
                             {i + 1}
                           </div>
                           <div className="min-w-0 flex-1">
@@ -994,7 +994,7 @@ export function ApplyClient({ countries, visaTypes }: ApplyClientProps) {
                 <Button
                   onClick={goNext}
                   disabled={!guideAcknowledged}
-                  className="h-10 rounded-xl bg-gradient-to-r from-blue-600 to-teal-500 px-6 text-sm font-medium shadow-lg shadow-blue-600/20 transition-all hover:shadow-xl disabled:opacity-50 sm:h-11 sm:px-8"
+                  className="h-10 rounded-xl bg-gradient-to-r from-rose-600 to-amber-500 px-6 text-sm font-medium shadow-lg shadow-rose-600/20 transition-all hover:shadow-xl disabled:opacity-50 sm:h-11 sm:px-8"
                 >
                   {tCommon("next")}
                   <ArrowRight className="ml-2 h-4 w-4" />
@@ -1023,9 +1023,9 @@ export function ApplyClient({ countries, visaTypes }: ApplyClientProps) {
             </div>
 
             {/* Trust signal — prominent */}
-            <div className="mb-5 flex items-center justify-center gap-2 rounded-xl border border-blue-100 bg-blue-50/60 px-4 py-2.5 dark:border-blue-900/40 dark:bg-blue-950/20">
-              <ShieldCheck className="h-4 w-4 text-blue-500" />
-              <span className="text-sm font-medium text-blue-600 dark:text-blue-400">
+            <div className="mb-5 flex items-center justify-center gap-2 rounded-xl border border-rose-100 bg-rose-50/60 px-4 py-2.5 dark:border-rose-900/40 dark:bg-rose-950/20">
+              <ShieldCheck className="h-4 w-4 text-rose-500" />
+              <span className="text-sm font-medium text-rose-600 dark:text-rose-400">
                 {t("trustSignal")}
               </span>
             </div>
@@ -1095,7 +1095,7 @@ export function ApplyClient({ countries, visaTypes }: ApplyClientProps) {
                     value={selectedVisaType}
                     onValueChange={handleVisaTypeChange}
                   >
-                    <SelectTrigger className="h-11 rounded-xl border-slate-200/80 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 dark:border-slate-700/80">
+                    <SelectTrigger className="h-11 rounded-xl border-slate-200/80 focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 dark:border-slate-700/80">
                       <SelectValue placeholder={t("selectVisaTypeTitle")} />
                     </SelectTrigger>
                     <SelectContent>
@@ -1114,7 +1114,7 @@ export function ApplyClient({ countries, visaTypes }: ApplyClientProps) {
                 <motion.div
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
-                  className="flex items-center justify-center gap-2 py-8 text-blue-600"
+                  className="flex items-center justify-center gap-2 py-8 text-rose-600"
                 >
                   <Loader2 className="h-5 w-5 animate-spin" />
                   <span className="text-sm">{tCommon("loading")}</span>
@@ -1260,7 +1260,7 @@ export function ApplyClient({ countries, visaTypes }: ApplyClientProps) {
             >
               <p className="text-xs text-slate-400 dark:text-slate-500">{t("referenceNumber")}</p>
               <p className="mt-1 font-mono text-lg font-bold text-slate-900 dark:text-white">{trackingCode}</p>
-              <p className="mt-1 text-xs text-blue-500">{t("copyCode")}</p>
+              <p className="mt-1 text-xs text-rose-500">{t("copyCode")}</p>
             </motion.div>
 
             <motion.div

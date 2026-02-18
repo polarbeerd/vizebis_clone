@@ -70,7 +70,7 @@ export function DocumentUploadCard({
   // Status badge colors
   const statusConfig: Record<string, { color: string; label: string }> = {
     pending: { color: "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400", label: "" },
-    uploaded: { color: "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300", label: t("uploaded") },
+    uploaded: { color: "bg-rose-100 text-rose-700 dark:bg-rose-900 dark:text-rose-300", label: t("uploaded") },
     approved: { color: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300", label: "✓" },
     rejected: { color: "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300", label: t("adminRejected") },
   };
@@ -226,10 +226,10 @@ export function DocumentUploadCard({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="flex items-center justify-center gap-2 rounded-xl border-2 border-dashed border-blue-300 bg-blue-50/50 p-8 dark:border-blue-700 dark:bg-blue-950/20"
+            className="flex items-center justify-center gap-2 rounded-xl border-2 border-dashed border-rose-300 bg-rose-50/50 p-8 dark:border-rose-700 dark:bg-rose-950/20"
           >
-            <Loader2 className="h-5 w-5 animate-spin text-blue-500" />
-            <span className="text-sm text-blue-600 dark:text-blue-400">
+            <Loader2 className="h-5 w-5 animate-spin text-rose-500" />
+            <span className="text-sm text-rose-600 dark:text-rose-400">
               {t("compressing")}
             </span>
           </motion.div>
@@ -242,10 +242,10 @@ export function DocumentUploadCard({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-blue-400 bg-blue-50/50 p-8 dark:border-blue-600 dark:bg-blue-950/20"
+            className="flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-rose-400 bg-rose-50/50 p-8 dark:border-rose-600 dark:bg-rose-950/20"
           >
-            <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
-            <span className="text-sm font-medium text-blue-600 dark:text-blue-400">
+            <Loader2 className="h-8 w-8 animate-spin text-rose-500" />
+            <span className="text-sm font-medium text-rose-600 dark:text-rose-400">
               {t("uploading")}
             </span>
           </motion.div>
@@ -344,10 +344,10 @@ export function DocumentUploadCard({
               onClick={() => inputRef.current?.click()}
               className={`flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed p-6 transition-all ${
                 dragOver
-                  ? "border-blue-400 bg-blue-50/50 dark:border-blue-500 dark:bg-blue-950/20"
+                  ? "border-rose-400 bg-rose-50/50 dark:border-rose-500 dark:bg-rose-950/20"
                   : status === "rejected"
                     ? "border-red-300 hover:border-red-400 hover:bg-red-50/30 dark:border-red-700"
-                    : "border-slate-300 hover:border-blue-300 hover:bg-blue-50/30 dark:border-slate-600 dark:hover:border-blue-600"
+                    : "border-slate-300 hover:border-rose-300 hover:bg-rose-50/30 dark:border-slate-600 dark:hover:border-rose-600"
               }`}
             >
               <motion.div

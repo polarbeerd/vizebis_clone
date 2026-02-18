@@ -115,7 +115,7 @@ export function UploadClient({ application, documents: initialDocuments }: Uploa
                 className={`font-semibold ${
                   progressPercent === 100
                     ? "text-emerald-600 dark:text-emerald-400"
-                    : "text-blue-600 dark:text-blue-400"
+                    : "text-rose-600 dark:text-rose-400"
                 }`}
               >
                 {progressPercent}%
@@ -129,7 +129,7 @@ export function UploadClient({ application, documents: initialDocuments }: Uploa
                 className={`h-full rounded-full ${
                   progressPercent === 100
                     ? "bg-gradient-to-r from-emerald-400 to-emerald-500"
-                    : "bg-gradient-to-r from-blue-500 to-violet-600"
+                    : "bg-gradient-to-r from-rose-500 to-pink-400"
                 }`}
               />
             </div>

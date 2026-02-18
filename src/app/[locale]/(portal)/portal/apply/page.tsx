@@ -1,7 +1,10 @@
-import { getActiveCountries } from "../actions";
+import { getActiveCountries, getActiveVisaTypes } from "../actions";
 import { ApplyClient } from "./apply-client";
 
 export default async function ApplyPage() {
-  const countries = await getActiveCountries();
-  return <ApplyClient countries={countries} />;
+  const [countries, visaTypes] = await Promise.all([
+    getActiveCountries(),
+    getActiveVisaTypes(),
+  ]);
+  return <ApplyClient countries={countries} visaTypes={visaTypes} />;
 }

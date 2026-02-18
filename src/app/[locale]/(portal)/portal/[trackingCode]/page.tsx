@@ -17,7 +17,7 @@ export default async function StatusPage({ params }: Props) {
 
   // Fetch additional V2 data
   const { documents } = await getApplicationDocuments(trackingCode);
-  const guides = data.country ? await getPortalContent(data.country, data.visa_type) : [];
+  const guides = data.country ? await getPortalContent(data.country) : [];
 
   return <StatusClient application={data} documents={documents} guides={guides} />;
 }

@@ -139,7 +139,7 @@ export function EditClient({ application }: EditClientProps) {
                   id={field.name}
                   type={field.type}
                   {...register(field.name)}
-                  className="h-11 rounded-xl border-slate-200/80 bg-white/80 transition-shadow focus:shadow-md focus:shadow-blue-100/50 dark:border-slate-700/80 dark:bg-slate-800/80 dark:focus:shadow-blue-900/20"
+                  className="h-11 rounded-xl border-slate-200/80 bg-white/80 transition-shadow focus:shadow-md focus:shadow-rose-100/50 dark:border-slate-700/80 dark:bg-slate-800/80 dark:focus:shadow-rose-900/20"
                 />
                 {errors[field.name] && (
                   <p className="mt-1 text-xs text-red-500">
@@ -160,7 +160,7 @@ export function EditClient({ application }: EditClientProps) {
               <Button
                 type="submit"
                 disabled={saving}
-                className="h-12 w-full rounded-xl bg-gradient-to-r from-blue-500 to-violet-600 text-base font-medium shadow-lg shadow-blue-500/25 transition-all hover:shadow-xl hover:shadow-blue-500/30"
+                className="h-12 w-full rounded-xl bg-gradient-to-r from-rose-500 to-pink-400 text-base font-medium shadow-lg shadow-rose-500/25 transition-all hover:shadow-xl hover:shadow-rose-500/30"
               >
                 {saving ? (
                   t("saving")
