@@ -160,7 +160,7 @@ export function EditClient({ application }: EditClientProps) {
               <Button
                 type="submit"
                 disabled={saving}
-                className="h-12 w-full rounded-xl bg-gradient-to-r from-brand-500 to-brand-400 text-base font-medium shadow-lg shadow-brand-500/25 transition-all hover:shadow-xl hover:shadow-brand-500/30"
+                className="h-12 w-full rounded-xl bg-brand-300 text-slate-700 text-base font-semibold shadow-md shadow-brand-400/25 transition-all hover:bg-brand-400 hover:text-slate-800"
               >
                 {saving ? (
                   t("saving")

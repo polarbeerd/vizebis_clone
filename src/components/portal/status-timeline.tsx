@@ -43,7 +43,7 @@ export function StatusTimeline({ status }: StatusTimelineProps) {
 
           {/* Animated progress line */}
           <motion.div
-            className="absolute top-5 left-5 h-1 rounded-full bg-gradient-to-r from-brand-500 to-brand-400"
+            className="absolute top-5 left-5 h-1 rounded-full bg-brand-400"
             initial={{ width: "0%" }}
             animate={{
               width: `${currentIndex >= 0 ? (currentIndex / (STEPS.length - 1)) * 100 : 0}%`,
@@ -66,7 +66,7 @@ export function StatusTimeline({ status }: StatusTimelineProps) {
                 >
                   {isCompleted ? (
                     <motion.div
-                      className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-brand-500 to-brand-400 text-white shadow-lg"
+                      className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-400 text-white shadow-lg"
                       initial={{ scale: 0.8 }}
                       animate={{ scale: 1 }}
                     >
@@ -79,7 +79,7 @@ export function StatusTimeline({ status }: StatusTimelineProps) {
                         animate={{ scale: [1, 1.5, 1], opacity: [0.5, 0, 0.5] }}
                         transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
                       />
-                      <div className="relative flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-brand-500 to-brand-400 text-white shadow-lg shadow-brand-500/30">
+                      <div className="relative flex h-10 w-10 items-center justify-center rounded-full bg-brand-300 text-white shadow-lg shadow-brand-500/30">
                         <motion.div
                           className="h-3 w-3 rounded-full bg-white"
                           animate={{ scale: [1, 0.7, 1] }}
@@ -128,7 +128,7 @@ export function StatusTimeline({ status }: StatusTimelineProps) {
                   transition={{ delay: 0.2 + index * 0.1, type: "spring" }}
                 >
                   {isCompleted ? (
-                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-brand-500 to-brand-400 text-white">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-400 text-white">
                       <Check className="h-4 w-4" strokeWidth={3} />
                     </div>
                   ) : isCurrent ? (
@@ -138,7 +138,7 @@ export function StatusTimeline({ status }: StatusTimelineProps) {
                         animate={{ scale: [1, 1.4, 1], opacity: [0.5, 0, 0.5] }}
                         transition={{ duration: 2, repeat: Infinity }}
                       />
-                      <div className="relative flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-brand-500 to-brand-400 text-white">
+                      <div className="relative flex h-8 w-8 items-center justify-center rounded-full bg-brand-300 text-white">
                         <motion.div
                           className="h-2.5 w-2.5 rounded-full bg-white"
                           animate={{ scale: [1, 0.7, 1] }}
@@ -154,7 +154,7 @@ export function StatusTimeline({ status }: StatusTimelineProps) {
                 </motion.div>
                 {!isLast && (
                   <div className={`w-0.5 h-8 ${
-                    isCompleted ? "bg-gradient-to-b from-brand-500 to-brand-400" : "bg-slate-200 dark:bg-slate-700"
+                    isCompleted ? "bg-brand-400" : "bg-slate-200 dark:bg-slate-700"
                   }`} />
                 )}
               </div>
@@ -188,7 +188,7 @@ function RejectedTimeline({ t }: { t: ReturnType<typeof useTranslations<"portal"
         <div className="relative flex items-center justify-between">
           <div className="absolute top-5 left-5 right-5 h-1 rounded-full bg-slate-200 dark:bg-slate-700" />
           <motion.div
-            className="absolute top-5 left-5 h-1 rounded-full bg-gradient-to-r from-brand-500 to-red-500"
+            className="absolute top-5 left-5 h-1 rounded-full bg-brand-400"
             initial={{ width: "0%" }}
             animate={{ width: "75%" }}
             transition={{ duration: 1.2, ease: "easeOut", delay: 0.3 }}
@@ -201,7 +201,7 @@ function RejectedTimeline({ t }: { t: ReturnType<typeof useTranslations<"portal"
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
                 transition={{ delay: 0.2 + index * 0.15, type: "spring" }}
-                className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-brand-500 to-brand-400 text-white shadow-lg"
+                className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-400 text-white shadow-lg"
               >
                 <Check className="h-5 w-5" strokeWidth={3} />
               </motion.div>
@@ -252,11 +252,11 @@ function RejectedTimeline({ t }: { t: ReturnType<typeof useTranslations<"portal"
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
                 transition={{ delay: 0.2 + index * 0.1, type: "spring" }}
-                className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-brand-500 to-brand-400 text-white"
+                className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-400 text-white"
               >
                 <Check className="h-4 w-4" strokeWidth={3} />
               </motion.div>
-              <div className="w-0.5 h-8 bg-gradient-to-b from-brand-500 to-brand-400" />
+              <div className="w-0.5 h-8 bg-brand-400" />
             </div>
             <motion.span
               initial={{ opacity: 0, x: -10 }}

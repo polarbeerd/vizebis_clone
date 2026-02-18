@@ -465,7 +465,7 @@ export function ApplyClient({ countries, visaTypes }: ApplyClientProps) {
             value={form.watch(field.field_key) || ""}
             onValueChange={(val) => form.setValue(field.field_key, val, { shouldValidate: formSubmitted })}
           >
-            <SelectTrigger className="h-11 rounded-xl border-slate-200/80 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 dark:border-slate-700/80">
+            <SelectTrigger className="h-11 rounded-xl border-slate-200/80 focus:ring-2 focus:ring-brand-300/30 focus:border-brand-300 dark:border-slate-700/80">
               <SelectValue placeholder={placeholder || label} />
             </SelectTrigger>
             <SelectContent>
@@ -501,7 +501,7 @@ export function ApplyClient({ countries, visaTypes }: ApplyClientProps) {
           )}
           <Textarea
             {...form.register(field.field_key)}
-            className="min-h-[100px] rounded-xl border-slate-200/80 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 dark:border-slate-700/80"
+            className="min-h-[100px] rounded-xl border-slate-200/80 focus:ring-2 focus:ring-brand-300/30 focus:border-brand-300 dark:border-slate-700/80"
             placeholder={placeholder || ""}
             maxLength={charLimit}
           />
@@ -561,7 +561,7 @@ export function ApplyClient({ countries, visaTypes }: ApplyClientProps) {
         <Input
           type={inputType}
           {...form.register(field.field_key)}
-          className="h-11 rounded-xl border-slate-200/80 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 dark:border-slate-700/80"
+          className="h-11 rounded-xl border-slate-200/80 focus:ring-2 focus:ring-brand-300/30 focus:border-brand-300 dark:border-slate-700/80"
           placeholder={placeholder || ""}
           maxLength={field.max_chars ?? undefined}
         />
@@ -683,7 +683,7 @@ export function ApplyClient({ countries, visaTypes }: ApplyClientProps) {
       <Button
         type="submit"
         disabled={submitting || (formSubmitted && Object.keys(form.formState.errors).length > 0)}
-        className="h-10 rounded-xl bg-gradient-to-r from-brand-600 to-warm-500 px-6 text-sm font-medium shadow-lg shadow-brand-600/20 transition-all hover:shadow-xl disabled:opacity-50 sm:h-11 sm:px-8"
+        className="h-10 rounded-xl bg-brand-300 text-slate-700 px-6 text-sm font-semibold shadow-md shadow-brand-400/25 transition-all hover:bg-brand-400 hover:text-slate-800 disabled:opacity-50 sm:h-11 sm:px-8"
       >
         {submitting ? (
           <>
@@ -732,7 +732,7 @@ export function ApplyClient({ countries, visaTypes }: ApplyClientProps) {
                       isComplete
                         ? "border-emerald-500 bg-emerald-500 text-white"
                         : isActive
-                          ? "border-brand-600 bg-gradient-to-r from-brand-600 to-warm-500 text-white shadow-lg shadow-brand-600/25"
+                          ? "border-brand-400 bg-brand-300 text-slate-700 shadow-md shadow-brand-400/25"
                           : "border-slate-300 bg-white text-slate-400 dark:border-slate-600 dark:bg-slate-800"
                     }`}
                   >
@@ -751,7 +751,7 @@ export function ApplyClient({ countries, visaTypes }: ApplyClientProps) {
                   <span
                     className={`mt-2 hidden text-xs font-semibold sm:block transition-colors duration-300 ${
                       isActive
-                        ? "text-brand-700 dark:text-brand-400"
+                        ? "text-brand-600 dark:text-brand-400"
                         : isComplete
                           ? "text-emerald-600 dark:text-emerald-400"
                           : "text-slate-400 dark:text-slate-500"
@@ -813,8 +813,8 @@ export function ApplyClient({ countries, visaTypes }: ApplyClientProps) {
                   onClick={() => handleCountrySelect(country.name)}
                   className={`group relative flex flex-col items-center justify-center rounded-2xl border p-4 shadow-sm transition-all duration-200 ${
                     selectedCountry === country.name
-                      ? "border-brand-500 bg-gradient-to-br from-brand-50 to-warm-50 shadow-lg shadow-brand-500/10 dark:from-brand-950/30 dark:to-warm-950/30"
-                      : "border-slate-200/60 bg-white/70 backdrop-blur-md hover:border-brand-400 dark:border-slate-700/60 dark:bg-slate-900/70 dark:hover:border-brand-600"
+                      ? "border-brand-300 bg-brand-50 shadow-md shadow-brand-300/15 dark:bg-brand-950/30"
+                      : "border-slate-200/60 bg-white/70 backdrop-blur-md hover:border-brand-300 dark:border-slate-700/60 dark:bg-slate-900/70 dark:hover:border-brand-700"
                   }`}
                 >
                   <span className="mb-2 text-3xl">
@@ -832,7 +832,7 @@ export function ApplyClient({ countries, visaTypes }: ApplyClientProps) {
                   {selectedCountry === country.name && (
                     <motion.div
                       layoutId="country-check"
-                      className="absolute -right-1.5 -top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-gradient-to-r from-brand-600 to-warm-500 text-white shadow-md"
+                      className="absolute -right-1.5 -top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-brand-300 text-slate-700 shadow-md"
                     >
                       <Check className="h-3.5 w-3.5" />
                     </motion.div>
@@ -847,7 +847,7 @@ export function ApplyClient({ countries, visaTypes }: ApplyClientProps) {
                 <Button
                   onClick={goNextFromStep1}
                   disabled={!canProceedStep1 || loadingGuides}
-                  className="h-11 w-full rounded-xl bg-gradient-to-r from-brand-600 to-warm-500 px-8 text-sm font-medium shadow-lg shadow-brand-600/20 transition-all hover:shadow-xl hover:shadow-brand-600/25 disabled:cursor-not-allowed disabled:opacity-50 sm:h-12 sm:w-auto sm:text-base"
+                  className="h-11 w-full rounded-xl bg-brand-300 text-slate-700 px-8 text-sm font-semibold shadow-md shadow-brand-400/25 transition-all hover:bg-brand-400 hover:text-slate-800 disabled:cursor-not-allowed disabled:opacity-50 sm:h-12 sm:w-auto sm:text-base"
                 >
                   {loadingGuides ? (
                     <>
@@ -937,7 +937,7 @@ export function ApplyClient({ countries, visaTypes }: ApplyClientProps) {
                           transition={{ delay: i * 0.08, duration: 0.3 }}
                           className="flex items-start gap-4 rounded-2xl border border-slate-200/60 bg-white/70 p-5 shadow-sm backdrop-blur-md dark:border-slate-700/60 dark:bg-slate-900/70"
                         >
-                          <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-brand-500 to-brand-400 text-sm font-bold text-white shadow-lg shadow-brand-500/25">
+                          <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-brand-300 text-sm font-bold text-slate-700 shadow-md shadow-brand-400/20">
                             {i + 1}
                           </div>
                           <div className="min-w-0 flex-1">
@@ -994,7 +994,7 @@ export function ApplyClient({ countries, visaTypes }: ApplyClientProps) {
                 <Button
                   onClick={goNext}
                   disabled={!guideAcknowledged}
-                  className="h-10 rounded-xl bg-gradient-to-r from-brand-600 to-warm-500 px-6 text-sm font-medium shadow-lg shadow-brand-600/20 transition-all hover:shadow-xl disabled:opacity-50 sm:h-11 sm:px-8"
+                  className="h-10 rounded-xl bg-brand-300 text-slate-700 px-6 text-sm font-semibold shadow-md shadow-brand-400/25 transition-all hover:bg-brand-400 hover:text-slate-800 disabled:opacity-50 sm:h-11 sm:px-8"
                 >
                   {tCommon("next")}
                   <ArrowRight className="ml-2 h-4 w-4" />
@@ -1023,9 +1023,9 @@ export function ApplyClient({ countries, visaTypes }: ApplyClientProps) {
             </div>
 
             {/* Trust signal — prominent */}
-            <div className="mb-5 flex items-center justify-center gap-2 rounded-xl border border-brand-100 bg-brand-50/60 px-4 py-2.5 dark:border-brand-900/40 dark:bg-brand-950/20">
-              <ShieldCheck className="h-4 w-4 text-brand-500" />
-              <span className="text-sm font-medium text-brand-600 dark:text-brand-400">
+            <div className="mb-5 flex items-center justify-center gap-2 rounded-xl border border-warm-200 bg-warm-100/60 px-4 py-2.5 dark:border-warm-900/40 dark:bg-warm-950/20">
+              <ShieldCheck className="h-4 w-4 text-warm-600" />
+              <span className="text-sm font-medium text-warm-700 dark:text-warm-400">
                 {t("trustSignal")}
               </span>
             </div>
@@ -1095,7 +1095,7 @@ export function ApplyClient({ countries, visaTypes }: ApplyClientProps) {
                     value={selectedVisaType}
                     onValueChange={handleVisaTypeChange}
                   >
-                    <SelectTrigger className="h-11 rounded-xl border-slate-200/80 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 dark:border-slate-700/80">
+                    <SelectTrigger className="h-11 rounded-xl border-slate-200/80 focus:ring-2 focus:ring-brand-300/30 focus:border-brand-300 dark:border-slate-700/80">
                       <SelectValue placeholder={t("selectVisaTypeTitle")} />
                     </SelectTrigger>
                     <SelectContent>
@@ -1114,7 +1114,7 @@ export function ApplyClient({ countries, visaTypes }: ApplyClientProps) {
                 <motion.div
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
-                  className="flex items-center justify-center gap-2 py-8 text-brand-600"
+                  className="flex items-center justify-center gap-2 py-8 text-brand-500"
                 >
                   <Loader2 className="h-5 w-5 animate-spin" />
                   <span className="text-sm">{tCommon("loading")}</span>
@@ -1222,7 +1222,7 @@ export function ApplyClient({ countries, visaTypes }: ApplyClientProps) {
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
               transition={{ type: "spring", stiffness: 200, damping: 12, delay: 0.2 }}
-              className="mb-6 flex h-24 w-24 items-center justify-center rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 shadow-xl shadow-emerald-500/30"
+              className="mb-6 flex h-24 w-24 items-center justify-center rounded-full bg-emerald-500 shadow-xl shadow-emerald-500/30"
             >
               <motion.div
                 initial={{ pathLength: 0, opacity: 0 }}

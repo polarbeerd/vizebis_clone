@@ -59,7 +59,7 @@ export function SegmentedControl({
             {isActive && (
               <motion.span
                 layoutId={layoutId}
-                className="absolute inset-0 rounded-lg bg-gradient-to-r from-brand-600 to-warm-500 shadow-md shadow-brand-600/20"
+                className="absolute inset-0 rounded-lg bg-brand-300 shadow-md shadow-brand-400/20"
                 transition={{ type: "spring", stiffness: 400, damping: 30 }}
               />
             )}
@@ -67,7 +67,7 @@ export function SegmentedControl({
             <span
               className={`relative truncate ${
                 isActive
-                  ? "text-white"
+                  ? "text-slate-700"
                   : "text-slate-600 dark:text-slate-400"
               }`}
             >

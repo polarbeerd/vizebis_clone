@@ -5,7 +5,7 @@ import { motion } from "framer-motion";
 export function AnimatedBackground() {
   return (
     <div className="fixed inset-0 -z-10 overflow-hidden">
-      <div className="absolute inset-0 bg-gradient-to-br from-slate-50 via-brand-50/30 to-warm-50/40 dark:from-slate-950 dark:via-brand-950/30 dark:to-warm-950/40" />
+      <div className="absolute inset-0 bg-gradient-to-br from-slate-50/80 via-brand-50/20 to-warm-50/30 dark:from-slate-950/80 dark:via-brand-950/20 dark:to-warm-950/30" />
 
       {/* Floating orbs */}
       <motion.div
