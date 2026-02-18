@@ -128,8 +128,8 @@ export function UploadClient({ application, documents: initialDocuments }: Uploa
                 transition={{ delay: 0.4, duration: 0.8, ease: "easeOut" }}
                 className={`h-full rounded-full ${
                   progressPercent === 100
-                    ? "bg-brand-400"
-                    : "bg-brand-400"
+                    ? "bg-[#FEBEBF]"
+                    : "bg-[#FEBEBF]"
                 }`}
               />
             </div>

@@ -683,7 +683,7 @@ export function ApplyClient({ countries, visaTypes }: ApplyClientProps) {
       <Button
         type="submit"
         disabled={submitting || (formSubmitted && Object.keys(form.formState.errors).length > 0)}
-        className="h-10 rounded-xl bg-[#FEBEBF] text-white px-6 text-sm font-semibold shadow-md shadow-brand-400/25 transition-all hover:bg-brand-400 disabled:opacity-50 sm:h-11 sm:px-8"
+        className="h-10 rounded-xl bg-[#FEBEBF] text-white px-6 text-sm font-semibold shadow-md shadow-brand-400/25 transition-all hover:brightness-90 disabled:opacity-50 sm:h-11 sm:px-8"
       >
         {submitting ? (
           <>
@@ -730,9 +730,9 @@ export function ApplyClient({ countries, visaTypes }: ApplyClientProps) {
                     transition={{ type: "spring", stiffness: 300, damping: 20 }}
                     className={`flex h-9 w-9 items-center justify-center rounded-full border-2 transition-colors duration-300 sm:h-11 sm:w-11 ${
                       isComplete
-                        ? "border-brand-400 bg-brand-400 text-white"
+                        ? "border-[#FEBEBF] bg-[#FEBEBF] text-white"
                         : isActive
-                          ? "border-brand-400 bg-[#FEBEBF] text-white shadow-md shadow-brand-400/25"
+                          ? "border-[#FEBEBF] bg-[#FEBEBF] text-white shadow-md shadow-brand-300/25"
                           : "border-slate-300 bg-white text-slate-400 dark:border-slate-600 dark:bg-slate-800"
                     }`}
                   >
@@ -764,7 +764,7 @@ export function ApplyClient({ countries, visaTypes }: ApplyClientProps) {
                 {i < activeSteps.length - 1 && (
                   <div className="relative mx-1.5 h-0.5 flex-1 overflow-hidden rounded-full bg-slate-200 sm:mx-3 dark:bg-slate-700">
                     <motion.div
-                      className="absolute inset-y-0 left-0 rounded-full bg-brand-400"
+                      className="absolute inset-y-0 left-0 rounded-full bg-[#FEBEBF]"
                       initial={{ width: "0%" }}
                       animate={{ width: isComplete ? "100%" : "0%" }}
                       transition={{ duration: 0.5, ease: "easeInOut" }}
@@ -847,7 +847,7 @@ export function ApplyClient({ countries, visaTypes }: ApplyClientProps) {
                 <Button
                   onClick={goNextFromStep1}
                   disabled={!canProceedStep1 || loadingGuides}
-                  className="h-11 w-full rounded-xl bg-[#FEBEBF] text-white px-8 text-sm font-semibold shadow-md shadow-brand-400/25 transition-all hover:bg-brand-400 disabled:cursor-not-allowed disabled:opacity-50 sm:h-12 sm:w-auto sm:text-base"
+                  className="h-11 w-full rounded-xl bg-[#FEBEBF] text-white px-8 text-sm font-semibold shadow-md shadow-brand-400/25 transition-all hover:brightness-90 disabled:cursor-not-allowed disabled:opacity-50 sm:h-12 sm:w-auto sm:text-base"
                 >
                   {loadingGuides ? (
                     <>
@@ -994,7 +994,7 @@ export function ApplyClient({ countries, visaTypes }: ApplyClientProps) {
                 <Button
                   onClick={goNext}
                   disabled={!guideAcknowledged}
-                  className="h-10 rounded-xl bg-[#FEBEBF] text-white px-6 text-sm font-semibold shadow-md shadow-brand-400/25 transition-all hover:bg-brand-400 disabled:opacity-50 sm:h-11 sm:px-8"
+                  className="h-10 rounded-xl bg-[#FEBEBF] text-white px-6 text-sm font-semibold shadow-md shadow-brand-400/25 transition-all hover:brightness-90 disabled:opacity-50 sm:h-11 sm:px-8"
                 >
                   {tCommon("next")}
                   <ArrowRight className="ml-2 h-4 w-4" />
@@ -1023,9 +1023,9 @@ export function ApplyClient({ countries, visaTypes }: ApplyClientProps) {
             </div>
 
             {/* Trust signal — prominent */}
-            <div className="mb-5 flex items-center justify-center gap-2 rounded-xl border border-warm-200 bg-warm-100/60 px-4 py-2.5 dark:border-warm-900/40 dark:bg-warm-950/20">
-              <ShieldCheck className="h-4 w-4 text-warm-600" />
-              <span className="text-sm font-medium text-warm-700 dark:text-warm-400">
+            <div className="mb-5 flex items-center justify-center gap-2 rounded-xl border border-brand-200 bg-[#FEBEBF]/20 px-4 py-2.5 dark:border-brand-800/40 dark:bg-brand-950/20">
+              <ShieldCheck className="h-4 w-4 text-brand-500" />
+              <span className="text-sm font-medium text-brand-600 dark:text-brand-400">
                 {t("trustSignal")}
               </span>
             </div>
@@ -1222,7 +1222,7 @@ export function ApplyClient({ countries, visaTypes }: ApplyClientProps) {
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
               transition={{ type: "spring", stiffness: 200, damping: 12, delay: 0.2 }}
-              className="mb-6 flex h-24 w-24 items-center justify-center rounded-full bg-brand-400 shadow-xl shadow-brand-400/30"
+              className="mb-6 flex h-24 w-24 items-center justify-center rounded-full bg-[#FEBEBF] shadow-xl shadow-[#FEBEBF]/30"
             >
               <motion.div
                 initial={{ pathLength: 0, opacity: 0 }}

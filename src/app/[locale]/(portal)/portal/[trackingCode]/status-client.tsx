@@ -171,7 +171,7 @@ function DocumentProgressSection({
           initial={{ width: 0 }}
           animate={{ width: `${progressPct}%` }}
           transition={{ delay: 0.5, duration: 0.8, ease: "easeOut" }}
-          className="h-full rounded-full bg-brand-400"
+          className="h-full rounded-full bg-[#FEBEBF]"
         />
       </div>
 
@@ -500,7 +500,7 @@ export function StatusClient({ application, documents, guides }: StatusClientPro
           <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
             <Button
               size="lg"
-              className="w-full rounded-xl bg-brand-300 text-slate-700 font-semibold px-8 shadow-md shadow-brand-400/25 hover:bg-brand-400 hover:text-slate-800 sm:w-auto"
+              className="w-full rounded-xl bg-[#FEBEBF] text-white font-semibold px-8 shadow-md shadow-[#FEBEBF]/25 hover:brightness-90 sm:w-auto"
             >
               <Edit className="mr-2 h-4 w-4" />
               {t("editInfo")}

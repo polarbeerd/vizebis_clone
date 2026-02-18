@@ -46,7 +46,7 @@ export function PortalClient() {
           initial={{ scale: 0 }}
           animate={{ scale: 1 }}
           transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
-          className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-2xl bg-brand-300 shadow-xl shadow-brand-400/25"
+          className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-2xl bg-[#FEBEBF] shadow-xl shadow-[#FEBEBF]/25"
         >
           <Search className="h-9 w-9 text-slate-700" />
         </motion.div>
@@ -80,8 +80,8 @@ export function PortalClient() {
             transition={{ delay: 0.6, duration: 0.6 }}
             className="rounded-2xl border border-slate-200/60 bg-white/70 p-6 shadow-sm backdrop-blur-md dark:border-slate-700/60 dark:bg-slate-900/70"
           >
-            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-brand-300 shadow-md shadow-brand-400/20">
-              <Search className="h-6 w-6 text-slate-700" />
+            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-[#FEBEBF] shadow-md shadow-[#FEBEBF]/20">
+              <Search className="h-6 w-6 text-white" />
             </div>
             <h2 className="mb-4 text-left text-xl font-semibold text-slate-900 dark:text-white">
               {tApply("haveCode")}
@@ -101,7 +101,7 @@ export function PortalClient() {
                     type="submit"
                     size="icon"
                     disabled={loading || !code.trim()}
-                    className="h-8 w-8 rounded-lg bg-brand-300 shadow-sm transition-transform hover:scale-105 hover:bg-brand-400 active:scale-95 disabled:opacity-50"
+                    className="h-8 w-8 rounded-lg bg-[#FEBEBF] shadow-sm transition-transform hover:scale-105 hover:brightness-90 active:scale-95 disabled:opacity-50"
                   >
                     <motion.div
                       animate={loading ? { rotate: 360 } : {}}
@@ -124,7 +124,7 @@ export function PortalClient() {
                 <Button
                   type="submit"
                   disabled={loading || !code.trim()}
-                  className="h-11 w-full rounded-xl bg-brand-300 text-slate-700 text-base font-semibold shadow-md shadow-brand-400/25 transition-all hover:bg-brand-400 hover:text-slate-800"
+                  className="h-11 w-full rounded-xl bg-[#FEBEBF] text-white text-base font-semibold shadow-md shadow-[#FEBEBF]/25 transition-all hover:brightness-90"
                 >
                   {loading ? t("searching") : t("trackButton")}
                 </Button>
@@ -164,7 +164,7 @@ export function PortalClient() {
             </p>
             <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
               <Link href="/portal/apply" className="block">
-                <Button className="h-11 w-full rounded-xl bg-[#FEBEBF] text-white text-base font-medium shadow-lg shadow-brand-400/25 transition-all hover:bg-brand-400 hover:shadow-xl hover:shadow-brand-400/30">
+                <Button className="h-11 w-full rounded-xl bg-[#FEBEBF] text-white text-base font-medium shadow-lg shadow-[#FEBEBF]/25 transition-all hover:brightness-90 hover:shadow-xl hover:shadow-[#FEBEBF]/30">
                   {tApply("startNew")}
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
