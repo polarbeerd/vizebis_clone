@@ -12,7 +12,7 @@ export default function PortalLayout({
       <div className="min-h-screen">
         <AnimatedBackground />
         <PortalHeader />
-        <main className="mx-auto max-w-4xl px-2 py-3 sm:px-6 sm:py-8">{children}</main>
+        <main className="mx-auto max-w-3xl px-2 py-3 sm:px-6 sm:py-8">{children}</main>
       </div>
     </PortalLocaleProvider>
   );

@@ -707,7 +707,7 @@ export function ApplyClient({ countries, visaTypes }: ApplyClientProps) {
     <div className="w-full px-1 py-4 sm:px-0 sm:py-6">
       {/* ── Stepper ── */}
       <div className="mb-8 sm:mb-10">
-        <div className="mx-auto flex max-w-xs items-center justify-between sm:max-w-none">
+        <div className="mx-auto flex max-w-xs items-center justify-between sm:max-w-2xl">
           {activeSteps.map((s, i) => {
             const stepId = s.id;
             const isActive =
@@ -801,7 +801,7 @@ export function ApplyClient({ countries, visaTypes }: ApplyClientProps) {
               </p>
             </div>
 
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
               {countries.map((country, i) => (
                 <motion.button
                   key={country.id}
