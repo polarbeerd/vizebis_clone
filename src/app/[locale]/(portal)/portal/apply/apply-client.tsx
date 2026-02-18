@@ -693,10 +693,10 @@ export function ApplyClient({ countries, visaTypes }: ApplyClientProps) {
   // RENDER
   // ────────────────────────────────────────────────────────────
   return (
-    <div className="w-full px-1 py-4 sm:px-0 sm:py-6">
+    <div className="mx-auto w-full max-w-2xl px-1 py-4 sm:px-0 sm:py-6">
       {/* ── Stepper ── */}
       <div className="mb-8 sm:mb-10">
-        <div className="mx-auto flex max-w-xs items-center justify-between sm:max-w-2xl">
+        <div className="mx-auto flex max-w-xs items-center justify-between sm:max-w-xl">
           {activeSteps.map((s, i) => {
             const stepId = s.id;
             const isActive =
