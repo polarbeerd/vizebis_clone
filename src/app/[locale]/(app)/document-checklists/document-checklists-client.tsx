@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { useRouter } from "@/i18n/navigation";
 import { toast } from "sonner";
 import { Copy, Edit, Plus, Trash2 } from "lucide-react";
@@ -26,7 +26,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { DataTable } from "@/components/data-table/data-table";
-import type { ChecklistRow, CountryOption } from "./page";
+import type { ChecklistRow, CountryOption, VisaTypeOption } from "./page";
 import {
   ChecklistItemForm,
   type ChecklistItemForForm,
@@ -35,15 +35,17 @@ import {
 interface DocumentChecklistsClientProps {
   data: ChecklistRow[];
   countries: CountryOption[];
+  visaTypes: VisaTypeOption[];
 }
 
 export function DocumentChecklistsClient({
   data,
   countries,
+  visaTypes: visaTypeOptions,
 }: DocumentChecklistsClientProps) {
   const t = useTranslations("documentChecklists");
   const tCommon = useTranslations("common");
-  const tVisaType = useTranslations("visaType");
+  const locale = useLocale();
   const router = useRouter();
 
   const supabase = React.useMemo(() => createClient(), []);
@@ -71,13 +73,10 @@ export function DocumentChecklistsClient({
   const [sourceVisaType, setSourceVisaType] = React.useState("");
   const [copying, setCopying] = React.useState(false);
 
-  const visaTypes = [
-    { value: "kultur", label: tVisaType("kultur") },
-    { value: "ticari", label: tVisaType("ticari") },
-    { value: "turistik", label: tVisaType("turistik") },
-    { value: "ziyaret", label: tVisaType("ziyaret") },
-    { value: "diger", label: tVisaType("diger") },
-  ];
+  const visaTypes = visaTypeOptions.map((vt) => ({
+    value: vt.value,
+    label: locale === "tr" ? vt.label_tr : vt.label_en,
+  }));
 
   // Filter data by selected country + visa type
   const filteredData = React.useMemo(() => {

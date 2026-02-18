@@ -337,6 +337,7 @@ export function ApplicationsClient({ data }: ApplicationsClientProps) {
         cell: ({ row }) => (
           <span className="font-medium">{row.getValue("id")}</span>
         ),
+        size: 60,
         enableSorting: true,
       },
       {
@@ -347,8 +348,8 @@ export function ApplicationsClient({ data }: ApplicationsClientProps) {
           if (!code) return "-";
           return (
             <div className="flex items-center gap-1">
-              <span className="max-w-[100px] truncate font-mono text-xs" title={code}>
-                {code.slice(0, 8)}...
+              <span className="font-mono text-xs whitespace-nowrap" title={code}>
+                {code}
               </span>
               <button
                 onClick={(e) => {
@@ -364,6 +365,32 @@ export function ApplicationsClient({ data }: ApplicationsClientProps) {
               </button>
             </div>
           );
+        },
+        size: 180,
+        enableSorting: false,
+      },
+      {
+        accessorKey: "source",
+        size: 80,
+        header: () => t("source"),
+        cell: ({ row }) => {
+          const source = row.getValue("source") as string;
+          if (source === "portal") {
+            return (
+              <Badge variant="outline" className="text-[10px] bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/30 dark:text-blue-400 dark:border-blue-800">
+                {t("sourcePortal")}
+              </Badge>
+            );
+          }
+          return (
+            <Badge variant="outline" className="text-[10px] bg-slate-50 text-slate-500 border-slate-200 dark:bg-slate-950/30 dark:text-slate-400 dark:border-slate-700">
+              {t("sourceAdmin")}
+            </Badge>
+          );
+        },
+        filterFn: (row, id, value: string[]) => {
+          const source = (row.getValue(id) as string) || "admin";
+          return value.includes(source);
         },
         enableSorting: false,
       },
@@ -487,6 +514,7 @@ export function ApplicationsClient({ data }: ApplicationsClientProps) {
       },
       {
         accessorKey: "visa_status",
+        size: 100,
         header: () => t("visaStatus"),
         cell: ({ row }) =>
           visaStatusBadge(row.getValue("visa_status") as string | null),
@@ -535,6 +563,7 @@ export function ApplicationsClient({ data }: ApplicationsClientProps) {
       },
       {
         id: "actions",
+        size: 60,
         header: () => tCommon("actions"),
         cell: ({ row }) => {
           const application = row.original;
@@ -614,6 +643,14 @@ export function ApplicationsClient({ data }: ApplicationsClientProps) {
         options: [
           { label: tPayment("unpaid"), value: "odenmedi" },
           { label: tPayment("paid"), value: "odendi" },
+        ],
+      },
+      {
+        id: "source",
+        title: t("source"),
+        options: [
+          { label: t("sourcePortal"), value: "portal" },
+          { label: t("sourceAdmin"), value: "admin" },
         ],
       },
     ],
@@ -789,6 +826,17 @@ export function ApplicationsClient({ data }: ApplicationsClientProps) {
         pageSize={10}
         onExportCsv={handleExportCsv}
         rowClassName={getRowClassName}
+        initialColumnVisibility={{
+          passport_no: false,
+          company_name: false,
+          appointment_date: false,
+          pickup_date: false,
+          fee: false,
+          invoice_status: false,
+          payment_status: false,
+          notes: false,
+          doc_total: false,
+        }}
         toolbarExtra={
           <div className="space-y-3">
             {dateFilterToolbar}

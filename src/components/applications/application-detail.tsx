@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { Copy, Edit, Loader2, Download, Check, XCircle, Plus } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { formatDate, formatCurrency } from "@/lib/utils";
@@ -71,8 +71,10 @@ interface ApplicationDetail {
   passport_photo_url: string | null;
   visa_photo_url: string | null;
   companies: { company_name: string } | null;
-  referrals: { full_name: string } | null;
+  referrals: { name: string } | null;
   profiles: { full_name: string } | null;
+  custom_fields: Record<string, unknown> | null;
+  source: string | null;
 }
 
 interface ApplicationDetailProps {
@@ -183,6 +185,7 @@ export function ApplicationDetailSheet({
   const tCommon = useTranslations("common");
   const tPortal = useTranslations("portal");
   const tAppDocs = useTranslations("applicationDocuments");
+  const tDetail = useTranslations("applicationDetail");
 
   const [application, setApplication] =
     React.useState<ApplicationDetail | null>(null);
@@ -194,6 +197,11 @@ export function ApplicationDetailSheet({
   const [customName, setCustomName] = React.useState("");
   const [customDescription, setCustomDescription] = React.useState("");
   const [customRequired, setCustomRequired] = React.useState(true);
+  const [portalEdits, setPortalEdits] = React.useState<Record<string, string>>({});
+  const [savingPortal, setSavingPortal] = React.useState(false);
+  const [fieldDefs, setFieldDefs] = React.useState<Array<{ field_key: string; field_label: string; field_label_tr: string | null }>>([]);
+  const [smartTemplates, setSmartTemplates] = React.useState<Array<{ template_key: string; label: string; label_tr: string; sub_fields: Array<{ key: string; label: string; label_tr: string }> }>>([]);
+  const locale = useLocale();
 
   const supabase = React.useMemo(() => createClient(), []);
 
@@ -206,23 +214,51 @@ export function ApplicationDetailSheet({
 
     async function fetchApplication() {
       setLoading(true);
-      const { data, error } = await supabase
-        .from("applications")
-        .select(
+      const [appRes, fieldDefsRes, smartTemplatesRes] = await Promise.all([
+        supabase
+          .from("applications")
+          .select(
+            `
+            *,
+            companies ( company_name ),
+            referrals ( name ),
+            profiles!assigned_user_id ( full_name )
           `
-          *,
-          companies ( company_name ),
-          referrals ( full_name ),
-          profiles ( full_name )
-        `
-        )
-        .eq("id", applicationId)
-        .single();
+          )
+          .eq("id", applicationId)
+          .single(),
+        supabase
+          .from("portal_field_definitions")
+          .select("field_key, field_label, field_label_tr"),
+        supabase
+          .from("portal_smart_field_templates")
+          .select("template_key, label, label_tr, sub_fields"),
+      ]);
 
-      if (error) {
-        console.error("Error fetching application detail:", error);
+      if (appRes.error) {
+        console.error("Error fetching application detail:", appRes.error);
       } else {
-        setApplication(data as unknown as ApplicationDetail);
+        setApplication(appRes.data as unknown as ApplicationDetail);
+      }
+
+      if (fieldDefsRes.data) {
+        setFieldDefs(
+          fieldDefsRes.data.map((d: Record<string, unknown>) => ({
+            field_key: d.field_key as string,
+            field_label: d.field_label as string,
+            field_label_tr: (d.field_label_tr as string) ?? null,
+          }))
+        );
+      }
+      if (smartTemplatesRes.data) {
+        setSmartTemplates(
+          smartTemplatesRes.data.map((t: Record<string, unknown>) => ({
+            template_key: t.template_key as string,
+            label: t.label as string,
+            label_tr: (t.label_tr as string) ?? "",
+            sub_fields: (t.sub_fields as Array<{ key: string; label: string; label_tr: string }>) ?? [],
+          }))
+        );
       }
 
       // Fetch application documents
@@ -427,8 +463,8 @@ export function ApplicationDetailSheet({
   return (
     <>
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="sm:max-w-lg w-full p-0 flex flex-col">
-        <SheetHeader className="px-4 pt-4">
+      <SheetContent className="sm:max-w-lg w-full p-0 flex flex-col overflow-hidden">
+        <SheetHeader className="px-4 pt-4 shrink-0">
           <SheetTitle>
             {application?.full_name ?? t("personalInfo")}
           </SheetTitle>
@@ -440,7 +476,7 @@ export function ApplicationDetailSheet({
             <Loader2 className="size-6 animate-spin text-muted-foreground" />
           </div>
         ) : application ? (
-          <ScrollArea className="flex-1 px-4 pb-4">
+          <ScrollArea className="flex-1 min-h-0 overflow-hidden px-4 pb-4">
             {/* Tracking code + portal link */}
             {application.tracking_code && (
               <div className="mb-3 flex items-center gap-2 rounded-lg border border-dashed border-blue-200 bg-blue-50/50 px-3 py-2 dark:border-blue-800 dark:bg-blue-950/30">
@@ -457,6 +493,52 @@ export function ApplicationDetailSheet({
                   title={tPortal("copyPortalLink")}
                 >
                   <Copy className="size-3.5" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon-xs"
+                  onClick={() => {
+                    if (!application) return;
+                    const exportData: Record<string, unknown> = {
+                      id: application.id,
+                      tracking_code: application.tracking_code,
+                      full_name: application.full_name,
+                      id_number: application.id_number,
+                      date_of_birth: application.date_of_birth,
+                      phone: application.phone,
+                      email: application.email,
+                      passport_no: application.passport_no,
+                      passport_expiry: application.passport_expiry,
+                      visa_status: application.visa_status,
+                      visa_type: application.visa_type,
+                      country: application.country,
+                      appointment_date: application.appointment_date,
+                      appointment_time: application.appointment_time,
+                      consulate_office: application.consulate_office,
+                      source: application.source,
+                    };
+                    if (application.custom_fields) {
+                      const cf = application.custom_fields as Record<string, unknown>;
+                      for (const [k, v] of Object.entries(cf)) {
+                        if (k === "_smart") {
+                          const smart = v as Record<string, Record<string, unknown>>;
+                          for (const [sfKey, sfData] of Object.entries(smart)) {
+                            for (const [subKey, subVal] of Object.entries(sfData)) {
+                              if (subKey === "_valid") continue;
+                              exportData[`${sfKey}_${subKey}`] = subVal;
+                            }
+                          }
+                        } else if (!k.startsWith("_")) {
+                          exportData[k] = v;
+                        }
+                      }
+                    }
+                    navigator.clipboard.writeText(JSON.stringify(exportData, null, 2));
+                    toast.success(tDetail("jsonCopied"));
+                  }}
+                  title={tDetail("copyJson")}
+                >
+                  <span className="text-[10px] font-mono">{"{}"}</span>
                 </Button>
               </div>
             )}
@@ -478,120 +560,285 @@ export function ApplicationDetailSheet({
               )}
             </div>
 
-            {/* Section: Personal Info */}
-            <h4 className="text-sm font-semibold mb-2">{t("personalInfo")}</h4>
-            <div className="space-y-0">
-              <FieldRow label={t("fullName")} value={application.full_name} />
-              <FieldRow label={t("idNumber")} value={application.id_number} />
-              <FieldRow
-                label={t("dateOfBirth")}
-                value={
-                  application.date_of_birth
-                    ? formatDate(application.date_of_birth)
-                    : null
-                }
-              />
-              <FieldRow label={t("phone")} value={application.phone} />
-              <FieldRow label={t("email")} value={application.email} />
-              <FieldRow
-                label={t("company")}
-                value={application.companies?.company_name}
-              />
-            </div>
+            {(() => {
+              const isPortalApp = !!application.custom_fields && Object.keys(application.custom_fields).length > 0;
 
-            <Separator className="my-3" />
+              if (isPortalApp) {
+                const cf = application.custom_fields as Record<string, unknown>;
+                const regularKeys = Object.keys(cf).filter((k) => k !== "_smart");
+                const smartData = (cf._smart ?? {}) as Record<string, Record<string, unknown>>;
+                const smartKeys = Object.keys(smartData);
 
-            {/* Section: Passport & Visa */}
-            <h4 className="text-sm font-semibold mb-2">
-              {t("passportVisaInfo")}
-            </h4>
-            <div className="space-y-0">
-              <FieldRow
-                label={t("passportNo")}
-                value={application.passport_no}
-              />
-              <FieldRow
-                label={t("passportExpiry")}
-                value={
-                  application.passport_expiry
-                    ? formatDate(application.passport_expiry)
-                    : null
-                }
-              />
-              <FieldRow
-                label={t("visaStart")}
-                value={
-                  application.visa_start
-                    ? formatDate(application.visa_start)
-                    : null
-                }
-              />
-              <FieldRow
-                label={t("visaEnd")}
-                value={
-                  application.visa_end
-                    ? formatDate(application.visa_end)
-                    : null
-                }
-              />
-              <FieldRow
-                label={t("visaType")}
-                value={
-                  application.visa_type
-                    ? tVisaType(
-                        (visaTypeKeyMap[application.visa_type] ??
-                          application.visa_type) as Parameters<
-                          typeof tVisaType
-                        >[0]
-                      )
-                    : null
-                }
-              />
-              <FieldRow
-                label={t("visaRejected")}
-                value={
-                  application.visa_rejected ? tCommon("yes") : tCommon("no")
-                }
-              />
-            </div>
+                return (
+                  <>
+                    {/* Section: Customer Data */}
+                    <div className="flex items-center justify-between mb-2">
+                      <h4 className="text-sm font-semibold">{t("customerData")}</h4>
+                      <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/30 dark:text-blue-400 dark:border-blue-800">
+                        {tDetail("sourcePortal")}
+                      </Badge>
+                    </div>
 
-            <Separator className="my-3" />
+                    {regularKeys.length > 0 && (
+                      <div className="space-y-0">
+                        {regularKeys.map((key) => {
+                          const def = fieldDefs.find((d) => d.field_key === key);
+                          const label = def
+                            ? (locale === "tr" && def.field_label_tr ? def.field_label_tr : def.field_label)
+                            : key.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+                          const editKey = key;
+                          return (
+                            <div key={key} className="flex justify-between py-1.5 gap-2">
+                              <span className="text-muted-foreground text-sm whitespace-nowrap">
+                                {label}
+                              </span>
+                              <Input
+                                className="h-7 text-sm font-medium text-right max-w-[60%]"
+                                value={portalEdits[editKey] ?? String(cf[key] ?? "")}
+                                onChange={(e) =>
+                                  setPortalEdits((prev) => ({ ...prev, [editKey]: e.target.value }))
+                                }
+                              />
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
 
-            {/* Section: Appointment & Travel */}
-            <h4 className="text-sm font-semibold mb-2">
-              {t("appointmentTravel")}
-            </h4>
-            <div className="space-y-0">
-              <FieldRow label={t("country")} value={application.country} />
-              <FieldRow
-                label={t("appointmentDate")}
-                value={
-                  application.appointment_date
-                    ? formatDate(application.appointment_date)
-                    : null
-                }
-              />
-              <FieldRow
-                label={t("appointmentTime")}
-                value={application.appointment_time}
-              />
-              <FieldRow
-                label={t("pickupDate")}
-                value={
-                  application.pickup_date
-                    ? formatDate(application.pickup_date)
-                    : null
-                }
-              />
-              <FieldRow
-                label={t("travelDate")}
-                value={
-                  application.travel_date
-                    ? formatDate(application.travel_date)
-                    : null
-                }
-              />
-            </div>
+                    {smartKeys.length > 0 && (
+                      <div className="mt-3 space-y-3">
+                        {smartKeys.map((templateKey) => {
+                          const tmpl = smartTemplates.find((t) => t.template_key === templateKey);
+                          const groupLabel = tmpl
+                            ? (locale === "tr" && tmpl.label_tr ? tmpl.label_tr : tmpl.label)
+                            : templateKey.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+
+                          const subData = smartData[templateKey];
+                          if (!subData || typeof subData !== "object") return null;
+                          const subKeys = Object.keys(subData).filter((k) => k !== "_valid");
+
+                          return (
+                            <div key={templateKey} className="rounded-lg border p-3">
+                              <h5 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+                                {groupLabel}
+                              </h5>
+                              <div className="space-y-0">
+                                {subKeys.map((subKey) => {
+                                  const editKey = `_smart.${templateKey}.${subKey}`;
+                                  const subField = tmpl?.sub_fields?.find((sf) => sf.key === subKey);
+                                  const subLabel = subField
+                                    ? (locale === "tr" && subField.label_tr ? subField.label_tr : subField.label)
+                                    : subKey.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+
+                                  return (
+                                    <div key={subKey} className="flex justify-between py-1.5 gap-2">
+                                      <span className="text-muted-foreground text-xs whitespace-nowrap">
+                                        {subLabel}
+                                      </span>
+                                      <Input
+                                        className="h-7 text-sm font-medium text-right max-w-[60%]"
+                                        value={portalEdits[editKey] ?? String(subData[subKey] ?? "")}
+                                        onChange={(e) =>
+                                          setPortalEdits((prev) => ({ ...prev, [editKey]: e.target.value }))
+                                        }
+                                      />
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    {Object.keys(portalEdits).length > 0 && (
+                      <Button
+                        size="sm"
+                        className="mt-2 w-full"
+                        disabled={savingPortal}
+                        onClick={async () => {
+                          if (!applicationId) return;
+                          setSavingPortal(true);
+                          try {
+                            const current = { ...cf };
+                            for (const [editKey, editVal] of Object.entries(portalEdits)) {
+                              if (editKey.startsWith("_smart.")) {
+                                const parts = editKey.split(".");
+                                const tplKey = parts[1];
+                                const sKey = parts.slice(2).join(".");
+                                if (!current._smart) current._smart = {};
+                                const smart = current._smart as Record<string, Record<string, unknown>>;
+                                if (!smart[tplKey]) smart[tplKey] = {};
+                                smart[tplKey][sKey] = editVal;
+                              } else {
+                                current[editKey] = editVal;
+                              }
+                            }
+                            const { error } = await supabase
+                              .from("applications")
+                              .update({ custom_fields: current })
+                              .eq("id", applicationId);
+                            if (error) throw error;
+                            setApplication({ ...application, custom_fields: current });
+                            setPortalEdits({});
+                            toast.success(tDetail("portalDataSaved"));
+                          } catch {
+                            toast.error(tDetail("portalDataSaveError"));
+                          } finally {
+                            setSavingPortal(false);
+                          }
+                        }}
+                      >
+                        {savingPortal ? <Loader2 className="size-4 animate-spin mr-2" /> : null}
+                        {tDetail("savePortalData")}
+                      </Button>
+                    )}
+
+                    <Separator className="my-3" />
+
+                    {/* Section: Process Tracking */}
+                    <h4 className="text-sm font-semibold mb-2">{t("processTracking")}</h4>
+                    <div className="space-y-0">
+                      <FieldRow
+                        label={t("visaStatus")}
+                        value={
+                          application.visa_status
+                            ? tVisa(
+                                (visaStatusKeyMap[application.visa_status] ??
+                                  application.visa_status) as Parameters<typeof tVisa>[0]
+                              )
+                            : null
+                        }
+                      />
+                      <FieldRow
+                        label={t("visaType")}
+                        value={
+                          application.visa_type
+                            ? tVisaType(
+                                (visaTypeKeyMap[application.visa_type] ??
+                                  application.visa_type) as Parameters<typeof tVisaType>[0]
+                              )
+                            : null
+                        }
+                      />
+                      <FieldRow label={t("country")} value={application.country} />
+                      <FieldRow
+                        label={t("appointmentDate")}
+                        value={application.appointment_date ? formatDate(application.appointment_date) : null}
+                      />
+                      <FieldRow label={t("appointmentTime")} value={application.appointment_time} />
+                      <FieldRow
+                        label={t("pickupDate")}
+                        value={application.pickup_date ? formatDate(application.pickup_date) : null}
+                      />
+                      <FieldRow
+                        label={t("travelDate")}
+                        value={application.travel_date ? formatDate(application.travel_date) : null}
+                      />
+                      <FieldRow label={t("consulateAppNo")} value={application.consulate_app_no} />
+                      <FieldRow label={t("consulateOffice")} value={application.consulate_office} />
+                      <FieldRow
+                        label={t("visaStart")}
+                        value={application.visa_start ? formatDate(application.visa_start) : null}
+                      />
+                      <FieldRow
+                        label={t("visaEnd")}
+                        value={application.visa_end ? formatDate(application.visa_end) : null}
+                      />
+                      <FieldRow
+                        label={t("visaRejected")}
+                        value={application.visa_rejected ? tCommon("yes") : tCommon("no")}
+                      />
+                    </div>
+                  </>
+                );
+              }
+
+              // Admin-created app: show classic sections
+              return (
+                <>
+                  {/* Section: Personal Info */}
+                  <h4 className="text-sm font-semibold mb-2">{t("personalInfo")}</h4>
+                  <div className="space-y-0">
+                    <FieldRow label={t("fullName")} value={application.full_name} />
+                    <FieldRow label={t("idNumber")} value={application.id_number} />
+                    <FieldRow
+                      label={t("dateOfBirth")}
+                      value={application.date_of_birth ? formatDate(application.date_of_birth) : null}
+                    />
+                    <FieldRow label={t("phone")} value={application.phone} />
+                    <FieldRow label={t("email")} value={application.email} />
+                    <FieldRow label={t("company")} value={application.companies?.company_name} />
+                  </div>
+
+                  <Separator className="my-3" />
+
+                  {/* Section: Passport & Visa */}
+                  <h4 className="text-sm font-semibold mb-2">{t("passportVisaInfo")}</h4>
+                  <div className="space-y-0">
+                    <FieldRow label={t("passportNo")} value={application.passport_no} />
+                    <FieldRow
+                      label={t("passportExpiry")}
+                      value={application.passport_expiry ? formatDate(application.passport_expiry) : null}
+                    />
+                    <FieldRow
+                      label={t("visaStart")}
+                      value={application.visa_start ? formatDate(application.visa_start) : null}
+                    />
+                    <FieldRow
+                      label={t("visaEnd")}
+                      value={application.visa_end ? formatDate(application.visa_end) : null}
+                    />
+                    <FieldRow
+                      label={t("visaType")}
+                      value={
+                        application.visa_type
+                          ? tVisaType(
+                              (visaTypeKeyMap[application.visa_type] ??
+                                application.visa_type) as Parameters<typeof tVisaType>[0]
+                            )
+                          : null
+                      }
+                    />
+                    <FieldRow
+                      label={t("visaRejected")}
+                      value={application.visa_rejected ? tCommon("yes") : tCommon("no")}
+                    />
+                  </div>
+
+                  <Separator className="my-3" />
+
+                  {/* Section: Appointment & Travel */}
+                  <h4 className="text-sm font-semibold mb-2">{t("appointmentTravel")}</h4>
+                  <div className="space-y-0">
+                    <FieldRow label={t("country")} value={application.country} />
+                    <FieldRow
+                      label={t("appointmentDate")}
+                      value={application.appointment_date ? formatDate(application.appointment_date) : null}
+                    />
+                    <FieldRow label={t("appointmentTime")} value={application.appointment_time} />
+                    <FieldRow
+                      label={t("pickupDate")}
+                      value={application.pickup_date ? formatDate(application.pickup_date) : null}
+                    />
+                    <FieldRow
+                      label={t("travelDate")}
+                      value={application.travel_date ? formatDate(application.travel_date) : null}
+                    />
+                  </div>
+
+                  <Separator className="my-3" />
+
+                  {/* Section: Consulate */}
+                  <h4 className="text-sm font-semibold mb-2">{t("consulateInfo")}</h4>
+                  <div className="space-y-0">
+                    <FieldRow label={t("consulateAppNo")} value={application.consulate_app_no} />
+                    <FieldRow label={t("consulateOffice")} value={application.consulate_office} />
+                  </div>
+                </>
+              );
+            })()}
 
             <Separator className="my-3" />
 
@@ -687,29 +934,12 @@ export function ApplicationDetailSheet({
 
             <Separator className="my-3" />
 
-            {/* Section: Consulate */}
-            <h4 className="text-sm font-semibold mb-2">
-              {t("consulateInfo")}
-            </h4>
-            <div className="space-y-0">
-              <FieldRow
-                label={t("consulateAppNo")}
-                value={application.consulate_app_no}
-              />
-              <FieldRow
-                label={t("consulateOffice")}
-                value={application.consulate_office}
-              />
-            </div>
-
-            <Separator className="my-3" />
-
-            {/* Section: Other */}
+            {/* Section: Notes & Other */}
             <h4 className="text-sm font-semibold mb-2">{t("other")}</h4>
             <div className="space-y-0">
               <FieldRow
                 label={t("reference")}
-                value={application.referrals?.full_name}
+                value={application.referrals?.name}
               />
               <FieldRow
                 label={t("assignedUser")}
@@ -900,7 +1130,7 @@ export function ApplicationDetailSheet({
 
         {/* Footer with edit button */}
         {application && onEdit && (
-          <div className="border-t px-4 py-3">
+          <div className="border-t px-4 py-3 shrink-0">
             <Button
               className="w-full"
               onClick={() => {

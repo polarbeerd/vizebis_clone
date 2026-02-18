@@ -86,9 +86,9 @@ src/
 │   │   └── (portal)/              # Public portal (NO auth required)
 │   │       ├── layout.tsx          # Minimal layout: header + animated bg, no sidebar
 │   │       └── portal/
-│   │           ├── page.tsx + portal-client.tsx     # Landing: tracking code entry
+│   │           ├── page.tsx                         # Redirects to /portal/apply
 │   │           ├── actions.ts                       # Server actions (service role client)
-│   │           ├── apply/page.tsx + apply-client.tsx # 5-step apply wizard (dynamic fields)
+│   │           ├── apply/page.tsx + apply-client.tsx # 4-step apply wizard (dynamic fields)
 │   │           └── [trackingCode]/
 │   │               ├── page.tsx + status-client.tsx  # Animated status timeline + details
 │   │               ├── edit/page.tsx + edit-client.tsx   # Personal info form
@@ -99,7 +99,8 @@ src/
 │   ├── layout/
 │   │   ├── sidebar.tsx            # 30-item nav, logo stretches full width
 │   │   ├── header.tsx             # User dropdown, notifications, mobile menu
-│   │   └── locale-switcher.tsx    # TR/EN toggle
+│   │   ├── locale-switcher.tsx    # TR/EN toggle (uses AdminLocaleProvider)
+│   │   └── admin-locale-provider.tsx # Instant locale switching for admin (React state)
 │   ├── dashboard/
 │   │   └── stat-card.tsx          # Reusable stat card (5 color variants)
 │   ├── data-table/                # 4 components: table, toolbar, pagination, column-header
@@ -111,10 +112,14 @@ src/
 │   ├── forms/                     # form-builder
 │   ├── chat/                      # chat-widget (floating realtime)
 │   ├── portal/                    # Portal-specific components
-│   │   ├── portal-header.tsx      # Minimal header: logo + locale switcher
+│   │   ├── portal-header.tsx      # Minimal header: logo (links to /portal/apply) + locale switcher
+│   │   ├── portal-locale-switcher.tsx # Instant locale switching for portal
+│   │   ├── phone-input.tsx        # Phone number input with country code
+│   │   ├── segmented-control.tsx  # Segmented control for city selection
 │   │   ├── status-timeline.tsx    # Animated horizontal/vertical stepper
 │   │   ├── document-upload-card.tsx # Drag-drop upload card
-│   │   └── animated-background.tsx # Floating gradient orbs
+│   │   ├── animated-background.tsx # Floating gradient orbs
+│   │   └── smart-fields/          # Smart field components (nationality, travel dates, etc.)
 │   ├── document-checklists/       # checklist-item-form.tsx
 │   └── portal-form-fields/        # field-form.tsx
 ├── lib/
@@ -139,7 +144,11 @@ supabase/
     ├── 001_core_schema.sql        # Full schema (746 lines, 23 tables, 10 enums)
     ├── 002_portal_schema.sql      # Portal additions (tracking_code, portal-uploads bucket)
     ├── 003_portal_v2_schema.sql   # Checklists, documents, content, countries enhancements
-    └── 004_portal_form_fields.sql # Dynamic form fields + custom_fields JSONB
+    ├── 004_portal_form_fields.sql # Dynamic form fields + custom_fields JSONB
+    ├── 006_field_enhancements.sql # Field definitions table + visa_types table
+    ├── 007_smart_field_templates.sql # Smart field template system
+    ├── 008_replace_minmax_with_max_chars.sql # Character limit on fields
+    └── 009_smart_field_sub_labels.sql # Sub-field labels for smart fields
 ```
 
 ---
@@ -175,6 +184,9 @@ supabase/
 | `application_documents` | Document tracking per application | application_id, checklist_item_id, status, file_path |
 | `portal_content` | Guides/articles for portal | country, visa_type, title, content, content_type |
 | `portal_form_fields` | Dynamic portal form fields | country, visa_type, field_key, field_label, field_type, is_standard |
+| `portal_field_definitions` | Reusable field definitions library | field_key, field_label, field_type, section, options |
+| `portal_smart_field_templates` | Smart field templates (nationality, address, etc.) | template_key, label, sub_fields JSONB |
+| `visa_types` | Visa type options for dropdowns | value, label_en, label_tr, is_active, sort_order |
 
 **Enums:** visa_status, visa_type, currency_type, payment_status, payment_method, invoice_status, document_type, document_status, priority_type, access_level, user_role
 
@@ -199,7 +211,7 @@ Row color coding: Green (delivered), Blue (approved), Yellow (at consulate), Gra
 Every page follows: **Server Component** (page.tsx) fetches data → **Client Component** (*-client.tsx) renders UI.
 
 ### DataTable Pattern
-Reusable `<DataTable>` accepts: `columns`, `data`, `searchKey`, `filterableColumns`, `rowClassName`, `onExportCsv`, `toolbarExtra`.
+Reusable `<DataTable>` accepts: `columns`, `data`, `searchKey`, `filterableColumns`, `rowClassName`, `onExportCsv`, `toolbarExtra`, `initialColumnVisibility`. Column `size` property is respected for width styling (default 150 is ignored).
 
 ### Form Pattern
 Dialog-based forms use React Hook Form + Zod. Supabase browser client for mutations. Toast notifications via Sonner.
@@ -208,7 +220,13 @@ Dialog-based forms use React Hook Form + Zod. Supabase browser client for mutati
 Server components: `getTranslations("namespace")`. Client components: `useTranslations("namespace")`. All text in `messages/tr.json` and `messages/en.json`. **Always use `@/i18n/navigation` (NOT `next/navigation`) for locale-aware routing in client components.**
 
 ### Portal Pattern
-Portal uses **service role client** (bypasses RLS) since visitors are unauthenticated. Server actions validate tracking codes. Middleware skips Supabase session refresh for `/portal` routes.
+Portal uses **service role client** (bypasses RLS) since visitors are unauthenticated. `/portal` redirects directly to `/portal/apply` (country selection). No tracking code homepage — customers apply and are contacted via phone. Logo in portal header links back to `/portal/apply`. Middleware skips Supabase session refresh for `/portal` routes.
+
+### Admin Locale Switching
+`AdminLocaleProvider` wraps the admin layout for instant language switching via React state (no page reload). Uses `NextIntlClientProvider` override with pre-imported messages. `LocaleSwitcher` uses `useAdminLocale()` hook. Same pattern as portal's `PortalLocaleProvider`.
+
+### Application Edit Form — Portal-First Tabs
+When editing a portal-sourced application (`custom_fields` exists), the form defaults to "Customer Data" tab showing all submitted fields. Admin workflow fields go to "Process Tracking" tab. For admin-created apps (no `custom_fields`), classic tabs are shown: Personal Info, Passport & Visa, Process Tracking. Controlled by `isPortalApp` boolean.
 
 ### Per-Country Config Pattern
 Tables like `document_checklists` and `portal_form_fields` share the same pattern: filter by `country` + `visa_type`, admin CRUD via DataTable with country/visa dropdowns, "copy from" feature to clone configs between combos. Follow this pattern for any new per-country per-visa config.
@@ -230,9 +248,9 @@ Tables like `document_checklists` and `portal_form_fields` share the same patter
 - Metrics (consulate-metrics, country-metrics with Recharts)
 - Referral report (CRUD + performance)
 - Settings (7 tabs), Email management, Profile, Notifications, Logs, CDN files
-- Customer Portal (tracking lookup, status timeline, edit info, upload docs)
-- Portal Apply Wizard (5-step: country select, guides, dynamic form, document upload, confirmation)
-- Portal Admin (document checklists, form fields, portal content, countries management)
+- Customer Portal (status timeline, edit info, upload docs)
+- Portal Apply Wizard (4-step: country select, guides, dynamic form + document upload, confirmation)
+- Portal Admin (document checklists, form fields, portal content, countries, visa types)
 
 ### UI-ONLY SHELLS (7 routes) — Need backend integration
 - **AI Analysis** — placeholder responses, needs OpenAI API
@@ -324,8 +342,8 @@ The customer portal uses a distinct design language from the admin panel. Use th
 ### Glassmorphism Cards
 Semi-transparent backgrounds with backdrop blur: `bg-white/70 backdrop-blur-md border-slate-200/60 dark:bg-slate-900/70 dark:border-slate-700/60`. Creates depth without heaviness.
 
-### Gradient Accents
-Primary actions use `bg-gradient-to-r from-blue-500 to-violet-600` with matching `shadow-lg shadow-blue-500/25`. Success states use `from-emerald-500 to-teal-600`. Never flat solid colors for important CTAs.
+### Brand Colors — Solid Pink & Yellow
+Brand pink: `#FEBEBF` — used for all portal buttons, badges, stepper circles, and CTAs as `bg-[#FEBEBF] text-white`. Hover via `hover:brightness-90` (not color-shifting). Brand yellow: `#FFE7B8` — accent/warm. **No gradients on portal CTAs** — use solid brand colors only. Custom scales defined in `globals.css` via `@theme inline`: `brand-*` (pink) and `warm-*` (yellow).
 
 ### Motion Choreography (Framer Motion)
 - Page transitions: `initial={{ opacity: 0, x: 50 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -50 }}` for wizard steps
@@ -336,10 +354,10 @@ Primary actions use `bg-gradient-to-r from-blue-500 to-violet-600` with matching
 - `layoutId` for shared element transitions (e.g. selection checkmarks)
 
 ### Selection Pattern
-Selected items get: gradient bg (`from-blue-50 to-violet-50`), blue border, and a floating checkmark badge (`absolute -right-1 -top-1 rounded-full bg-blue-500`). Unselected items are neutral glass cards with hover border change.
+Country and option selection use **single-click navigation** — clicking a card navigates immediately, no highlight + next button. Selected items use pink brand colors for checkmarks and borders.
 
 ### Progress Indicators
-Horizontal stepper with: circles (icon inside), connecting lines, color states (emerald=complete, blue gradient=active, slate=pending). Scale animation on active step (`scale: 1.1`).
+Horizontal stepper with: circles (icon inside), connecting lines, color states (pink `#FEBEBF`=complete, pink=active, slate=pending). Scale animation on active step (`scale: 1.1`). No emerald/green colors on portal.
 
 ### Rounded Everything
 `rounded-2xl` on cards, `rounded-xl` on inputs and buttons. Larger radius = more friendly/modern feel. Never sharp corners on portal.

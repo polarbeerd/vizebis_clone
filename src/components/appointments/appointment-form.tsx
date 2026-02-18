@@ -4,7 +4,7 @@ import * as React from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -89,10 +89,11 @@ export function AppointmentForm({
   onSuccess,
 }: AppointmentFormProps) {
   const t = useTranslations("appointments");
-  const tVisaType = useTranslations("visaType");
   const tCommon = useTranslations("common");
+  const locale = useLocale();
 
   const [loading, setLoading] = React.useState(false);
+  const [visaTypeOptions, setVisaTypeOptions] = React.useState<Array<{ value: string; label_en: string; label_tr: string }>>([]);
   const isEdit = !!appointment;
   const supabase = React.useMemo(() => createClient(), []);
 
@@ -116,6 +117,19 @@ export function AppointmentForm({
       passport_photo: "",
     },
   });
+
+  // Fetch visa types on open
+  React.useEffect(() => {
+    if (!open) return;
+    supabase
+      .from("visa_types")
+      .select("value, label_en, label_tr")
+      .eq("is_active", true)
+      .order("sort_order")
+      .then(({ data }) => {
+        if (data) setVisaTypeOptions(data);
+      });
+  }, [open, supabase]);
 
   // Pre-fill form when editing
   React.useEffect(() => {
@@ -323,26 +337,16 @@ export function AppointmentForm({
                         <FormControl>
                           <SelectTrigger className="w-full">
                             <SelectValue
-                              placeholder={tVisaType("select")}
+                              placeholder={t("visaType")}
                             />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="kultur">
-                            {tVisaType("cultural")}
-                          </SelectItem>
-                          <SelectItem value="ticari">
-                            {tVisaType("commercial")}
-                          </SelectItem>
-                          <SelectItem value="turistik">
-                            {tVisaType("tourist")}
-                          </SelectItem>
-                          <SelectItem value="ziyaret">
-                            {tVisaType("visit")}
-                          </SelectItem>
-                          <SelectItem value="diger">
-                            {tVisaType("other")}
-                          </SelectItem>
+                          {visaTypeOptions.map((vt) => (
+                            <SelectItem key={vt.value} value={vt.value}>
+                              {locale === "tr" ? vt.label_tr : vt.label_en}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                       <FormMessage />

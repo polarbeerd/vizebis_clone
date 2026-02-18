@@ -40,6 +40,7 @@ import {
   BookOpen,
   Flag,
   FormInput,
+  Stamp,
   type LucideIcon,
 } from "lucide-react";
 
@@ -66,6 +67,16 @@ export function useNavGroups(): NavGroup[] {
         { label: t("companies"), href: "/companies", icon: Building2 },
         { label: t("appointments"), href: "/appointments", icon: CalendarClock },
         { label: t("calendar"), href: "/calendar", icon: Calendar },
+      ],
+    },
+    {
+      title: t("portalGroup"),
+      items: [
+        { label: t("documentChecklists"), href: "/document-checklists", icon: CheckSquare },
+        { label: t("portalContent"), href: "/portal-content", icon: BookOpen },
+        { label: t("portalFormFields"), href: "/portal-form-fields", icon: FormInput },
+        { label: t("countriesManagement"), href: "/countries", icon: Flag },
+        { label: t("visaTypesManagement"), href: "/visa-types", icon: Stamp },
       ],
     },
     {
@@ -109,15 +120,6 @@ export function useNavGroups(): NavGroup[] {
       items: [
         { label: t("emailHosting"), href: "/email-hosting", icon: Mail },
         { label: t("emailManagement"), href: "/email-management", icon: MailCheck },
-      ],
-    },
-    {
-      title: t("portalGroup"),
-      items: [
-        { label: t("documentChecklists"), href: "/document-checklists", icon: CheckSquare },
-        { label: t("portalContent"), href: "/portal-content", icon: BookOpen },
-        { label: t("portalFormFields"), href: "/portal-form-fields", icon: FormInput },
-        { label: t("countriesManagement"), href: "/countries", icon: Flag },
       ],
     },
     {
@@ -186,7 +188,7 @@ export function Sidebar() {
       </div>
 
       {/* Navigation */}
-      <ScrollArea className="flex-1 px-3 py-3">
+      <ScrollArea className="min-h-0 flex-1 px-3 py-3">
         <SidebarNav />
       </ScrollArea>
     </aside>

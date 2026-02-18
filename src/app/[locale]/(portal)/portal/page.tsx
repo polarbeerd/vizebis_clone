@@ -1,5 +1,5 @@
-import { PortalClient } from "./portal-client";
+import { redirect } from "next/navigation";
 
 export default function PortalPage() {
-  return <PortalClient />;
+  redirect("/portal/apply");
 }

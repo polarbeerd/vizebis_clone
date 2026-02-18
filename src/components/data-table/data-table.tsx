@@ -38,6 +38,8 @@ interface DataTableProps<TData, TValue> {
   rowClassName?: (row: TData) => string;
   /** Extra toolbar content rendered above the standard toolbar (e.g. date quick-filters) */
   toolbarExtra?: React.ReactNode;
+  /** Default column visibility — columns not listed default to visible */
+  initialColumnVisibility?: VisibilityState;
 }
 
 export function DataTable<TData, TValue>({
@@ -50,6 +52,7 @@ export function DataTable<TData, TValue>({
   onExportCsv,
   rowClassName,
   toolbarExtra,
+  initialColumnVisibility,
 }: DataTableProps<TData, TValue>) {
   const t = useTranslations("dataTable");
 
@@ -58,7 +61,7 @@ export function DataTable<TData, TValue>({
     []
   );
   const [columnVisibility, setColumnVisibility] =
-    React.useState<VisibilityState>({});
+    React.useState<VisibilityState>(initialColumnVisibility ?? {});
 
   const table = useReactTable({
     data,
@@ -98,16 +101,24 @@ export function DataTable<TData, TValue>({
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
-                {headerGroup.headers.map((header) => (
-                  <TableHead key={header.id} colSpan={header.colSpan}>
-                    {header.isPlaceholder
-                      ? null
-                      : flexRender(
-                          header.column.columnDef.header,
-                          header.getContext()
-                        )}
-                  </TableHead>
-                ))}
+                {headerGroup.headers.map((header) => {
+                  const size = header.getSize();
+                  const hasCustomSize = size !== 150;
+                  return (
+                    <TableHead
+                      key={header.id}
+                      colSpan={header.colSpan}
+                      style={hasCustomSize ? { width: size } : undefined}
+                    >
+                      {header.isPlaceholder
+                        ? null
+                        : flexRender(
+                            header.column.columnDef.header,
+                            header.getContext()
+                          )}
+                    </TableHead>
+                  );
+                })}
               </TableRow>
             ))}
           </TableHeader>
@@ -119,14 +130,21 @@ export function DataTable<TData, TValue>({
                   data-state={row.getIsSelected() && "selected"}
                   className={rowClassName ? rowClassName(row.original) : undefined}
                 >
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id}>
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext()
-                      )}
-                    </TableCell>
-                  ))}
+                  {row.getVisibleCells().map((cell) => {
+                    const size = cell.column.getSize();
+                    const hasCustomSize = size !== 150;
+                    return (
+                      <TableCell
+                        key={cell.id}
+                        style={hasCustomSize ? { width: size } : undefined}
+                      >
+                        {flexRender(
+                          cell.column.columnDef.cell,
+                          cell.getContext()
+                        )}
+                      </TableCell>
+                    );
+                  })}
                 </TableRow>
               ))
             ) : (

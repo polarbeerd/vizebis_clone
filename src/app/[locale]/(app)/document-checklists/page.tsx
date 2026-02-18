@@ -18,10 +18,16 @@ export interface CountryOption {
   flag_emoji: string | null;
 }
 
+export interface VisaTypeOption {
+  value: string;
+  label_en: string;
+  label_tr: string;
+}
+
 export default async function DocumentChecklistsPage() {
   const supabase = await createClient();
 
-  const [checklistRes, countriesRes] = await Promise.all([
+  const [checklistRes, countriesRes, visaTypesRes] = await Promise.all([
     supabase
       .from("document_checklists")
       .select("*")
@@ -29,6 +35,11 @@ export default async function DocumentChecklistsPage() {
     supabase
       .from("countries")
       .select("id, name, flag_emoji")
+      .eq("is_active", true)
+      .order("sort_order"),
+    supabase
+      .from("visa_types")
+      .select("value, label_en, label_tr")
       .eq("is_active", true)
       .order("sort_order"),
   ]);
@@ -54,5 +65,13 @@ export default async function DocumentChecklistsPage() {
     })
   );
 
-  return <DocumentChecklistsClient data={checklists} countries={countries} />;
+  const visaTypes: VisaTypeOption[] = (visaTypesRes.data ?? []).map(
+    (v: Record<string, unknown>) => ({
+      value: v.value as string,
+      label_en: v.label_en as string,
+      label_tr: v.label_tr as string,
+    })
+  );
+
+  return <DocumentChecklistsClient data={checklists} countries={countries} visaTypes={visaTypes} />;
 }

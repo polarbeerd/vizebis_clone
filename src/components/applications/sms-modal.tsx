@@ -46,13 +46,14 @@ export function SmsModal({ application, open, onOpenChange }: SmsModalProps) {
   const [selectedTemplate, setSelectedTemplate] = React.useState("");
 
   // ── Templates ──────────────────────────────────────────────
+  const appName = application?.full_name ?? "";
   const templates: Record<string, string> = React.useMemo(
     () => ({
-      appointment: t("templateAppointment"),
-      passport_pickup: t("templatePassportPickup"),
-      missing_docs: t("templateMissingDocs"),
+      appointment: t("templateAppointment", { name: appName }),
+      passport_pickup: t("templatePassportPickup", { name: appName }),
+      missing_docs: t("templateMissingDocs", { name: appName }),
     }),
-    [t]
+    [t, appName]
   );
 
   // Reset state when dialog opens
@@ -66,9 +67,7 @@ export function SmsModal({ application, open, onOpenChange }: SmsModalProps) {
   function handleTemplateChange(value: string) {
     setSelectedTemplate(value);
     if (value && templates[value]) {
-      const name = application?.full_name ?? "";
-      // Replace {name} placeholder in template
-      setMessage(templates[value].replace("{name}", name));
+      setMessage(templates[value]);
     }
   }
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
+import { Link } from "@/i18n/navigation";
 import { PortalLocaleSwitcher } from "@/components/portal/portal-locale-switcher";
 
 export function PortalHeader() {
@@ -13,11 +14,13 @@ export function PortalHeader() {
     >
       <div className="mx-auto flex h-16 max-w-5xl items-center justify-between px-4 sm:h-24 sm:px-10">
         <div className="flex-1" />
-        <img
-          src="/logo.jpg"
-          alt="Unusual Consulting"
-          className="h-12 object-contain sm:h-[4.5rem]"
-        />
+        <Link href="/portal/apply">
+          <img
+            src="/logo.jpg"
+            alt="Unusual Consulting"
+            className="h-12 object-contain sm:h-[4.5rem] cursor-pointer"
+          />
+        </Link>
         <div className="flex flex-1 justify-end pr-1 sm:pr-2">
           <PortalLocaleSwitcher />
         </div>

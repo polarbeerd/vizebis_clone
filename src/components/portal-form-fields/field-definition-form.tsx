@@ -32,7 +32,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
 const FIELD_TYPES = [
@@ -48,9 +47,13 @@ const FIELD_TYPES = [
 const definitionSchema = z.object({
   field_key: z.string().min(1, "Field key is required"),
   field_label: z.string().min(1, "Field label is required"),
+  field_label_tr: z.string().default(""),
   field_type: z.string().min(1, "Field type is required"),
   placeholder: z.string().default(""),
+  placeholder_tr: z.string().default(""),
   options: z.string().default(""),
+  options_tr: z.string().default(""),
+  max_chars: z.coerce.number().int().min(1).nullable().default(null),
 });
 
 type DefinitionFormValues = z.output<typeof definitionSchema>;
@@ -59,10 +62,13 @@ export interface FieldDefinition {
   id: number;
   field_key: string;
   field_label: string;
+  field_label_tr: string | null;
   field_type: string;
   placeholder: string | null;
+  placeholder_tr: string | null;
   options: string | null;
-  is_standard: boolean;
+  options_tr: string | null;
+  max_chars: number | null;
   created_at: string | null;
 }
 
@@ -84,7 +90,6 @@ export function FieldDefinitionForm({
 
   const [loading, setLoading] = React.useState(false);
   const isEdit = !!item?.id;
-  const isStandard = item?.is_standard ?? false;
   const supabase = React.useMemo(() => createClient(), []);
 
   const form = useForm<DefinitionFormValues>({
@@ -93,9 +98,13 @@ export function FieldDefinitionForm({
     defaultValues: {
       field_key: "",
       field_label: "",
+      field_label_tr: "",
       field_type: "text",
       placeholder: "",
+      placeholder_tr: "",
       options: "",
+      options_tr: "",
+      max_chars: null,
     },
   });
 
@@ -106,17 +115,25 @@ export function FieldDefinitionForm({
       form.reset({
         field_key: item.field_key ?? "",
         field_label: item.field_label ?? "",
+        field_label_tr: item.field_label_tr ?? "",
         field_type: item.field_type ?? "text",
         placeholder: item.placeholder ?? "",
+        placeholder_tr: item.placeholder_tr ?? "",
         options: item.options ?? "",
+        options_tr: item.options_tr ?? "",
+        max_chars: item.max_chars ?? null,
       });
     } else if (open && !item) {
       form.reset({
         field_key: "",
         field_label: "",
+        field_label_tr: "",
         field_type: "text",
         placeholder: "",
+        placeholder_tr: "",
         options: "",
+        options_tr: "",
+        max_chars: null,
       });
     }
   }, [open, item, form]);
@@ -127,9 +144,13 @@ export function FieldDefinitionForm({
     const payload = {
       field_key: values.field_key,
       field_label: values.field_label,
+      field_label_tr: values.field_label_tr,
       field_type: values.field_type,
       placeholder: values.placeholder,
+      placeholder_tr: values.placeholder_tr,
       options: values.options,
+      options_tr: values.options_tr,
+      max_chars: values.max_chars || null,
     };
 
     try {
@@ -144,7 +165,7 @@ export function FieldDefinitionForm({
       } else {
         const { error } = await supabase
           .from("portal_field_definitions")
-          .insert({ ...payload, is_standard: false });
+          .insert(payload);
 
         if (error) throw error;
         toast.success(t("createSuccess"));
@@ -160,17 +181,15 @@ export function FieldDefinitionForm({
     }
   }
 
+  // Show max_chars for text-like types
+  const showMaxChars = ["text", "tel", "number", "email", "textarea"].includes(watchFieldType);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>
             {isEdit ? t("editDefinition") : t("createDefinition")}
-            {isStandard && (
-              <Badge variant="outline" className="ml-2">
-                {t("isStandard")}
-              </Badge>
-            )}
           </DialogTitle>
           <DialogDescription>
             {isEdit ? t("editDescription") : t("addDescription")}
@@ -179,96 +198,198 @@ export function FieldDefinitionForm({
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <FormField
-              control={form.control}
-              name="field_key"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{t("fieldKey")} *</FormLabel>
-                  <FormControl>
-                    <Input
-                      {...field}
-                      disabled={isStandard}
-                      placeholder={t("fieldKeyPlaceholder")}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="field_label"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{t("fieldLabel")} *</FormLabel>
-                  <FormControl>
-                    <Input
-                      {...field}
-                      placeholder={t("fieldLabelPlaceholder")}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="field_type"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{t("fieldType")}</FormLabel>
-                  <Select
-                    onValueChange={field.onChange}
-                    value={field.value}
-                    disabled={isStandard}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {FIELD_TYPES.map((ft) => (
-                        <SelectItem key={ft} value={ft}>
-                          {ft}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="placeholder"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{t("placeholder")}</FormLabel>
-                  <FormControl>
-                    <Input {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            {watchFieldType === "select" && (
+            {/* Field key + type row */}
+            <div className="grid gap-4 sm:grid-cols-2">
               <FormField
                 control={form.control}
-                name="options"
+                name="field_key"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>{t("options")}</FormLabel>
+                    <FormLabel>{t("fieldKey")} *</FormLabel>
+                    <FormControl>
+                      <Input
+                        {...field}
+                        placeholder={t("fieldKeyPlaceholder")}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="field_type"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t("fieldType")}</FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      value={field.value}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {FIELD_TYPES.map((ft) => (
+                          <SelectItem key={ft} value={ft}>
+                            {ft}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            {/* Labels: EN / TR side by side */}
+            <div className="grid gap-4 sm:grid-cols-2">
+              <FormField
+                control={form.control}
+                name="field_label"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>
+                      <span className="mr-1.5">{"\u{1F1EC}\u{1F1E7}"}</span>
+                      {t("fieldLabelEN")} *
+                    </FormLabel>
+                    <FormControl>
+                      <Input
+                        {...field}
+                        placeholder="e.g. Full Name"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="field_label_tr"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>
+                      <span className="mr-1.5">{"\u{1F1F9}\u{1F1F7}"}</span>
+                      {t("fieldLabelTR")}
+                    </FormLabel>
+                    <FormControl>
+                      <Input
+                        {...field}
+                        placeholder="orn. Ad Soyad"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            {/* Placeholders: EN / TR side by side */}
+            <div className="grid gap-4 sm:grid-cols-2">
+              <FormField
+                control={form.control}
+                name="placeholder"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>
+                      <span className="mr-1.5">{"\u{1F1EC}\u{1F1E7}"}</span>
+                      {t("placeholderEN")}
+                    </FormLabel>
                     <FormControl>
                       <Input {...field} />
                     </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="placeholder_tr"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>
+                      <span className="mr-1.5">{"\u{1F1F9}\u{1F1F7}"}</span>
+                      {t("placeholderTR")}
+                    </FormLabel>
+                    <FormControl>
+                      <Input {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            {/* Options: EN / TR side by side (only for select) */}
+            {watchFieldType === "select" && (
+              <div className="grid gap-4 sm:grid-cols-2">
+                <FormField
+                  control={form.control}
+                  name="options"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>
+                        <span className="mr-1.5">{"\u{1F1EC}\u{1F1E7}"}</span>
+                        {t("optionsEN")}
+                      </FormLabel>
+                      <FormControl>
+                        <Input {...field} placeholder="Male, Female" />
+                      </FormControl>
+                      <p className="text-xs text-muted-foreground">
+                        {t("optionsHint")}
+                      </p>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="options_tr"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>
+                        <span className="mr-1.5">{"\u{1F1F9}\u{1F1F7}"}</span>
+                        {t("optionsTR")}
+                      </FormLabel>
+                      <FormControl>
+                        <Input {...field} placeholder="Erkek, Kadin" />
+                      </FormControl>
+                      <p className="text-xs text-muted-foreground">
+                        {t("optionsHint")}
+                      </p>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            )}
+
+            {showMaxChars && (
+              <FormField
+                control={form.control}
+                name="max_chars"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t("charLimit")}</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        min={1}
+                        placeholder={t("charLimitPlaceholder")}
+                        value={field.value ?? ""}
+                        onChange={(e) =>
+                          field.onChange(
+                            e.target.value === "" ? null : Number(e.target.value)
+                          )
+                        }
+                      />
+                    </FormControl>
                     <p className="text-xs text-muted-foreground">
-                      {t("optionsHint")}
+                      {t("charLimitHint")}
                     </p>
                     <FormMessage />
                   </FormItem>

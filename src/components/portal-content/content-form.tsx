@@ -23,6 +23,7 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
+  FormDescription,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -44,7 +45,7 @@ const contentSchema = z.object({
   content: z.string().min(1, "Content is required"),
   content_type: z.string().min(1, "Content type is required"),
   country: z.string().default(""),
-  visa_type: z.string().default(""),
+  video_url: z.string().default(""),
   sort_order: z.coerce.number().default(0),
   is_published: z.boolean().default(true),
 });
@@ -58,7 +59,7 @@ export interface ContentForForm {
   content?: string | null;
   content_type?: string | null;
   country?: string | null;
-  visa_type?: string | null;
+  video_url?: string | null;
   sort_order?: number | null;
   is_published?: boolean | null;
 }
@@ -80,7 +81,6 @@ export function ContentForm({
 }: ContentFormProps) {
   const t = useTranslations("portalContent");
   const tCommon = useTranslations("common");
-  const tVisaType = useTranslations("visaType");
 
   const [loading, setLoading] = React.useState(false);
   const isEdit = !!content;
@@ -95,7 +95,7 @@ export function ContentForm({
       content: "",
       content_type: "",
       country: "",
-      visa_type: "",
+      video_url: "",
       sort_order: 0,
       is_published: true,
     },
@@ -109,7 +109,7 @@ export function ContentForm({
         content: content.content ?? "",
         content_type: content.content_type ?? "",
         country: content.country ?? "",
-        visa_type: content.visa_type ?? "",
+        video_url: content.video_url ?? "",
         sort_order: content.sort_order ?? 0,
         is_published: content.is_published ?? true,
       });
@@ -119,7 +119,7 @@ export function ContentForm({
         content: "",
         content_type: "",
         country: "",
-        visa_type: "",
+        video_url: "",
         sort_order: 0,
         is_published: true,
       });
@@ -135,7 +135,7 @@ export function ContentForm({
       content: values.content,
       content_type: values.content_type,
       country: values.country || null,
-      visa_type: values.visa_type || null,
+      video_url: values.video_url || null,
       sort_order: values.sort_order,
       is_published: values.is_published,
     };
@@ -208,50 +208,71 @@ export function ContentForm({
                     <FormItem>
                       <FormLabel>{t("articleContent")} *</FormLabel>
                       <FormControl>
-                        <Textarea rows={12} {...field} />
+                        <Textarea rows={10} {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
 
-                {/* Content Type */}
+                {/* Video URL */}
                 <FormField
                   control={form.control}
-                  name="content_type"
+                  name="video_url"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>{t("contentType")} *</FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        value={field.value}
-                      >
-                        <FormControl>
-                          <SelectTrigger className="w-full">
-                            <SelectValue placeholder={t("contentType")} />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="country_guide">
-                            {t("countryGuide")}
-                          </SelectItem>
-                          <SelectItem value="process_guide">
-                            {t("processGuide")}
-                          </SelectItem>
-                          <SelectItem value="faq">
-                            {t("faq")}
-                          </SelectItem>
-                          <SelectItem value="general">
-                            {t("general")}
-                          </SelectItem>
-                        </SelectContent>
-                      </Select>
+                      <FormLabel>{t("videoUrl")}</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="https://www.youtube.com/watch?v=..."
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        {t("videoUrlHint")}
+                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* Content Type */}
+                  <FormField
+                    control={form.control}
+                    name="content_type"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{t("contentType")} *</FormLabel>
+                        <Select
+                          onValueChange={field.onChange}
+                          value={field.value}
+                        >
+                          <FormControl>
+                            <SelectTrigger className="w-full">
+                              <SelectValue placeholder={t("contentType")} />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="country_guide">
+                              {t("countryGuide")}
+                            </SelectItem>
+                            <SelectItem value="process_guide">
+                              {t("processGuide")}
+                            </SelectItem>
+                            <SelectItem value="faq">
+                              {t("faq")}
+                            </SelectItem>
+                            <SelectItem value="general">
+                              {t("general")}
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
                   {/* Country */}
                   <FormField
                     control={form.control}
@@ -260,8 +281,8 @@ export function ContentForm({
                       <FormItem>
                         <FormLabel>{t("assignCountry")}</FormLabel>
                         <Select
-                          onValueChange={field.onChange}
-                          value={field.value}
+                          onValueChange={(v) => field.onChange(v === "__all__" ? "" : v)}
+                          value={field.value || "__all__"}
                         >
                           <FormControl>
                             <SelectTrigger className="w-full">
@@ -269,7 +290,7 @@ export function ContentForm({
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            <SelectItem value="">
+                            <SelectItem value="__all__">
                               {tCommon("all")}
                             </SelectItem>
                             {countries.map((c) => (
@@ -277,48 +298,6 @@ export function ContentForm({
                                 {c.flag_emoji ? `${c.flag_emoji} ` : ""}{c.name}
                               </SelectItem>
                             ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  {/* Visa Type */}
-                  <FormField
-                    control={form.control}
-                    name="visa_type"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>{t("assignVisaType")}</FormLabel>
-                        <Select
-                          onValueChange={field.onChange}
-                          value={field.value}
-                        >
-                          <FormControl>
-                            <SelectTrigger className="w-full">
-                              <SelectValue placeholder={tCommon("all")} />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="">
-                              {tCommon("all")}
-                            </SelectItem>
-                            <SelectItem value="kultur">
-                              {tVisaType("cultural")}
-                            </SelectItem>
-                            <SelectItem value="ticari">
-                              {tVisaType("commercial")}
-                            </SelectItem>
-                            <SelectItem value="turistik">
-                              {tVisaType("tourist")}
-                            </SelectItem>
-                            <SelectItem value="ziyaret">
-                              {tVisaType("visit")}
-                            </SelectItem>
-                            <SelectItem value="diger">
-                              {tVisaType("other")}
-                            </SelectItem>
                           </SelectContent>
                         </Select>
                         <FormMessage />

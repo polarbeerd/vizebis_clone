@@ -4,7 +4,7 @@ import * as React from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -135,6 +135,26 @@ export interface ApplicationForForm {
   notes?: string | null;
   assigned_user_id?: string | null;
   assignment_note?: string | null;
+  custom_fields?: Record<string, unknown> | null;
+}
+
+interface FieldDefLookup {
+  field_key: string;
+  field_label: string;
+  field_label_tr: string | null;
+}
+
+interface SmartSubField {
+  key: string;
+  label: string;
+  label_tr: string;
+}
+
+interface SmartTemplateLookup {
+  template_key: string;
+  label: string;
+  label_tr: string;
+  sub_fields: SmartSubField[];
 }
 
 interface ApplicationFormProps {
@@ -152,18 +172,23 @@ export function ApplicationForm({
 }: ApplicationFormProps) {
   const t = useTranslations("applications");
   const tVisa = useTranslations("visaStatus");
-  const tVisaType = useTranslations("visaType");
   const tInvoice = useTranslations("invoiceStatus");
   const tPayment = useTranslations("paymentStatus");
   const tPaymentMethod = useTranslations("paymentMethod");
   const tCommon = useTranslations("common");
+  const locale = useLocale();
 
   const [loading, setLoading] = React.useState(false);
   const [companies, setCompanies] = React.useState<Company[]>([]);
   const [referrals, setReferrals] = React.useState<Referral[]>([]);
   const [profiles, setProfiles] = React.useState<Profile[]>([]);
+  const [visaTypeOptions, setVisaTypeOptions] = React.useState<Array<{ value: string; label_en: string; label_tr: string }>>([]);
+  const [fieldDefs, setFieldDefs] = React.useState<FieldDefLookup[]>([]);
+  const [smartTemplates, setSmartTemplates] = React.useState<SmartTemplateLookup[]>([]);
+  const [portalEdits, setPortalEdits] = React.useState<Record<string, string>>({});
 
   const isEdit = !!application;
+  const isPortalApp = !!application?.custom_fields && Object.keys(application.custom_fields).length > 0;
   const supabase = React.useMemo(() => createClient(), []);
 
   // ── Fetch lookup data ────────────────────────────────────────
@@ -171,7 +196,7 @@ export function ApplicationForm({
     if (!open) return;
 
     async function fetchLookups() {
-      const [companiesRes, referralsRes, profilesRes] = await Promise.all([
+      const [companiesRes, referralsRes, profilesRes, visaTypesRes, fieldDefsRes, smartTemplatesRes] = await Promise.all([
         supabase
           .from("companies")
           .select("id, company_name")
@@ -185,11 +210,42 @@ export function ApplicationForm({
           .from("profiles")
           .select("id, full_name")
           .order("full_name"),
+        supabase
+          .from("visa_types")
+          .select("value, label_en, label_tr")
+          .eq("is_active", true)
+          .order("sort_order"),
+        supabase
+          .from("portal_field_definitions")
+          .select("field_key, field_label, field_label_tr"),
+        supabase
+          .from("portal_smart_field_templates")
+          .select("template_key, label, label_tr, sub_fields"),
       ]);
 
       if (companiesRes.data) setCompanies(companiesRes.data);
       if (referralsRes.data) setReferrals(referralsRes.data);
       if (profilesRes.data) setProfiles(profilesRes.data);
+      if (visaTypesRes.data) setVisaTypeOptions(visaTypesRes.data);
+      if (fieldDefsRes.data) {
+        setFieldDefs(
+          fieldDefsRes.data.map((d: Record<string, unknown>) => ({
+            field_key: d.field_key as string,
+            field_label: d.field_label as string,
+            field_label_tr: (d.field_label_tr as string) ?? null,
+          }))
+        );
+      }
+      if (smartTemplatesRes.data) {
+        setSmartTemplates(
+          smartTemplatesRes.data.map((t: Record<string, unknown>) => ({
+            template_key: t.template_key as string,
+            label: t.label as string,
+            label_tr: (t.label_tr as string) ?? "",
+            sub_fields: (t.sub_fields as SmartSubField[]) ?? [],
+          }))
+        );
+      }
     }
 
     fetchLookups();
@@ -278,8 +334,33 @@ export function ApplicationForm({
         assigned_user_id: application.assigned_user_id ?? "",
         assignment_note: application.assignment_note ?? "",
       });
+      // Initialize portal edits from custom_fields
+      const cf = application.custom_fields;
+      if (cf && typeof cf === "object") {
+        const edits: Record<string, string> = {};
+        for (const [key, val] of Object.entries(cf)) {
+          if (key === "_smart") {
+            // Flatten smart field values
+            const smart = val as Record<string, Record<string, unknown>>;
+            for (const [templateKey, subFields] of Object.entries(smart)) {
+              if (typeof subFields === "object" && subFields !== null) {
+                for (const [subKey, subVal] of Object.entries(subFields)) {
+                  if (subKey === "_valid") continue;
+                  edits[`_smart.${templateKey}.${subKey}`] = String(subVal ?? "");
+                }
+              }
+            }
+          } else {
+            edits[key] = String(val ?? "");
+          }
+        }
+        setPortalEdits(edits);
+      } else {
+        setPortalEdits({});
+      }
     } else if (open && !application) {
       form.reset();
+      setPortalEdits({});
     }
   }, [open, application, form]);
 
@@ -325,6 +406,26 @@ export function ApplicationForm({
       assignment_note: values.assignment_note || null,
     };
 
+    // Merge portal edits back into custom_fields
+    if (isEdit && application?.custom_fields && Object.keys(portalEdits).length > 0) {
+      const updated = JSON.parse(JSON.stringify(application.custom_fields)) as Record<string, unknown>;
+      for (const [key, val] of Object.entries(portalEdits)) {
+        if (key.startsWith("_smart.")) {
+          // Parse "_smart.nationality.selection" → updated._smart.nationality.selection = val
+          const parts = key.split(".");
+          const templateKey = parts[1];
+          const subKey = parts.slice(2).join(".");
+          if (!updated._smart) updated._smart = {};
+          const smart = updated._smart as Record<string, Record<string, unknown>>;
+          if (!smart[templateKey]) smart[templateKey] = {};
+          smart[templateKey][subKey] = val;
+        } else {
+          updated[key] = val;
+        }
+      }
+      payload.custom_fields = updated;
+    }
+
     try {
       if (isEdit && application) {
         const { error } = await supabase
@@ -353,8 +454,8 @@ export function ApplicationForm({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-3xl max-h-[90vh] flex flex-col p-0">
-        <DialogHeader className="px-6 pt-6 pb-0">
+      <DialogContent className="sm:max-w-3xl max-h-[90vh] p-0 gap-0 [display:flex] flex-col">
+        <DialogHeader className="px-6 pt-6 pb-2 shrink-0">
           <DialogTitle>
             {isEdit ? t("editApplication") : t("addNew")}
           </DialogTitle>
@@ -366,183 +467,374 @@ export function ApplicationForm({
         <Form {...form}>
           <form
             onSubmit={form.handleSubmit(onSubmit)}
-            className="flex flex-col flex-1 overflow-hidden"
+            className="flex flex-col flex-1 min-h-0"
           >
-            <ScrollArea className="flex-1 px-6">
-              <Tabs defaultValue="personal" className="w-full">
+            <ScrollArea className="flex-1 min-h-0 overflow-hidden px-6">
+              <Tabs defaultValue={isPortalApp ? "customer" : "personal"} className="w-full">
                 <TabsList className="w-full flex-wrap h-auto">
-                  <TabsTrigger value="personal">
-                    {t("personalInfo")}
-                  </TabsTrigger>
-                  <TabsTrigger value="passport">
-                    {t("passportVisaInfo")}
-                  </TabsTrigger>
-                  <TabsTrigger value="appointment">
-                    {t("appointmentTravel")}
-                  </TabsTrigger>
+                  {isPortalApp ? (
+                    <>
+                      <TabsTrigger value="customer">
+                        {t("customerData")}
+                      </TabsTrigger>
+                      <TabsTrigger value="process">
+                        {t("processTracking")}
+                      </TabsTrigger>
+                    </>
+                  ) : (
+                    <>
+                      <TabsTrigger value="personal">
+                        {t("personalInfo")}
+                      </TabsTrigger>
+                      <TabsTrigger value="passport">
+                        {t("passportVisaInfo")}
+                      </TabsTrigger>
+                      <TabsTrigger value="process">
+                        {t("processTracking")}
+                      </TabsTrigger>
+                    </>
+                  )}
                   <TabsTrigger value="fee">{t("feeInfo")}</TabsTrigger>
-                  <TabsTrigger value="consulate">
-                    {t("consulateInfo")}
+                  <TabsTrigger value="notes">
+                    {t("notesTab")}
                   </TabsTrigger>
-                  <TabsTrigger value="other">{t("other")}</TabsTrigger>
                 </TabsList>
 
-                {/* ── Tab 1: Personal Info ──────────────────────── */}
-                <TabsContent value="personal" className="space-y-4 pt-4 pb-4">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="full_name"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>{t("fullName")} *</FormLabel>
-                          <FormControl>
-                            <Input {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="id_number"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>{t("idNumber")}</FormLabel>
-                          <FormControl>
-                            <Input {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="date_of_birth"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>{t("dateOfBirth")}</FormLabel>
-                          <FormControl>
-                            <Input type="date" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="phone"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>{t("phone")}</FormLabel>
-                          <FormControl>
-                            <Input {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="email"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>{t("email")}</FormLabel>
-                          <FormControl>
-                            <Input type="email" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="company_id"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>{t("company")}</FormLabel>
-                          <Select
-                            onValueChange={field.onChange}
-                            value={field.value}
-                          >
-                            <FormControl>
-                              <SelectTrigger className="w-full">
-                                <SelectValue placeholder={t("company")} />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {companies.map((c) => (
-                                <SelectItem
-                                  key={c.id}
-                                  value={String(c.id)}
-                                >
-                                  {c.company_name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                </TabsContent>
+                {/* ── Customer Data (portal apps only) ─────────── */}
+                {isPortalApp && (
+                  <TabsContent value="customer" className="space-y-4 pt-4 pb-4">
+                    {(() => {
+                      const cf = application?.custom_fields;
+                      if (!cf || typeof cf !== "object" || Object.keys(cf).length === 0) {
+                        return (
+                          <div className="flex items-center justify-center rounded-md border border-dashed py-8">
+                            <p className="text-sm text-muted-foreground">{t("noPortalData")}</p>
+                          </div>
+                        );
+                      }
 
-                {/* ── Tab 2: Passport & Visa ────────────────────── */}
-                <TabsContent value="passport" className="space-y-4 pt-4 pb-4">
+                      const regularKeys = Object.keys(cf).filter((k) => k !== "_smart");
+                      const smartData = (cf._smart ?? {}) as Record<string, Record<string, unknown>>;
+                      const smartKeys = Object.keys(smartData);
+
+                      return (
+                        <div className="space-y-6">
+                          {regularKeys.length > 0 && (
+                            <div>
+                              <h4 className="text-sm font-semibold mb-3">{t("customFields")}</h4>
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                {regularKeys.map((key) => {
+                                  const def = fieldDefs.find((d) => d.field_key === key);
+                                  const label = def
+                                    ? (locale === "tr" && def.field_label_tr ? def.field_label_tr : def.field_label)
+                                    : key.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+
+                                  return (
+                                    <div key={key}>
+                                      <label className="text-sm font-medium mb-1.5 block">{label}</label>
+                                      <Input
+                                        value={portalEdits[key] ?? String(cf[key] ?? "")}
+                                        onChange={(e) =>
+                                          setPortalEdits((prev) => ({ ...prev, [key]: e.target.value }))
+                                        }
+                                      />
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          )}
+
+                          {smartKeys.length > 0 && (
+                            <div>
+                              <h4 className="text-sm font-semibold mb-3">{t("smartFieldData")}</h4>
+                              <div className="space-y-4">
+                                {smartKeys.map((templateKey) => {
+                                  const tmpl = smartTemplates.find((t) => t.template_key === templateKey);
+                                  const groupLabel = tmpl
+                                    ? (locale === "tr" && tmpl.label_tr ? tmpl.label_tr : tmpl.label)
+                                    : templateKey.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+
+                                  const subData = smartData[templateKey];
+                                  if (!subData || typeof subData !== "object") return null;
+                                  const subKeys = Object.keys(subData).filter((k) => k !== "_valid");
+
+                                  return (
+                                    <div key={templateKey} className="rounded-lg border p-3">
+                                      <h5 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+                                        {groupLabel}
+                                      </h5>
+                                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                        {subKeys.map((subKey) => {
+                                          const editKey = `_smart.${templateKey}.${subKey}`;
+                                          const subField = tmpl?.sub_fields?.find((sf) => sf.key === subKey);
+                                          const subLabel = subField
+                                            ? (locale === "tr" && subField.label_tr ? subField.label_tr : subField.label)
+                                            : subKey.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+
+                                          return (
+                                            <div key={subKey}>
+                                              <label className="text-xs font-medium mb-1 block text-muted-foreground">
+                                                {subLabel}
+                                              </label>
+                                              <Input
+                                                className="h-8 text-sm"
+                                                value={portalEdits[editKey] ?? String(subData[subKey] ?? "")}
+                                                onChange={(e) =>
+                                                  setPortalEdits((prev) => ({ ...prev, [editKey]: e.target.value }))
+                                                }
+                                              />
+                                            </div>
+                                          );
+                                        })}
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()}
+                  </TabsContent>
+                )}
+
+                {/* ── Personal Info (admin-created apps only) ───── */}
+                {!isPortalApp && (
+                  <TabsContent value="personal" className="space-y-4 pt-4 pb-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="full_name"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>{t("fullName")} *</FormLabel>
+                            <FormControl>
+                              <Input {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="id_number"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>{t("idNumber")}</FormLabel>
+                            <FormControl>
+                              <Input {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="date_of_birth"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>{t("dateOfBirth")}</FormLabel>
+                            <FormControl>
+                              <Input type="date" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="phone"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>{t("phone")}</FormLabel>
+                            <FormControl>
+                              <Input {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="email"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>{t("email")}</FormLabel>
+                            <FormControl>
+                              <Input type="email" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="company_id"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>{t("company")}</FormLabel>
+                            <Select
+                              onValueChange={field.onChange}
+                              value={field.value}
+                            >
+                              <FormControl>
+                                <SelectTrigger className="w-full">
+                                  <SelectValue placeholder={t("company")} />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {companies.map((c) => (
+                                  <SelectItem
+                                    key={c.id}
+                                    value={String(c.id)}
+                                  >
+                                    {c.company_name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  </TabsContent>
+                )}
+
+                {/* ── Passport & Visa (admin-created apps only) ── */}
+                {!isPortalApp && (
+                  <TabsContent value="passport" className="space-y-4 pt-4 pb-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="passport_no"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>{t("passportNo")}</FormLabel>
+                            <FormControl>
+                              <Input {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="passport_expiry"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>{t("passportExpiry")}</FormLabel>
+                            <FormControl>
+                              <Input type="date" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="visa_start"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>{t("visaStart")}</FormLabel>
+                            <FormControl>
+                              <Input type="date" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="visa_end"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>{t("visaEnd")}</FormLabel>
+                            <FormControl>
+                              <Input type="date" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="visa_status"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>{t("visaStatus")}</FormLabel>
+                            <Select
+                              onValueChange={field.onChange}
+                              value={field.value}
+                            >
+                              <FormControl>
+                                <SelectTrigger className="w-full">
+                                  <SelectValue />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="beklemede">
+                                  {tVisa("pending")}
+                                </SelectItem>
+                                <SelectItem value="hazirlaniyor">
+                                  {tVisa("preparing")}
+                                </SelectItem>
+                                <SelectItem value="konsoloslukta">
+                                  {tVisa("atConsulate")}
+                                </SelectItem>
+                                <SelectItem value="vize_cikti">
+                                  {tVisa("approved")}
+                                </SelectItem>
+                                <SelectItem value="ret_oldu">
+                                  {tVisa("rejected")}
+                                </SelectItem>
+                                <SelectItem value="pasaport_teslim">
+                                  {tVisa("passportDelivered")}
+                                </SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="visa_type"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>{t("visaType")}</FormLabel>
+                            <Select
+                              onValueChange={field.onChange}
+                              value={field.value}
+                            >
+                              <FormControl>
+                                <SelectTrigger className="w-full">
+                                  <SelectValue
+                                    placeholder={t("visaType")}
+                                  />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {visaTypeOptions.map((vt) => (
+                                  <SelectItem key={vt.value} value={vt.value}>
+                                    {locale === "tr" ? vt.label_tr : vt.label_en}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  </TabsContent>
+                )}
+
+                {/* ── Process Tracking ────────────────────────── */}
+                <TabsContent value="process" className="space-y-4 pt-4 pb-4">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="passport_no"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>{t("passportNo")}</FormLabel>
-                          <FormControl>
-                            <Input {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="passport_expiry"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>{t("passportExpiry")}</FormLabel>
-                          <FormControl>
-                            <Input type="date" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="visa_start"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>{t("visaStart")}</FormLabel>
-                          <FormControl>
-                            <Input type="date" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="visa_end"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>{t("visaEnd")}</FormLabel>
-                          <FormControl>
-                            <Input type="date" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
                     <FormField
                       control={form.control}
                       name="visa_status"
@@ -595,42 +887,21 @@ export function ApplicationForm({
                           >
                             <FormControl>
                               <SelectTrigger className="w-full">
-                                <SelectValue
-                                  placeholder={tVisaType("select")}
-                                />
+                                <SelectValue placeholder={t("visaType")} />
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              <SelectItem value="kultur">
-                                {tVisaType("cultural")}
-                              </SelectItem>
-                              <SelectItem value="ticari">
-                                {tVisaType("commercial")}
-                              </SelectItem>
-                              <SelectItem value="turistik">
-                                {tVisaType("tourist")}
-                              </SelectItem>
-                              <SelectItem value="ziyaret">
-                                {tVisaType("visit")}
-                              </SelectItem>
-                              <SelectItem value="diger">
-                                {tVisaType("other")}
-                              </SelectItem>
+                              {visaTypeOptions.map((vt) => (
+                                <SelectItem key={vt.value} value={vt.value}>
+                                  {locale === "tr" ? vt.label_tr : vt.label_en}
+                                </SelectItem>
+                              ))}
                             </SelectContent>
                           </Select>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
-                  </div>
-                </TabsContent>
-
-                {/* ── Tab 3: Appointment & Travel ───────────────── */}
-                <TabsContent
-                  value="appointment"
-                  className="space-y-4 pt-4 pb-4"
-                >
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <FormField
                       control={form.control}
                       name="country"
@@ -696,10 +967,62 @@ export function ApplicationForm({
                         </FormItem>
                       )}
                     />
+                    <FormField
+                      control={form.control}
+                      name="consulate_app_no"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>{t("consulateAppNo")}</FormLabel>
+                          <FormControl>
+                            <Input {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="consulate_office"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>{t("consulateOffice")}</FormLabel>
+                          <FormControl>
+                            <Input {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="visa_start"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>{t("visaStart")}</FormLabel>
+                          <FormControl>
+                            <Input type="date" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="visa_end"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>{t("visaEnd")}</FormLabel>
+                          <FormControl>
+                            <Input type="date" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
                   </div>
                 </TabsContent>
 
-                {/* ── Tab 4: Fee Info ───────────────────────────── */}
+                {/* ── Fee Info ────────────────────────────────── */}
                 <TabsContent value="fee" className="space-y-4 pt-4 pb-4">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <FormField
@@ -917,43 +1240,8 @@ export function ApplicationForm({
                   </div>
                 </TabsContent>
 
-                {/* ── Tab 5: Consulate Info ─────────────────────── */}
-                <TabsContent
-                  value="consulate"
-                  className="space-y-4 pt-4 pb-4"
-                >
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="consulate_app_no"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>{t("consulateAppNo")}</FormLabel>
-                          <FormControl>
-                            <Input {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="consulate_office"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>{t("consulateOffice")}</FormLabel>
-                          <FormControl>
-                            <Input {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                </TabsContent>
-
-                {/* ── Tab 6: Other ──────────────────────────────── */}
-                <TabsContent value="other" className="space-y-4 pt-4 pb-4">
+                {/* ── Notes ───────────────────────────────────── */}
+                <TabsContent value="notes" className="space-y-4 pt-4 pb-4">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <FormField
                       control={form.control}
@@ -1061,10 +1349,11 @@ export function ApplicationForm({
                   </div>
                 </TabsContent>
               </Tabs>
+              <div className="h-4" />
             </ScrollArea>
 
             {/* ── Footer ──────────────────────────────────────── */}
-            <div className="flex items-center justify-end gap-2 border-t px-6 py-4">
+            <div className="flex items-center justify-end gap-2 border-t px-6 py-4 shrink-0">
               <Button
                 type="button"
                 variant="outline"
