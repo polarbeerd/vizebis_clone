@@ -41,6 +41,8 @@ import {
   Flag,
   FormInput,
   Stamp,
+  Hotel,
+  FileEdit,
   type LucideIcon,
 } from "lucide-react";
 
@@ -77,6 +79,8 @@ export function useNavGroups(): NavGroup[] {
         { label: t("portalFormFields"), href: "/portal-form-fields", icon: FormInput },
         { label: t("countriesManagement"), href: "/countries", icon: Flag },
         { label: t("visaTypesManagement"), href: "/visa-types", icon: Stamp },
+        { label: t("bookingTemplates"), href: "/booking-templates", icon: Hotel },
+        { label: t("letterTemplates"), href: "/letter-templates", icon: FileEdit },
       ],
     },
     {
