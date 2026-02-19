@@ -128,24 +128,28 @@ export function GeneratedDocumentsTab({ applicationId }: GeneratedDocumentsTabPr
     }
   }
 
+  // Trigger server-side generation via API route
+  async function triggerGeneration() {
+    if (!applicationId) return;
+    await fetch("/api/generate-documents", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ applicationId }),
+    });
+  }
+
   // Generate booking PDF manually
   async function handleGenerateBooking(hotelId: string) {
     if (!applicationId || !hotelId) return;
     setGenerating("booking");
     try {
-      // Create a generating record
-      const { error } = await supabase.from("generated_documents").insert({
-        application_id: applicationId,
-        type: "booking_pdf",
-        hotel_id: hotelId,
-        status: "generating",
-        generated_by: "manual",
-      });
-      if (error) throw error;
+      // Trigger server-side generation
+      await triggerGeneration();
       toast.success(t("generating"));
-      await fetchDocs();
-      // Note: actual generation would need to be triggered server-side
-      // For now we create the record - admin can trigger regen from Python service
+      // Poll for status update
+      setTimeout(() => fetchDocs(), 2000);
+      setTimeout(() => fetchDocs(), 5000);
+      setTimeout(() => fetchDocs(), 10000);
     } catch {
       toast.error(t("error"));
     } finally {
@@ -158,15 +162,11 @@ export function GeneratedDocumentsTab({ applicationId }: GeneratedDocumentsTabPr
     if (!applicationId) return;
     setGenerating("letter");
     try {
-      const { error } = await supabase.from("generated_documents").insert({
-        application_id: applicationId,
-        type: "letter_of_intent",
-        status: "generating",
-        generated_by: "manual",
-      });
-      if (error) throw error;
+      await triggerGeneration();
       toast.success(t("generating"));
-      await fetchDocs();
+      setTimeout(() => fetchDocs(), 2000);
+      setTimeout(() => fetchDocs(), 5000);
+      setTimeout(() => fetchDocs(), 10000);
     } catch {
       toast.error(t("error"));
     } finally {
@@ -198,31 +198,24 @@ export function GeneratedDocumentsTab({ applicationId }: GeneratedDocumentsTabPr
     await fetchDocs();
   }
 
-  // Regenerate (delete old, insert new)
+  // Regenerate: reset existing record to 'generating' and trigger server-side generation
   async function handleRegenerate(type: string) {
     if (!applicationId) return;
     setGenerating(type === "booking_pdf" ? "booking" : "letter");
     try {
-      // Delete existing
+      // Reset existing record status
       await supabase
         .from("generated_documents")
-        .delete()
+        .update({ status: "generating", error_message: null, updated_at: new Date().toISOString() })
         .eq("application_id", applicationId)
         .eq("type", type);
 
-      // Insert new generating record
-      const insertData: Record<string, unknown> = {
-        application_id: applicationId,
-        type,
-        status: "generating",
-        generated_by: "manual",
-      };
-      if (type === "booking_pdf" && bookingDoc?.hotel_id) {
-        insertData.hotel_id = bookingDoc.hotel_id;
-      }
-      await supabase.from("generated_documents").insert(insertData);
+      // Trigger server-side generation
+      await triggerGeneration();
       toast.success(t("generating"));
       await fetchDocs();
+      setTimeout(() => fetchDocs(), 3000);
+      setTimeout(() => fetchDocs(), 8000);
     } catch {
       toast.error(t("error"));
     } finally {

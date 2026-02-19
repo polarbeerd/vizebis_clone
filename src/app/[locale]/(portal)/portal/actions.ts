@@ -971,6 +971,17 @@ export async function submitGroup(
   }
 
   // Fire and forget — auto-generate documents for all group members
+  // Pick ONE shared hotel for the entire group
+  const { data: groupHotels } = await supabase
+    .from("booking_hotels")
+    .select("id")
+    .eq("type", "group")
+    .eq("is_active", true);
+
+  const sharedHotelId = groupHotels?.length
+    ? (groupHotels[Math.floor(Math.random() * groupHotels.length)].id as string)
+    : undefined;
+
   const { data: members } = await supabase
     .from("applications")
     .select("id")
@@ -979,7 +990,7 @@ export async function submitGroup(
 
   if (members?.length) {
     for (const member of members) {
-      generateDocumentsForApplication(member.id as number).catch((err) => {
+      generateDocumentsForApplication(member.id as number, sharedHotelId).catch((err) => {
         console.error("Auto-generation failed for member", member.id, err);
       });
     }

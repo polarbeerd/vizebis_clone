@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useTranslations, useLocale } from "next-intl";
-import { Copy, Edit, Loader2, Download, Check, XCircle, Plus } from "lucide-react";
+import { Copy, Edit, Loader2, Download, Check, XCircle, Plus, MessageSquare } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { formatDate, formatCurrency } from "@/lib/utils";
 
@@ -86,6 +86,7 @@ interface ApplicationCardProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onEdit?: (application: ApplicationDetail) => void;
+  onSms?: (application: { id: number; full_name: string | null; phone: string | null }) => void;
 }
 
 interface AppDoc {
@@ -179,6 +180,7 @@ export function ApplicationCard({
   open,
   onOpenChange,
   onEdit,
+  onSms,
 }: ApplicationCardProps) {
   const t = useTranslations("applications");
   const tVisa = useTranslations("visaStatus");
@@ -574,6 +576,22 @@ export function ApplicationCard({
                   >
                     <Edit className="mr-1.5 size-3.5" />
                     {tCommon("edit")}
+                  </Button>
+                )}
+                {onSms && application.phone && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      onSms({
+                        id: application.id,
+                        full_name: application.full_name,
+                        phone: application.phone,
+                      });
+                    }}
+                  >
+                    <MessageSquare className="mr-1.5 size-3.5" />
+                    SMS
                   </Button>
                 )}
               </div>

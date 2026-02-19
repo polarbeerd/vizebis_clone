@@ -866,6 +866,10 @@ export function ApplicationsClient({ data }: ApplicationsClientProps) {
         open={detailOpen}
         onOpenChange={setDetailOpen}
         onEdit={handleDetailEdit}
+        onSms={(app) => {
+          setSmsApplication(app);
+          setSmsOpen(true);
+        }}
       />
 
       {/* ── SMS Modal ───────────────────────────────────────── */}

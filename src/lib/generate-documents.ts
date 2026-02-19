@@ -2,7 +2,10 @@ import { createServiceClient } from "@/lib/supabase/service";
 
 const PDF_SERVICE_URL = process.env.PDF_SERVICE_URL || "http://localhost:8000";
 
-export async function generateDocumentsForApplication(applicationId: number) {
+export async function generateDocumentsForApplication(
+  applicationId: number,
+  sharedHotelId?: string
+) {
   const supabase = createServiceClient();
 
   // 1. Fetch application
@@ -22,7 +25,7 @@ export async function generateDocumentsForApplication(applicationId: number) {
 
   // 2. Run both in parallel
   await Promise.allSettled([
-    generateBookingPdf(supabase, app, hotelType),
+    generateBookingPdf(supabase, app, hotelType, sharedHotelId),
     generateLetterOfIntent(supabase, app),
   ]);
 }
@@ -30,26 +33,43 @@ export async function generateDocumentsForApplication(applicationId: number) {
 async function generateBookingPdf(
   supabase: ReturnType<typeof createServiceClient>,
   app: Record<string, unknown>,
-  hotelType: string
+  hotelType: string,
+  sharedHotelId?: string
 ) {
   try {
-    // Pick random active hotel
-    const { data: hotels } = await supabase
-      .from("booking_hotels")
-      .select("*")
-      .eq("type", hotelType)
-      .eq("is_active", true);
+    let hotel: Record<string, unknown>;
 
-    if (!hotels?.length) {
-      console.warn(
-        "No active hotels of type",
-        hotelType,
-        "— skipping booking PDF"
-      );
-      return;
+    if (sharedHotelId) {
+      // Use pre-selected hotel (group submissions share one hotel)
+      const { data: hotelData } = await supabase
+        .from("booking_hotels")
+        .select("*")
+        .eq("id", sharedHotelId)
+        .single();
+      if (!hotelData) {
+        console.warn("Shared hotel not found:", sharedHotelId);
+        return;
+      }
+      hotel = hotelData;
+    } else {
+      // Pick random active hotel
+      const { data: hotels } = await supabase
+        .from("booking_hotels")
+        .select("*")
+        .eq("type", hotelType)
+        .eq("is_active", true);
+
+      if (!hotels?.length) {
+        console.warn(
+          "No active hotels of type",
+          hotelType,
+          "— skipping booking PDF"
+        );
+        return;
+      }
+
+      hotel = hotels[Math.floor(Math.random() * hotels.length)];
     }
-
-    const hotel = hotels[Math.floor(Math.random() * hotels.length)];
 
     // Create generating record
     const { data: doc, error: insertError } = await supabase
@@ -72,7 +92,7 @@ async function generateBookingPdf(
     // Get template URL
     const { data: urlData } = supabase.storage
       .from("booking-templates")
-      .getPublicUrl(hotel.template_path);
+      .getPublicUrl(hotel.template_path as string);
 
     // Extract guest name and dates from application
     const guestName = (app.full_name as string) || "GUEST";
