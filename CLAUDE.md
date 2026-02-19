@@ -5,7 +5,7 @@
 - **Project:** Visa consulting management platform — "Unusual Consulting"
 - **Brand:** "our experience is your power" — modern, playful, professional
 - **Logo:** `public/logo.jpg` (black bg, pink/cream "UNUSUAL CONSULTING" text)
-- **Status:** 46 routes total — 34 fully functional, 7 UI-only, 1 broken, 4 portal
+- **Status:** 48 routes total — 36 fully functional, 7 UI-only, 1 broken, 4 portal
 - **Run:** `npm run dev` → http://localhost:3000
 - **Build:** `npm run build` (passing clean)
 - **Supabase project:** `vizebiscopy` — anon key connected, service role key placeholder
@@ -29,6 +29,9 @@
 | Icons | lucide-react | 0.563.x |
 | State | Zustand | 5.0.x |
 | Toasts | Sonner | latest |
+| Rich Text Editor | Tiptap | latest |
+| PDF Generation | Python FastAPI + pikepdf (sidecar service) | 9.0.x |
+| AI (Letter of Intent) | Gemini 2.5 Flash API | v1beta |
 
 ---
 
@@ -67,6 +70,8 @@ src/
 │   │   │   ├── portal-form-fields/  # Dynamic form field config per country+visa
 │   │   │   ├── portal-content/      # Guides/articles for portal
 │   │   │   ├── countries/           # Country management (flags, sort, active)
+│   │   │   ├── booking-templates/  # Hotel booking PDF template management
+│   │   │   ├── letter-templates/   # Letter of intent example management + generation settings
 │   │   │   ├── ai-analysis/       # Natural language data query chat
 │   │   │   ├── ai-assistant/      # Visa letter generator form
 │   │   │   ├── ai-prompts/        # Prompt template CRUD
@@ -93,6 +98,9 @@ src/
 │   │               ├── page.tsx + status-client.tsx  # Animated status timeline + details
 │   │               ├── edit/page.tsx + edit-client.tsx   # Personal info form
 │   │               └── upload/page.tsx + upload-client.tsx # Document upload
+│   ├── api/
+│   │   ├── generate-documents/    # POST: fire-and-forget document generation trigger
+│   │   └── extract-pdf-text/      # POST: extract text from uploaded PDF (letter examples)
 │   └── globals.css
 ├── components/
 │   ├── ui/                        # 25 shadcn/ui components
@@ -104,7 +112,9 @@ src/
 │   ├── dashboard/
 │   │   └── stat-card.tsx          # Reusable stat card (5 color variants)
 │   ├── data-table/                # 4 components: table, toolbar, pagination, column-header
-│   ├── applications/              # application-form, application-detail, sms-modal, deleted-applications
+│   ├── applications/              # application-card (tabbed detail), application-form, application-detail, generated-documents-tab, notes-tab, sms-modal, deleted-applications
+│   ├── booking-templates/         # hotel-form
+│   ├── letter-templates/          # example-form, letter-editor (Tiptap WYSIWYG)
 │   ├── companies/                 # company-form
 │   ├── appointments/              # appointment-form
 │   ├── documents/                 # document-form
@@ -124,6 +134,7 @@ src/
 │   └── portal-form-fields/        # field-form.tsx
 ├── lib/
 │   ├── utils.ts                   # cn(), formatCurrency(), formatDate(), formatDateTime()
+│   ├── generate-documents.ts      # Auto-generation orchestrator for booking PDF + letter of intent
 │   └── supabase/
 │       ├── client.ts              # Browser client (createBrowserClient)
 │       ├── server.ts              # Server client (createServerClient + cookies)
@@ -135,10 +146,14 @@ src/
 │   └── navigation.ts             # Locale-aware Link, redirect, usePathname, useRouter
 └── middleware.ts                  # Combined next-intl + Supabase session (skips portal)
 messages/
-├── tr.json                        # Turkish translations (~880 keys, 49 namespaces)
-└── en.json                        # English translations (~880 keys, 49 namespaces)
+├── tr.json                        # Turkish translations (~950 keys, 52 namespaces)
+└── en.json                        # English translations (~950 keys, 52 namespaces)
 public/
 └── logo.jpg                       # Unusual Consulting brand logo
+pdf-service/                       # Python FastAPI sidecar for PDF operations
+├── main.py                        # FastAPI app: /generate-booking (pikepdf) + /html-to-pdf (weasyprint)
+├── requirements.txt               # fastapi, uvicorn, pikepdf, weasyprint, etc.
+└── Dockerfile                     # Container build for deployment
 supabase/
 └── migrations/
     ├── 001_core_schema.sql        # Full schema (746 lines, 23 tables, 10 enums)
@@ -148,12 +163,13 @@ supabase/
     ├── 006_field_enhancements.sql # Field definitions table + visa_types table
     ├── 007_smart_field_templates.sql # Smart field template system
     ├── 008_replace_minmax_with_max_chars.sql # Character limit on fields
-    └── 009_smart_field_sub_labels.sql # Sub-field labels for smart fields
+    ├── 009_smart_field_sub_labels.sql # Sub-field labels for smart fields
+    └── 013_booking_and_letter_of_intent.sql # booking_hotels, letter_intent_examples, generated_documents + storage buckets
 ```
 
 ---
 
-## Database Schema (27 Tables)
+## Database Schema (30 Tables)
 
 | Table | Purpose | Key Fields |
 |-------|---------|------------|
@@ -187,10 +203,13 @@ supabase/
 | `portal_field_definitions` | Reusable field definitions library | field_key, field_label, field_type, section, options |
 | `portal_smart_field_templates` | Smart field templates (nationality, address, etc.) | template_key, label, sub_fields JSONB |
 | `visa_types` | Visa type options for dropdowns | value, label_en, label_tr, is_active, sort_order |
+| `booking_hotels` | Hotel booking PDF templates | name, type (individual/group), template_path, edit_config JSONB, is_active, sort_order |
+| `letter_intent_examples` | Example letters for AI few-shot prompts | country, visa_type, file_path, extracted_text, is_active |
+| `generated_documents` | Auto-generated docs per application | application_id, type (booking_pdf/letter_of_intent), hotel_id, file_path, content, status, generated_by |
 
 **Enums:** visa_status, visa_type, currency_type, payment_status, payment_method, invoice_status, document_type, document_status, priority_type, access_level, user_role
 
-**Storage Buckets:** `portal-uploads` (defined in migration 002, needs manual creation in dashboard)
+**Storage Buckets:** `portal-uploads` (migration 002), `booking-templates` (hotel PDF templates), `letter-intent-examples` (example letter PDFs), `generated-docs` (auto-generated booking PDFs + letters) — all defined in migrations, need manual creation in Supabase dashboard
 
 ---
 
@@ -231,6 +250,9 @@ When editing a portal-sourced application (`custom_fields` exists), the form def
 ### Per-Country Config Pattern
 Tables like `document_checklists` and `portal_form_fields` share the same pattern: filter by `country` + `visa_type`, admin CRUD via DataTable with country/visa dropdowns, "copy from" feature to clone configs between combos. Follow this pattern for any new per-country per-visa config.
 
+### Document Generation Pattern
+Auto-generation fires on portal submission (`actions.ts`) via `generateDocumentsForApplication()` — fire-and-forget with `.catch()`. Generates booking PDF (via Python sidecar + pikepdf) and letter of intent (via Gemini 2.5 Flash API). Group submissions share a single randomly-picked hotel via `sharedHotelId` parameter. Status tracked in `generated_documents` table (generating → ready/error). Client polls via setTimeout after triggering `/api/generate-documents`. Admin can view/download/regenerate from the Generated Documents tab in the application card.
+
 ### Dynamic Form Pattern
 `portal_form_fields` defines fields with `is_standard` (maps to `applications` column) vs custom (stored in `applications.custom_fields` JSONB). Zod schema is built dynamically at runtime from fetched field definitions. Use `zodResolver(schema) as any` to avoid TS generic mismatch with `useForm`.
 
@@ -238,10 +260,10 @@ Tables like `document_checklists` and `portal_form_fields` share the same patter
 
 ## Current Status — What Works vs What Doesn't
 
-### FULLY FUNCTIONAL (34 routes) — Connected to Supabase
+### FULLY FUNCTIONAL (36 routes) — Connected to Supabase
 - Authentication (login, register, logout, session management)
 - Dashboard (live stats, recent activity)
-- Applications (full CRUD, 40+ fields, tracking code, CSV export, color coding)
+- Applications (full CRUD, 40+ fields, tracking code, CSV export, color coding, tabbed detail card with generated documents)
 - Companies, Appointments, Calendar (full CRUD)
 - Documents, Tags, Forms, Passwords (full CRUD)
 - Finance reports (debt-individual, debt-corporate, at-consulate, country-reports)
@@ -251,6 +273,8 @@ Tables like `document_checklists` and `portal_form_fields` share the same patter
 - Customer Portal (status timeline, edit info, upload docs)
 - Portal Apply Wizard (4-step: country select, guides, dynamic form + document upload, confirmation)
 - Portal Admin (document checklists, form fields, portal content, countries, visa types)
+- Booking Templates (hotel CRUD, PDF template upload, edit config JSON)
+- Letter Templates (example letter CRUD, PDF text extraction, Gemini generation settings)
 
 ### UI-ONLY SHELLS (7 routes) — Need backend integration
 - **AI Analysis** — placeholder responses, needs OpenAI API
@@ -327,6 +351,8 @@ What separates the best platforms: **WhatsApp integration**, **AI-powered automa
 NEXT_PUBLIC_SUPABASE_URL=https://puxhataoolzchfkecqsy.supabase.co   # ✅ Connected
 NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ...                                  # ✅ Real key
 SUPABASE_SERVICE_ROLE_KEY=your-service-role-key-here                  # ❌ Placeholder — get from Supabase dashboard > Settings > API
+PDF_SERVICE_URL=http://localhost:8000                                  # Python FastAPI sidecar for PDF generation (pikepdf + weasyprint)
+GEMINI_API_KEY=...                                                    # For letter of intent generation (Gemini 2.5 Flash)
 # Future:
 # OPENAI_API_KEY=sk-...                                              # For AI features
 # WHATSAPP_API_TOKEN=...                                             # For WhatsApp Business API
