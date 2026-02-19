@@ -57,7 +57,7 @@ import type { ApplicationRow } from "./page";
 
 import { ApplicationForm } from "@/components/applications/application-form";
 import type { ApplicationForForm } from "@/components/applications/application-form";
-import { ApplicationDetailSheet } from "@/components/applications/application-detail";
+import { ApplicationCard } from "@/components/applications/application-card";
 import { SmsModal } from "@/components/applications/sms-modal";
 import { DeletedApplications } from "@/components/applications/deleted-applications";
 
@@ -371,21 +371,28 @@ export function ApplicationsClient({ data }: ApplicationsClientProps) {
       },
       {
         accessorKey: "source",
-        size: 80,
+        size: 100,
         header: () => t("source"),
         cell: ({ row }) => {
           const source = row.getValue("source") as string;
-          if (source === "portal") {
-            return (
-              <Badge variant="outline" className="text-[10px] bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/30 dark:text-blue-400 dark:border-blue-800">
-                {t("sourcePortal")}
-              </Badge>
-            );
-          }
+          const groupId = row.original.group_id;
           return (
-            <Badge variant="outline" className="text-[10px] bg-slate-50 text-slate-500 border-slate-200 dark:bg-slate-950/30 dark:text-slate-400 dark:border-slate-700">
-              {t("sourceAdmin")}
-            </Badge>
+            <div className="flex items-center gap-1 flex-wrap">
+              {source === "portal" ? (
+                <Badge variant="outline" className="text-[10px] bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/30 dark:text-blue-400 dark:border-blue-800">
+                  {t("sourcePortal")}
+                </Badge>
+              ) : (
+                <Badge variant="outline" className="text-[10px] bg-slate-50 text-slate-500 border-slate-200 dark:bg-slate-950/30 dark:text-slate-400 dark:border-slate-700">
+                  {t("sourceAdmin")}
+                </Badge>
+              )}
+              {groupId && (
+                <Badge variant="outline" className="text-[10px] bg-violet-50 text-violet-700 border-violet-200 dark:bg-violet-950/30 dark:text-violet-400 dark:border-violet-800">
+                  {t("groupBadge")}
+                </Badge>
+              )}
+            </div>
           );
         },
         filterFn: (row, id, value: string[]) => {
@@ -854,7 +861,7 @@ export function ApplicationsClient({ data }: ApplicationsClientProps) {
       />
 
       {/* ── Application Detail Sheet ────────────────────────── */}
-      <ApplicationDetailSheet
+      <ApplicationCard
         applicationId={detailId}
         open={detailOpen}
         onOpenChange={setDetailOpen}
