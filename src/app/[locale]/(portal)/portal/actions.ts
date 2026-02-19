@@ -1,6 +1,7 @@
 "use server";
 
 import { createServiceClient } from "@/lib/supabase/service";
+import { generateDocumentsForApplication } from "@/lib/generate-documents";
 
 // Fields visible to the customer (NO fees, payments, admin notes)
 const CUSTOMER_VISIBLE_SELECT = `
@@ -530,6 +531,11 @@ export async function createPortalApplication(data: {
     await supabase.from("application_documents").insert(docs);
   }
 
+  // Fire and forget — auto-generate booking PDF and letter of intent
+  generateDocumentsForApplication(applicationId).catch((err) => {
+    console.error("Auto-generation failed for application", applicationId, err);
+  });
+
   return { trackingCode, applicationId, error: null };
 }
 
@@ -701,4 +707,380 @@ export async function getApplicationDocuments(
   );
 
   return { documents, error: null };
+}
+
+// ──────────────────────────────────────────────────────────────
+// Group Applications — Server Actions
+// ──────────────────────────────────────────────────────────────
+
+export interface GroupData {
+  id: number;
+  group_name: string;
+  country: string;
+  application_city: string;
+  travel_dates: Record<string, unknown> | null;
+  tracking_code: string;
+  status: string;
+}
+
+export interface GroupMember {
+  id: number;
+  tracking_code: string;
+  full_name: string | null;
+  passport_no: string | null;
+  id_number: string | null;
+  date_of_birth: string | null;
+  visa_type: string | null;
+  custom_fields: Record<string, unknown> | null;
+}
+
+export async function createGroup(data: {
+  group_name: string;
+  country: string;
+  application_city: string;
+  travel_dates?: Record<string, unknown>;
+}): Promise<{ group: GroupData | null; error: string | null }> {
+  const supabase = createServiceClient();
+
+  const { data: group, error } = await supabase
+    .from("application_groups")
+    .insert({
+      group_name: data.group_name,
+      country: data.country,
+      application_city: data.application_city,
+      travel_dates: data.travel_dates ?? null,
+      status: "draft",
+    })
+    .select("id, group_name, country, application_city, travel_dates, tracking_code, status")
+    .single();
+
+  if (error || !group) {
+    console.error("Error creating group:", error);
+    return { group: null, error: "CREATE_FAILED" };
+  }
+
+  return { group: group as GroupData, error: null };
+}
+
+export async function getGroupMembers(
+  groupId: number
+): Promise<GroupMember[]> {
+  const supabase = createServiceClient();
+
+  const { data, error } = await supabase
+    .from("applications")
+    .select("id, tracking_code, full_name, passport_no, id_number, date_of_birth, visa_type, custom_fields")
+    .eq("group_id", groupId)
+    .eq("is_deleted", false)
+    .order("id", { ascending: true });
+
+  if (error) {
+    console.error("Error fetching group members:", error);
+    return [];
+  }
+
+  return (data ?? []) as GroupMember[];
+}
+
+export async function addGroupMember(data: {
+  groupId: number;
+  country: string;
+  visa_type: string;
+  application_city: string;
+  standardFields: Record<string, string>;
+  customFields: Record<string, string>;
+  smartFieldData?: Record<string, unknown>;
+}): Promise<{
+  member: GroupMember | null;
+  error: string | null;
+}> {
+  const supabase = createServiceClient();
+
+  const cf = data.customFields;
+  const allFields = { ...data.standardFields, ...cf };
+
+  const fullName = [allFields.name, allFields.surname]
+    .filter(Boolean)
+    .join(" ") || allFields.full_name || null;
+
+  const standardInsert: Record<string, unknown> = {
+    ...(fullName ? { full_name: fullName } : {}),
+    ...(allFields.phone ? { phone: allFields.phone } : {}),
+    ...(allFields.email ? { email: allFields.email } : {}),
+    ...(allFields.id_number ? { id_number: allFields.id_number } : {}),
+    ...(allFields.date_of_birth ? { date_of_birth: allFields.date_of_birth } : {}),
+    ...(allFields.passport_no ? { passport_no: allFields.passport_no } : {}),
+    ...((allFields.passport_expiry || allFields.date_expiry)
+      ? { passport_expiry: allFields.passport_expiry || allFields.date_expiry }
+      : {}),
+  };
+
+  const { data: app, error } = await supabase
+    .from("applications")
+    .insert({
+      ...standardInsert,
+      custom_fields: {
+        ...(Object.keys(data.customFields).length > 0 ? data.customFields : {}),
+        ...(data.smartFieldData && Object.keys(data.smartFieldData).length > 0
+          ? { _smart: data.smartFieldData }
+          : {}),
+        application_city: data.application_city,
+      },
+      country: data.country,
+      visa_type: data.visa_type,
+      visa_status: "beklemede",
+      source: "portal",
+      group_id: data.groupId,
+      payment_status: "odenmedi",
+      invoice_status: "fatura_yok",
+      currency: "TL",
+      consulate_fee: 0,
+      service_fee: 0,
+    })
+    .select("id, tracking_code, full_name, passport_no, id_number, date_of_birth, visa_type, custom_fields")
+    .single();
+
+  if (error || !app) {
+    console.error("Error adding group member:", error);
+    return { member: null, error: "CREATE_FAILED" };
+  }
+
+  // Auto-populate documents from checklist
+  const { data: checklistItems } = await supabase
+    .from("document_checklists")
+    .select("id, is_required")
+    .eq("country", data.country)
+    .eq("visa_type", data.visa_type)
+    .order("sort_order");
+
+  if (checklistItems && checklistItems.length > 0) {
+    const appId = (app as Record<string, unknown>).id as number;
+    const docs = checklistItems.map((item: Record<string, unknown>) => ({
+      application_id: appId,
+      checklist_item_id: item.id as number,
+      is_required: item.is_required as boolean,
+      status: "pending",
+    }));
+    await supabase.from("application_documents").insert(docs);
+  }
+
+  return { member: app as GroupMember, error: null };
+}
+
+export async function updateGroupMember(data: {
+  applicationId: number;
+  groupId: number;
+  visa_type: string;
+  standardFields: Record<string, string>;
+  customFields: Record<string, string>;
+  smartFieldData?: Record<string, unknown>;
+  application_city: string;
+  country: string;
+}): Promise<{ error: string | null }> {
+  const supabase = createServiceClient();
+
+  const cf = data.customFields;
+  const allFields = { ...data.standardFields, ...cf };
+
+  const fullName = [allFields.name, allFields.surname]
+    .filter(Boolean)
+    .join(" ") || allFields.full_name || null;
+
+  const standardUpdate: Record<string, unknown> = {
+    ...(fullName ? { full_name: fullName } : {}),
+    ...(allFields.phone ? { phone: allFields.phone } : {}),
+    ...(allFields.email ? { email: allFields.email } : {}),
+    ...(allFields.id_number ? { id_number: allFields.id_number } : {}),
+    ...(allFields.date_of_birth ? { date_of_birth: allFields.date_of_birth } : {}),
+    ...(allFields.passport_no ? { passport_no: allFields.passport_no } : {}),
+    ...((allFields.passport_expiry || allFields.date_expiry)
+      ? { passport_expiry: allFields.passport_expiry || allFields.date_expiry }
+      : {}),
+  };
+
+  const { error } = await supabase
+    .from("applications")
+    .update({
+      ...standardUpdate,
+      custom_fields: {
+        ...(Object.keys(data.customFields).length > 0 ? data.customFields : {}),
+        ...(data.smartFieldData && Object.keys(data.smartFieldData).length > 0
+          ? { _smart: data.smartFieldData }
+          : {}),
+        application_city: data.application_city,
+      },
+      visa_type: data.visa_type,
+    })
+    .eq("id", data.applicationId)
+    .eq("group_id", data.groupId);
+
+  if (error) {
+    console.error("Error updating group member:", error);
+    return { error: "UPDATE_FAILED" };
+  }
+
+  return { error: null };
+}
+
+export async function deleteGroupMember(
+  applicationId: number,
+  groupId: number
+): Promise<{ error: string | null }> {
+  const supabase = createServiceClient();
+
+  // Soft delete by marking is_deleted
+  const { error } = await supabase
+    .from("applications")
+    .update({ is_deleted: true })
+    .eq("id", applicationId)
+    .eq("group_id", groupId);
+
+  if (error) {
+    console.error("Error deleting group member:", error);
+    return { error: "DELETE_FAILED" };
+  }
+
+  return { error: null };
+}
+
+export async function submitGroup(
+  groupId: number
+): Promise<{ trackingCode: string | null; error: string | null }> {
+  const supabase = createServiceClient();
+
+  // Get group info
+  const { data: group, error: groupError } = await supabase
+    .from("application_groups")
+    .select("tracking_code")
+    .eq("id", groupId)
+    .single();
+
+  if (groupError || !group) {
+    return { trackingCode: null, error: "GROUP_NOT_FOUND" };
+  }
+
+  // Mark group as submitted
+  const { error: updateError } = await supabase
+    .from("application_groups")
+    .update({ status: "submitted" })
+    .eq("id", groupId);
+
+  if (updateError) {
+    console.error("Error submitting group:", updateError);
+    return { trackingCode: null, error: "SUBMIT_FAILED" };
+  }
+
+  // Fire and forget — auto-generate documents for all group members
+  const { data: members } = await supabase
+    .from("applications")
+    .select("id")
+    .eq("group_id", groupId)
+    .eq("is_deleted", false);
+
+  if (members?.length) {
+    for (const member of members) {
+      generateDocumentsForApplication(member.id as number).catch((err) => {
+        console.error("Auto-generation failed for member", member.id, err);
+      });
+    }
+  }
+
+  return {
+    trackingCode: (group as Record<string, unknown>).tracking_code as string,
+    error: null,
+  };
+}
+
+// ──────────────────────────────────────────────────────────────
+// Application Notes — Server Actions (Admin)
+// ──────────────────────────────────────────────────────────────
+
+export interface ApplicationNote {
+  id: number;
+  content: string;
+  category: string;
+  is_pinned: boolean;
+  author_id: string | null;
+  author_name: string | null;
+  created_at: string;
+}
+
+export async function getApplicationNotes(
+  applicationId: number
+): Promise<ApplicationNote[]> {
+  const supabase = createServiceClient();
+
+  const { data, error } = await supabase
+    .from("application_notes")
+    .select("id, content, category, is_pinned, author_id, created_at, profiles(full_name)")
+    .eq("application_id", applicationId)
+    .order("is_pinned", { ascending: false })
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    console.error("Error fetching notes:", error);
+    return [];
+  }
+
+  return (data ?? []).map((n: Record<string, unknown>) => {
+    const profile = n.profiles as Record<string, unknown> | null;
+    return {
+      id: n.id as number,
+      content: n.content as string,
+      category: (n.category as string) ?? "internal",
+      is_pinned: n.is_pinned as boolean,
+      author_id: n.author_id as string | null,
+      author_name: profile ? (profile.full_name as string) : null,
+      created_at: n.created_at as string,
+    };
+  });
+}
+
+export async function addApplicationNote(data: {
+  applicationId: number;
+  content: string;
+  category: string;
+  authorId: string;
+}): Promise<{ note: ApplicationNote | null; error: string | null }> {
+  const supabase = createServiceClient();
+
+  const { data: note, error } = await supabase
+    .from("application_notes")
+    .insert({
+      application_id: data.applicationId,
+      content: data.content,
+      category: data.category,
+      author_id: data.authorId,
+    })
+    .select("id, content, category, is_pinned, author_id, created_at")
+    .single();
+
+  if (error || !note) {
+    console.error("Error adding note:", error);
+    return { note: null, error: "CREATE_FAILED" };
+  }
+
+  return {
+    note: { ...(note as Record<string, unknown>), author_name: null } as unknown as ApplicationNote,
+    error: null,
+  };
+}
+
+export async function toggleNotePin(
+  noteId: number,
+  isPinned: boolean
+): Promise<{ error: string | null }> {
+  const supabase = createServiceClient();
+
+  const { error } = await supabase
+    .from("application_notes")
+    .update({ is_pinned: isPinned })
+    .eq("id", noteId);
+
+  if (error) {
+    console.error("Error toggling pin:", error);
+    return { error: "UPDATE_FAILED" };
+  }
+
+  return { error: null };
 }
