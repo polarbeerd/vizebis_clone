@@ -31,6 +31,7 @@ export function LetterEditor({ content, onSave, onClose }: LetterEditorProps) {
   const editor = useEditor({
     extensions: [StarterKit, Underline],
     content,
+    immediatelyRender: false,
     editorProps: {
       attributes: {
         class: "prose prose-sm max-w-none min-h-[400px] p-4 focus:outline-none",

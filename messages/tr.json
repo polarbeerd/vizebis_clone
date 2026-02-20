@@ -1782,7 +1782,10 @@
     "saveSuccess": "Otel başarıyla kaydedildi",
     "deleteSuccess": "Otel başarıyla silindi",
     "uploadSuccess": "PDF şablonu yüklendi",
-    "uploadError": "PDF şablonu yüklenemedi"
+    "uploadError": "PDF şablonu yüklenemedi",
+    "country": "Ülke",
+    "selectCountry": "Ülke seçin",
+    "noCountry": "Ülke Belirtilmemiş"
   },
   "letterTemplates": {
     "title": "Niyet Mektubu",

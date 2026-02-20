@@ -52,23 +52,49 @@ async function generateBookingPdf(
       }
       hotel = hotelData;
     } else {
-      // Pick random active hotel
-      const { data: hotels } = await supabase
+      // Pick random active hotel, preferring one matching the application's country
+      const country = app.country as string | undefined;
+
+      let query = supabase
         .from("booking_hotels")
         .select("*")
         .eq("type", hotelType)
         .eq("is_active", true);
 
-      if (!hotels?.length) {
+      if (country) {
+        query = query.eq("country", country);
+      }
+
+      const { data: hotels } = await query;
+
+      // Fallback: if no country-matched hotels, try without country filter
+      if (!hotels?.length && country) {
+        const { data: fallbackHotels } = await supabase
+          .from("booking_hotels")
+          .select("*")
+          .eq("type", hotelType)
+          .eq("is_active", true);
+
+        if (!fallbackHotels?.length) {
+          console.warn(
+            "No active hotels of type",
+            hotelType,
+            "— skipping booking PDF"
+          );
+          return;
+        }
+
+        hotel = fallbackHotels[Math.floor(Math.random() * fallbackHotels.length)];
+      } else if (!hotels?.length) {
         console.warn(
           "No active hotels of type",
           hotelType,
           "— skipping booking PDF"
         );
         return;
+      } else {
+        hotel = hotels[Math.floor(Math.random() * hotels.length)];
       }
-
-      hotel = hotels[Math.floor(Math.random() * hotels.length)];
     }
 
     // Create generating record

@@ -971,22 +971,40 @@ export async function submitGroup(
   }
 
   // Fire and forget — auto-generate documents for all group members
-  // Pick ONE shared hotel for the entire group
-  const { data: groupHotels } = await supabase
+  // Pick ONE shared hotel for the entire group, matching country if possible
+  const { data: members } = await supabase
+    .from("applications")
+    .select("id, country")
+    .eq("group_id", groupId)
+    .eq("is_deleted", false);
+
+  const groupCountry = members?.[0]?.country as string | undefined;
+
+  let hotelQuery = supabase
     .from("booking_hotels")
     .select("id")
     .eq("type", "group")
     .eq("is_active", true);
 
+  if (groupCountry) {
+    hotelQuery = hotelQuery.eq("country", groupCountry);
+  }
+
+  let { data: groupHotels } = await hotelQuery;
+
+  // Fallback: if no country-matched hotels, try without country filter
+  if (!groupHotels?.length && groupCountry) {
+    const { data: fallbackHotels } = await supabase
+      .from("booking_hotels")
+      .select("id")
+      .eq("type", "group")
+      .eq("is_active", true);
+    groupHotels = fallbackHotels;
+  }
+
   const sharedHotelId = groupHotels?.length
     ? (groupHotels[Math.floor(Math.random() * groupHotels.length)].id as string)
     : undefined;
-
-  const { data: members } = await supabase
-    .from("applications")
-    .select("id")
-    .eq("group_id", groupId)
-    .eq("is_deleted", false);
 
   if (members?.length) {
     for (const member of members) {

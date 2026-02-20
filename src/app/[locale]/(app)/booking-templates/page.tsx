@@ -11,6 +11,7 @@ export interface HotelRow {
   template_path: string;
   edit_config: Record<string, unknown>;
   type: string;
+  country: string | null;
   is_active: boolean;
   sort_order: number;
   created_at: string;

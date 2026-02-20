@@ -47,6 +47,7 @@ import type { HotelRow } from "@/app/[locale]/(app)/booking-templates/page";
 // Schema
 const hotelSchema = z.object({
   name: z.string().min(1, "Hotel name is required"),
+  country: z.string().min(1, "Country is required"),
   address: z.string().min(1, "Address is required"),
   email: z.string().email("Valid email required"),
   phone: z.string().min(1, "Phone is required"),
@@ -66,6 +67,11 @@ const DEFAULT_EDIT_CONFIG: Record<string, unknown> = {
   },
   patterns: {},
 };
+
+interface CountryOption {
+  name: string;
+  flag_emoji: string | null;
+}
 
 interface HotelFormProps {
   open: boolean;
@@ -87,6 +93,7 @@ export function HotelForm({
   const [pdfFile, setPdfFile] = React.useState<File | null>(null);
   const [editConfigJson, setEditConfigJson] = React.useState("");
   const [configOpen, setConfigOpen] = React.useState(false);
+  const [countries, setCountries] = React.useState<CountryOption[]>([]);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   const isEdit = !!hotel;
@@ -97,6 +104,7 @@ export function HotelForm({
     resolver: zodResolver(hotelSchema) as any,
     defaultValues: {
       name: "",
+      country: "",
       address: "",
       email: "",
       phone: "",
@@ -106,11 +114,25 @@ export function HotelForm({
     },
   });
 
+  // Fetch countries
+  React.useEffect(() => {
+    if (!open) return;
+    supabase
+      .from("countries")
+      .select("name, flag_emoji")
+      .eq("is_active", true)
+      .order("sort_order")
+      .then(({ data }) => {
+        setCountries((data ?? []) as CountryOption[]);
+      });
+  }, [open, supabase]);
+
   // Pre-fill form when editing
   React.useEffect(() => {
     if (open && hotel) {
       form.reset({
         name: hotel.name ?? "",
+        country: hotel.country ?? "",
         address: hotel.address ?? "",
         email: hotel.email ?? "",
         phone: hotel.phone ?? "",
@@ -169,6 +191,7 @@ export function HotelForm({
         // Update hotel record
         const payload: Record<string, unknown> = {
           name: values.name,
+          country: values.country,
           address: values.address,
           email: values.email,
           phone: values.phone,
@@ -197,6 +220,7 @@ export function HotelForm({
         // Insert new hotel record
         const payload: Record<string, unknown> = {
           name: values.name,
+          country: values.country,
           address: values.address,
           email: values.email,
           phone: values.phone,
@@ -256,8 +280,8 @@ export function HotelForm({
             onSubmit={form.handleSubmit(onSubmit)}
             className="flex flex-col flex-1 overflow-hidden"
           >
-            <ScrollArea className="flex-1 px-6 py-4">
-              <div className="space-y-4">
+            <ScrollArea className="flex-1">
+              <div className="space-y-4 px-6 py-4">
                 {/* Hotel Name */}
                 <FormField
                   control={form.control}
@@ -268,6 +292,35 @@ export function HotelForm({
                       <FormControl>
                         <Input {...field} />
                       </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {/* Country */}
+                <FormField
+                  control={form.control}
+                  name="country"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t("country")} *</FormLabel>
+                      <Select
+                        onValueChange={field.onChange}
+                        value={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder={t("selectCountry")} />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {countries.map((c) => (
+                            <SelectItem key={c.name} value={c.name}>
+                              {c.flag_emoji ? `${c.flag_emoji} ` : ""}{c.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   )}

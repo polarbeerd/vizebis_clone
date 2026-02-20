@@ -1782,7 +1782,10 @@
     "saveSuccess": "Hotel saved successfully",
     "deleteSuccess": "Hotel deleted successfully",
     "uploadSuccess": "PDF template uploaded",
-    "uploadError": "Failed to upload PDF template"
+    "uploadError": "Failed to upload PDF template",
+    "country": "Country",
+    "selectCountry": "Select country",
+    "noCountry": "No Country"
   },
   "letterTemplates": {
     "title": "Letter of Intent",
