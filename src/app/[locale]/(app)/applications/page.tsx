@@ -19,6 +19,7 @@ export interface ApplicationRow {
   company_name: string | null;
   tracking_code: string | null;
   source: string | null;
+  group_id: number | null;
   doc_total: number;
   doc_completed: number;
 }
@@ -46,6 +47,7 @@ export default async function ApplicationsPage() {
       notes,
       tracking_code,
       source,
+      group_id,
       companies ( company_name )
     `
     )
@@ -89,6 +91,7 @@ export default async function ApplicationsPage() {
     company_name: (app.companies as { company_name: string } | null)?.company_name ?? null,
     tracking_code: app.tracking_code as string | null,
     source: app.source as string | null,
+    group_id: app.group_id as number | null,
     doc_total: docMap.get(app.id as number)?.total ?? 0,
     doc_completed: docMap.get(app.id as number)?.completed ?? 0,
   }));

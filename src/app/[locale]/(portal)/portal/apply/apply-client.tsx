@@ -14,6 +14,7 @@ import {
   Globe,
   FileText,
   User,
+  Users,
   CheckCircle2,
   AlertTriangle,
   Loader2,
@@ -48,6 +49,12 @@ import {
   getFormFields,
   getSmartFieldAssignments,
   createPortalApplication,
+  createGroup,
+  getGroupMembers,
+  addGroupMember,
+  updateGroupMember,
+  deleteGroupMember,
+  submitGroup,
 } from "../actions";
 import type {
   CountryOption,
@@ -55,7 +62,11 @@ import type {
   PortalContentItem,
   FormField,
   SmartFieldAssignment,
+  GroupData,
+  GroupMember,
 } from "../actions";
+import { GroupFolderForm } from "@/components/portal/group-folder-form";
+import { GroupFolderView } from "@/components/portal/group-folder-view";
 
 // ──────────────────────────────────────────────────────────────
 // Step config — built dynamically based on whether guides exist
@@ -63,6 +74,7 @@ import type {
 const ALL_STEPS = [
   { key: "stepCountry", icon: Globe, id: "country" },
   { key: "stepGuide", icon: FileText, id: "guide" },
+  { key: "stepChoice", icon: Users, id: "choice" },
   { key: "stepInfo", icon: User, id: "info" },
   { key: "stepConfirmation", icon: CheckCircle2, id: "confirmation" },
 ] as const;
@@ -218,6 +230,13 @@ export function ApplyClient({ countries, visaTypes }: ApplyClientProps) {
   const [loadingFields, setLoadingFields] = useState(false);
   const [loadingGuides, setLoadingGuides] = useState(false);
   const [formSubmitted, setFormSubmitted] = useState(false);
+  const [applicationMode, setApplicationMode] = useState<"individual" | "group" | null>(null);
+  const [groupData, setGroupData] = useState<GroupData | null>(null);
+  const [groupMembers, setGroupMembers] = useState<GroupMember[]>([]);
+  const [groupSubStep, setGroupSubStep] = useState<"create" | "folder" | "member">("create");
+  const [editingMember, setEditingMember] = useState<GroupMember | null>(null);
+  const [creatingFolder, setCreatingFolder] = useState(false);
+  const [submittingGroup, setSubmittingGroup] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
 
   // ── Dynamic stepper config ──
@@ -230,8 +249,9 @@ export function ApplyClient({ countries, visaTypes }: ApplyClientProps) {
     (s) =>
       (step === 1 && s.id === "country") ||
       (step === 2 && s.id === "guide") ||
-      (step === 3 && s.id === "info") ||
-      (step === 4 && s.id === "confirmation")
+      (step === 3 && s.id === "choice") ||
+      (step === 4 && s.id === "info") ||
+      (step === 5 && s.id === "confirmation")
   );
   const activeStepLabel = activeSteps[stepperIndex >= 0 ? stepperIndex : 0];
 
@@ -313,7 +333,7 @@ export function ApplyClient({ countries, visaTypes }: ApplyClientProps) {
   // ── Step navigation ──
   const goNext = () => {
     if (step === 2 && guideAcknowledged) {
-      setStep(3);
+      setStep(3); // go to choice
     }
   };
 
@@ -321,11 +341,26 @@ export function ApplyClient({ countries, visaTypes }: ApplyClientProps) {
     if (step === 2) {
       setStep(1);
     } else if (step === 3) {
+      // Choice step
       if (guides.length === 0) {
         setStep(1);
       } else {
         setStep(2);
       }
+    } else if (step === 4) {
+      if (applicationMode === "group" && groupSubStep === "member") {
+        // From member form, go back to folder view
+        setGroupSubStep("folder");
+        setEditingMember(null);
+        return;
+      }
+      if (applicationMode === "group" && groupSubStep === "folder") {
+        // From folder view, go back to choice
+        setStep(3);
+        return;
+      }
+      // Individual form: back to choice
+      setStep(3);
     }
   };
 
@@ -351,10 +386,13 @@ export function ApplyClient({ countries, visaTypes }: ApplyClientProps) {
   // ── Form submit ──
   const onFormSubmit = async (data: Record<string, string>) => {
     setFormSubmitted(true);
-    if (!selectedCity) {
+
+    // For individual mode, city is required
+    if (applicationMode !== "group" && !selectedCity) {
       toast.error(t("applicationCityRequired"));
       return;
     }
+
     setSmartSubmitted(true);
     for (const sa of smartAssignments) {
       const sfData = smartFieldData[sa.template_key];
@@ -366,7 +404,14 @@ export function ApplyClient({ countries, visaTypes }: ApplyClientProps) {
         return;
       }
     }
-    await submitApplication(data);
+
+    if (applicationMode === "group" && groupData) {
+      // Save group member
+      await saveGroupMember(data);
+    } else {
+      // Individual submit
+      await submitApplication(data);
+    }
   };
 
   const submitApplication = async (data: Record<string, string>) => {
@@ -399,7 +444,169 @@ export function ApplyClient({ countries, visaTypes }: ApplyClientProps) {
         return;
       }
       setTrackingCode(result.trackingCode);
-      setStep(4);
+      setStep(5);
+    } catch {
+      toast.error(t("uploadError"));
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // ── Group handlers ──
+  const handleChoiceSelect = (mode: "individual" | "group") => {
+    setApplicationMode(mode);
+    setStep(4);
+    if (mode === "group") {
+      setGroupSubStep("create");
+    }
+  };
+
+  const handleCreateFolder = async (data: {
+    groupName: string;
+    city: string;
+    travelDates?: Record<string, unknown>;
+  }) => {
+    setCreatingFolder(true);
+    try {
+      const result = await createGroup({
+        group_name: data.groupName,
+        country: selectedCountry,
+        application_city: data.city,
+        travel_dates: data.travelDates,
+      });
+      if (result.error || !result.group) {
+        toast.error(t("groupCreateError"));
+        return;
+      }
+      setGroupData(result.group);
+      setSelectedCity(data.city);
+      setGroupSubStep("folder");
+    } catch {
+      toast.error(t("groupCreateError"));
+    } finally {
+      setCreatingFolder(false);
+    }
+  };
+
+  const handleAddMember = () => {
+    setEditingMember(null);
+    setSelectedVisaType("");
+    setFormFields([]);
+    setSmartAssignments([]);
+    setSmartFieldData({});
+    setSmartSubmitted(false);
+    setFormSubmitted(false);
+    form.reset({});
+    setGroupSubStep("member");
+  };
+
+  const handleEditMember = (member: GroupMember) => {
+    setEditingMember(member);
+    // Pre-fill visa type - will trigger field loading
+    if (member.visa_type) {
+      handleVisaTypeChange(member.visa_type);
+    }
+    // Pre-fill form values from custom_fields
+    if (member.custom_fields) {
+      const cf = member.custom_fields as Record<string, string>;
+      setTimeout(() => {
+        for (const [key, value] of Object.entries(cf)) {
+          if (key !== "_smart" && key !== "application_city") {
+            form.setValue(key, value as string);
+          }
+        }
+        // Restore smart field data
+        if (cf._smart) {
+          setSmartFieldData(cf._smart as unknown as Record<string, Record<string, unknown>>);
+        }
+      }, 500);
+    }
+    setGroupSubStep("member");
+  };
+
+  const handleDeleteMember = async (member: GroupMember) => {
+    if (!groupData) return;
+    const result = await deleteGroupMember(member.id, groupData.id);
+    if (result.error) {
+      toast.error(t("uploadError"));
+      return;
+    }
+    toast.success(t("memberDeleted"));
+    setGroupMembers((prev) => prev.filter((m) => m.id !== member.id));
+  };
+
+  const handleSubmitGroup = async () => {
+    if (!groupData) return;
+    setSubmittingGroup(true);
+    try {
+      const result = await submitGroup(groupData.id);
+      if (result.error || !result.trackingCode) {
+        toast.error(t("uploadError"));
+        return;
+      }
+      setTrackingCode(result.trackingCode);
+      setStep(5);
+    } catch {
+      toast.error(t("uploadError"));
+    } finally {
+      setSubmittingGroup(false);
+    }
+  };
+
+  const saveGroupMember = async (data: Record<string, string>) => {
+    if (!groupData) return;
+    setSubmitting(true);
+    try {
+      const standardFields: Record<string, string> = {};
+      const customFields: Record<string, string> = {};
+      for (const field of formFields) {
+        const value = data[field.field_key] ?? "";
+        if (field.is_standard) {
+          standardFields[field.field_key] = value;
+        } else {
+          customFields[field.field_key] = value;
+        }
+      }
+
+      if (editingMember) {
+        // Update existing member
+        const result = await updateGroupMember({
+          applicationId: editingMember.id,
+          groupId: groupData.id,
+          visa_type: selectedVisaType,
+          standardFields,
+          customFields,
+          smartFieldData: Object.keys(smartFieldData).length > 0 ? smartFieldData : undefined,
+          application_city: groupData.application_city,
+          country: selectedCountry,
+        });
+        if (result.error) {
+          toast.error(t("uploadError"));
+          return;
+        }
+      } else {
+        // Add new member
+        const result = await addGroupMember({
+          groupId: groupData.id,
+          country: selectedCountry,
+          visa_type: selectedVisaType,
+          application_city: groupData.application_city,
+          standardFields,
+          customFields,
+          smartFieldData: Object.keys(smartFieldData).length > 0 ? smartFieldData : undefined,
+        });
+        if (result.error) {
+          toast.error(t("uploadError"));
+          return;
+        }
+      }
+
+      toast.success(t("memberSaved"));
+      // Refresh members list
+      const members = await getGroupMembers(groupData.id);
+      setGroupMembers(members);
+      setEditingMember(null);
+      setGroupSubStep("folder");
     } catch {
       toast.error(t("uploadError"));
     } finally {
@@ -702,12 +909,14 @@ export function ApplyClient({ countries, visaTypes }: ApplyClientProps) {
             const isActive =
               (step === 1 && stepId === "country") ||
               (step === 2 && stepId === "guide") ||
-              (step === 3 && stepId === "info") ||
-              (step === 4 && stepId === "confirmation");
+              (step === 3 && stepId === "choice") ||
+              (step === 4 && stepId === "info") ||
+              (step === 5 && stepId === "confirmation");
             const isComplete =
               (stepId === "country" && step > 1) ||
               (stepId === "guide" && step > 2) ||
-              (stepId === "info" && step > 3);
+              (stepId === "choice" && step > 3) ||
+              (stepId === "info" && step > 4);
             const Icon = s.icon;
 
             return (
@@ -996,15 +1205,160 @@ export function ApplyClient({ countries, visaTypes }: ApplyClientProps) {
           </motion.div>
         )}
 
-        {/* ═══════ STEP 3 — Visa Type + Dynamic Form ═══════ */}
+        {/* ═══════ STEP 3 — Individual / Group Choice ═══════ */}
         {step === 3 && (
           <motion.div
-            key="step3"
+            key="step3-choice"
             initial={{ opacity: 0, x: 50 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -50 }}
             transition={{ duration: 0.25 }}
           >
+            {/* Country indicator */}
+            {(() => {
+              const c = countries.find((c) => c.name === selectedCountry);
+              if (!c) return null;
+              return (
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="mb-4 flex items-center justify-center gap-2 sm:mb-5"
+                >
+                  <span className="text-3xl">{c.flag_emoji || "\u{1F3F3}\u{FE0F}"}</span>
+                  <span className="text-lg font-semibold text-slate-800 dark:text-slate-200">
+                    {countryDisplayName(c)}
+                  </span>
+                </motion.div>
+              );
+            })()}
+
+            <div className="mb-6 text-center sm:mb-8">
+              <h2 className="text-xl font-bold tracking-tight text-slate-900 sm:text-3xl dark:text-white">
+                {t("choiceTitle")}
+              </h2>
+              <p className="mt-1.5 text-sm text-slate-500 sm:mt-2 sm:text-base dark:text-slate-400">
+                {t("choiceSubtitle")}
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              {/* Individual */}
+              <motion.button
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.05 }}
+                whileHover={{ y: -2, boxShadow: "0 8px 25px -5px rgba(0,0,0,0.1)" }}
+                whileTap={{ scale: 0.97 }}
+                onClick={() => handleChoiceSelect("individual")}
+                className="group flex flex-col items-center justify-center rounded-2xl border border-slate-200/60 bg-white/70 p-8 shadow-sm backdrop-blur-md transition-all hover:border-brand-300 dark:border-slate-700/60 dark:bg-slate-900/70 dark:hover:border-brand-700"
+              >
+                <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-brand-100 dark:bg-brand-900/30">
+                  <User className="h-8 w-8 text-brand-600 dark:text-brand-400" />
+                </div>
+                <span className="text-lg font-semibold text-slate-800 dark:text-slate-200">
+                  {t("individualApp")}
+                </span>
+                <span className="mt-1 text-sm text-slate-400 dark:text-slate-500">
+                  {t("individualAppDesc")}
+                </span>
+              </motion.button>
+
+              {/* Group */}
+              <motion.button
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1 }}
+                whileHover={{ y: -2, boxShadow: "0 8px 25px -5px rgba(0,0,0,0.1)" }}
+                whileTap={{ scale: 0.97 }}
+                onClick={() => handleChoiceSelect("group")}
+                className="group flex flex-col items-center justify-center rounded-2xl border border-slate-200/60 bg-white/70 p-8 shadow-sm backdrop-blur-md transition-all hover:border-brand-300 dark:border-slate-700/60 dark:bg-slate-900/70 dark:hover:border-brand-700"
+              >
+                <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-brand-100 dark:bg-brand-900/30">
+                  <Users className="h-8 w-8 text-brand-600 dark:text-brand-400" />
+                </div>
+                <span className="text-lg font-semibold text-slate-800 dark:text-slate-200">
+                  {t("groupApp")}
+                </span>
+                <span className="mt-1 text-sm text-slate-400 dark:text-slate-500">
+                  {t("groupAppDesc")}
+                </span>
+              </motion.button>
+            </div>
+
+            {/* Back button */}
+            <div className="mt-8 flex items-center">
+              <Button
+                variant="outline"
+                onClick={goBack}
+                className="h-10 rounded-xl border-slate-300 px-4 text-sm text-slate-600 hover:bg-slate-50 sm:h-11 sm:px-6 dark:border-slate-600 dark:text-slate-400 dark:hover:bg-slate-800"
+              >
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                {tCommon("back")}
+              </Button>
+            </div>
+          </motion.div>
+        )}
+
+        {/* ═══════ STEP 4 — Visa Type + Dynamic Form / Group Sub-flow ═══════ */}
+        {step === 4 && (
+          <motion.div
+            key="step4"
+            initial={{ opacity: 0, x: 50 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -50 }}
+            transition={{ duration: 0.25 }}
+          >
+            {/* Group sub-step: create folder */}
+            {applicationMode === "group" && groupSubStep === "create" && (
+              <>
+                <GroupFolderForm
+                  country={selectedCountry}
+                  onCreateFolder={handleCreateFolder}
+                  loading={creatingFolder}
+                />
+                <div className="mt-6 flex items-center">
+                  <Button
+                    variant="outline"
+                    onClick={goBack}
+                    className="h-10 rounded-xl border-slate-300 px-4 text-sm text-slate-600 hover:bg-slate-50 sm:h-11 sm:px-6 dark:border-slate-600 dark:text-slate-400 dark:hover:bg-slate-800"
+                  >
+                    <ArrowLeft className="mr-2 h-4 w-4" />
+                    {tCommon("back")}
+                  </Button>
+                </div>
+              </>
+            )}
+
+            {/* Group sub-step: folder view */}
+            {applicationMode === "group" && groupSubStep === "folder" && groupData && (
+              <>
+                <GroupFolderView
+                  group={groupData}
+                  members={groupMembers}
+                  countries={countries}
+                  visaTypes={visaTypes}
+                  onAddMember={handleAddMember}
+                  onEditMember={handleEditMember}
+                  onDeleteMember={handleDeleteMember}
+                  onSubmit={handleSubmitGroup}
+                  submitting={submittingGroup}
+                />
+                <div className="mt-6 flex items-center">
+                  <Button
+                    variant="outline"
+                    onClick={goBack}
+                    className="h-10 rounded-xl border-slate-300 px-4 text-sm text-slate-600 hover:bg-slate-50 sm:h-11 sm:px-6 dark:border-slate-600 dark:text-slate-400 dark:hover:bg-slate-800"
+                  >
+                    <ArrowLeft className="mr-2 h-4 w-4" />
+                    {tCommon("back")}
+                  </Button>
+                </div>
+              </>
+            )}
+
+            {/* Individual form OR group member form */}
+            {(applicationMode !== "group" || groupSubStep === "member") && (
+            <>
             <div className="mb-6 text-center sm:mb-8">
               <h2 className="text-xl font-bold tracking-tight text-slate-900 sm:text-3xl dark:text-white">
                 {t("personalInfoTitle")}
@@ -1028,7 +1382,8 @@ export function ApplyClient({ countries, visaTypes }: ApplyClientProps) {
                 title={t("sectionApplicationDetails")}
                 description={t("sectionApplicationDetailsDesc")}
               >
-                {/* Application city */}
+                {/* Application city — hidden for group members */}
+                {applicationMode !== "group" && (
                 <div className="mb-5">
                   <Label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">
                     {t("applicationCity")} <span className="text-red-500">*</span>
@@ -1077,6 +1432,7 @@ export function ApplyClient({ countries, visaTypes }: ApplyClientProps) {
                     )}
                   </AnimatePresence>
                 </div>
+                )}
 
                 {/* Visa type dropdown */}
                 <div>
@@ -1197,13 +1553,15 @@ export function ApplyClient({ countries, visaTypes }: ApplyClientProps) {
                 </div>
               )}
             </div>
+            </>
+            )}
           </motion.div>
         )}
 
-        {/* ═══════ STEP 4 — Confirmation ═══════ */}
-        {step === 4 && (
+        {/* ═══════ STEP 5 — Confirmation ═══════ */}
+        {step === 5 && (
           <motion.div
-            key="step4"
+            key="step5"
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.95 }}
@@ -1277,6 +1635,11 @@ export function ApplyClient({ countries, visaTypes }: ApplyClientProps) {
                   setTrackingCode("");
                   setFormSubmitted(false);
                   setSmartSubmitted(false);
+                  setApplicationMode(null);
+                  setGroupData(null);
+                  setGroupMembers([]);
+                  setGroupSubStep("create");
+                  setEditingMember(null);
                 }}
               >
                 {t("submitAnother")}

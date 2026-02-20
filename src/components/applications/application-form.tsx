@@ -9,6 +9,7 @@ import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { createClient } from "@/lib/supabase/client";
+import { NotesTab } from "@/components/applications/notes-tab";
 import {
   Dialog,
   DialogContent,
@@ -498,6 +499,11 @@ export function ApplicationForm({
                   <TabsTrigger value="notes">
                     {t("notesTab")}
                   </TabsTrigger>
+                  {application && (
+                    <TabsTrigger value="timeline">
+                      {t("addNote")}
+                    </TabsTrigger>
+                  )}
                 </TabsList>
 
                 {/* ── Customer Data (portal apps only) ─────────── */}
@@ -1348,6 +1354,13 @@ export function ApplicationForm({
                     />
                   </div>
                 </TabsContent>
+
+                {/* ── Timeline Notes ───────────────────────────────── */}
+                {application && (
+                  <TabsContent value="timeline" className="pt-4 pb-4">
+                    <NotesTab applicationId={application.id} />
+                  </TabsContent>
+                )}
               </Tabs>
               <div className="h-4" />
             </ScrollArea>
