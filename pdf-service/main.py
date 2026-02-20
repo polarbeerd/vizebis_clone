@@ -1,3 +1,4 @@
+import os
 from fastapi import FastAPI
 from pydantic import BaseModel
 import httpx
@@ -6,6 +7,7 @@ import random
 from edit_booking import edit_booking_pdf, booking_from_dates
 
 app = FastAPI(title="Booking PDF Service")
+PORT = int(os.environ.get("PORT", 8000))
 
 class BookingRequest(BaseModel):
     template_url: str
