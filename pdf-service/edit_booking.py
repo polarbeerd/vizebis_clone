@@ -7,9 +7,9 @@ from fontTools.ttLib import TTFont
 import io
 
 # CONFIGURATION — defaults (Cabinn template)
-BOLD_FONT_PATH = "/usr/share/fonts/truetype/crosextra/Carlito-Bold.ttf"
-REGULAR_FONT_PATH = "/usr/share/fonts/truetype/crosextra/Carlito-Regular.ttf"
-ITALIC_FONT_PATH = "/usr/share/fonts/truetype/liberation/LiberationSerif-Italic.ttf"
+BOLD_FONT_PATH = "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf"
+REGULAR_FONT_PATH = "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf"
+ITALIC_FONT_PATH = "/usr/share/fonts/truetype/liberation/LiberationSans-Italic.ttf"
 
 CI_CENTER = 364.9
 CO_CENTER = 448.0
