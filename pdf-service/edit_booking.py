@@ -48,6 +48,10 @@ def _fmt_tl(val):
     """Format a number as TL-style with comma thousands: 27158 -> '27,158'"""
     return f"{int(round(val)):,}"
 
+def _fmt_tl_decimal(val):
+    """Format with comma thousands and 2 decimals: 23880.67 -> '23,880.67'"""
+    return f"{val:,.2f}"
+
 def booking_from_dates(checkin_date, checkout_date, confirmation_number, pin_code, guest_name, checkin_time=" 15:00 - 00:00", checkout_time=" until 11:00", num_guests=1, refund_amount_tl=None, price_total_tl=None, price_total_dkk=None):
     ci = datetime.strptime(checkin_date, "%Y-%m-%d")
     co = datetime.strptime(checkout_date, "%Y-%m-%d")
@@ -75,7 +79,7 @@ def booking_from_dates(checkin_date, checkout_date, confirmation_number, pin_cod
         checkout_weekday=co.strftime("%A"), checkout_time=checkout_time,
         nights=str((co - ci).days), confirmation_number=confirmation_number,
         pin_code=pin_code, guest_name=guest_name.upper(), refund_date_str=refund_date_str,
-        num_guests=str(num_guests), refund_amount_tl=_fmt_tl(refund_amount_tl) if refund_amount_tl is not None else "",
+        num_guests=str(num_guests), refund_amount_tl=_fmt_tl_decimal(refund_amount_tl) if refund_amount_tl is not None else "",
         price_base_tl=p_base_tl, price_vat_tl=p_vat_tl, price_total_tl=p_total_tl, price_total_dkk=p_total_dkk,
     )
 

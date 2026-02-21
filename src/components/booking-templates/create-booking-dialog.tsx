@@ -154,7 +154,7 @@ export function CreateBookingDialog({
         totalEur: eur,
         totalTry: tl,
         totalDkk: eur * dkkRate,
-        refundAmountTl: Math.round(tl),
+        refundAmountTl: n > 1 ? parseFloat((tl * (n - 1) / n).toFixed(2)) : 0,
       };
     }, [watchedValues, manualTry, manualDkk, eurToTry, eurToDkk]);
 
