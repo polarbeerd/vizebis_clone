@@ -391,25 +391,19 @@ def edit_booking_pdf(template_bytes: bytes, booking: BookingData, edit_config: d
     refund1_pat = patterns.get("refund_line1", r"\[\(Y\)88\s*\(ou\'ll get a full r\)-?\d*\s*\(efund if you cancel before 11:\)\d*\s*\(59\)\]TJ")
     stream = _replace_tj_array_simple(stream, refund1_pat, "You'll get a full refund if you cancel before 11:59")
 
-    # Replace refund TL amount (the amount after "you'll get a TL")
+    # Replace refund TL amount — matches "(number refund.)Tj" pattern
     if booking.refund_amount_tl:
         refund_tl_cfg = patterns.get("refund_tl_amount", {})
         old_tl = refund_tl_cfg.get("old_text", "")
         if old_tl:
             stream = _replace_simple_text(stream, old_tl, booking.refund_amount_tl, context=refund_tl_cfg.get("context"))
         else:
-            # Auto-detect: find first number Tj after "you'll get a TL"
-            # Try both escaped (\') and unescaped (') apostrophe forms
-            tl_ctx = stream.find("you\\'ll get a TL")
-            if tl_ctx < 0:
-                tl_ctx = stream.find("you'll get a TL")
-            if tl_ctx >= 0:
-                num_match = re.search(r'\((\d[\d.,\s]*)\)Tj', stream[tl_ctx:])
-                if num_match:
-                    pos = tl_ctx + num_match.start()
-                    old_tj = num_match.group(0)
-                    new_tj = f"({_esc(booking.refund_amount_tl)})Tj"
-                    stream = stream[:pos] + new_tj + stream[pos + len(old_tj):]
+            # Auto-detect: find "(number refund.)Tj" — the number before "refund."
+            refund_match = re.search(r'\((\d[\d,.]*)\s+refund\.\)Tj', stream)
+            if refund_match:
+                old_tj = refund_match.group(0)
+                new_tj = f"({_esc(booking.refund_amount_tl)} refund.)Tj"
+                stream = stream.replace(old_tj, new_tj, 1)
 
     # Replace number of guests in apartment section
     if booking.num_guests and booking.num_guests != "1":
@@ -419,21 +413,40 @@ def edit_booking_pdf(template_bytes: bytes, booking: BookingData, edit_config: d
             stream = _replace_simple_text(stream, old_guests, booking.num_guests, context=guests_cfg.get("context"))
 
     # Replace PRICE section amounts
+    # In the Cabinn template these are stored as:
+    #   base "21,727"  → TJ array: [(2)3 (1,727)]TJ
+    #   VAT  "5,431"   → TJ array: [(5)3 (,431)]TJ
+    #   total "27,158" → simple:   (27,158)Tj
+    #   DKK  "3,915"   → TJ array: [(3,91)3 (5)]TJ
+    # Each pattern can be a regex string (for TJ arrays) or a dict (for simple Tj).
+
     if booking.price_base_tl:
-        price_base_cfg = patterns.get("price_base_tl", {"old_text": "21,727"})
-        stream = _replace_simple_text(stream, price_base_cfg["old_text"], booking.price_base_tl, context=price_base_cfg.get("context"))
+        pat = patterns.get("price_base_tl", r'\[\(2\)-?\d*\s*\(1,727\)\]TJ')
+        if isinstance(pat, dict):
+            stream = _replace_simple_text(stream, pat["old_text"], booking.price_base_tl, context=pat.get("context"))
+        else:
+            stream = _replace_tj_array_simple(stream, pat, booking.price_base_tl)
 
     if booking.price_vat_tl:
-        price_vat_cfg = patterns.get("price_vat_tl", {"old_text": "5,431"})
-        stream = _replace_simple_text(stream, price_vat_cfg["old_text"], booking.price_vat_tl, context=price_vat_cfg.get("context"))
+        pat = patterns.get("price_vat_tl", r'\[\(5\)-?\d*\s*\(,431\)\]TJ')
+        if isinstance(pat, dict):
+            stream = _replace_simple_text(stream, pat["old_text"], booking.price_vat_tl, context=pat.get("context"))
+        else:
+            stream = _replace_tj_array_simple(stream, pat, booking.price_vat_tl)
 
     if booking.price_total_tl:
-        price_total_cfg = patterns.get("price_total_tl", {"old_text": "27,158"})
-        stream = _replace_simple_text(stream, price_total_cfg["old_text"], booking.price_total_tl, context=price_total_cfg.get("context"))
+        pat = patterns.get("price_total_tl", {"old_text": "27,158"})
+        if isinstance(pat, dict):
+            stream = _replace_simple_text(stream, pat["old_text"], booking.price_total_tl, context=pat.get("context"))
+        else:
+            stream = _replace_tj_array_simple(stream, pat, booking.price_total_tl)
 
     if booking.price_total_dkk:
-        price_dkk_cfg = patterns.get("price_total_dkk", {"old_text": "3,915"})
-        stream = _replace_simple_text(stream, price_dkk_cfg["old_text"], booking.price_total_dkk, context=price_dkk_cfg.get("context"))
+        pat = patterns.get("price_total_dkk", r'\[\(3,91\)-?\d*\s*\(5\)\]TJ')
+        if isinstance(pat, dict):
+            stream = _replace_simple_text(stream, pat["old_text"], booking.price_total_dkk, context=pat.get("context"))
+        else:
+            stream = _replace_tj_array_simple(stream, pat, booking.price_total_dkk)
 
     # 4. Write back
     contents.write(stream.encode('latin-1', errors='replace'))
