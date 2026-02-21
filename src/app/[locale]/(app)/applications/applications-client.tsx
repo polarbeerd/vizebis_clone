@@ -521,10 +521,82 @@ export function ApplicationsClient({ data }: ApplicationsClientProps) {
       },
       {
         accessorKey: "visa_status",
-        size: 100,
+        size: 140,
         header: () => t("visaStatus"),
-        cell: ({ row }) =>
-          visaStatusBadge(row.getValue("visa_status") as string | null),
+        cell: ({ row }) => {
+          const currentStatus = row.getValue("visa_status") as string | null;
+          if (!currentStatus) return "-";
+
+          const statusFlow: string[] = [
+            "beklemede",
+            "hazirlaniyor",
+            "konsoloslukta",
+            "vize_cikti",
+            "pasaport_teslim",
+          ];
+          const rejectStatus = "ret_oldu";
+
+          return (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="cursor-pointer hover:opacity-80 transition-opacity">
+                  {visaStatusBadge(currentStatus)}
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-48">
+                {statusFlow.map((status) => {
+                  const key = visaStatusKeyMap[status] ?? status;
+                  const label = tVisa(key as Parameters<typeof tVisa>[0]);
+                  const isCurrent = status === currentStatus;
+                  return (
+                    <DropdownMenuItem
+                      key={status}
+                      disabled={isCurrent}
+                      className={isCurrent ? "font-bold opacity-60" : ""}
+                      onClick={async (e) => {
+                        e.stopPropagation();
+                        const supabase = createClient();
+                        const { error } = await supabase
+                          .from("applications")
+                          .update({ visa_status: status })
+                          .eq("id", row.original.id);
+                        if (error) {
+                          toast.error(error.message);
+                        } else {
+                          toast.success(`${row.original.full_name}: ${label}`);
+                          router.refresh();
+                        }
+                      }}
+                    >
+                      {label}
+                    </DropdownMenuItem>
+                  );
+                })}
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  className={currentStatus === rejectStatus ? "font-bold opacity-60" : "text-red-600 dark:text-red-400"}
+                  disabled={currentStatus === rejectStatus}
+                  onClick={async (e) => {
+                    e.stopPropagation();
+                    const supabase = createClient();
+                    const { error } = await supabase
+                      .from("applications")
+                      .update({ visa_status: rejectStatus })
+                      .eq("id", row.original.id);
+                    if (error) {
+                      toast.error(error.message);
+                    } else {
+                      toast.success(`${row.original.full_name}: ${tVisa("rejected")}`);
+                      router.refresh();
+                    }
+                  }}
+                >
+                  {tVisa("rejected")}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          );
+        },
         filterFn: (row, id, value: string[]) => {
           return value.includes(row.getValue(id) as string);
         },
@@ -835,12 +907,9 @@ export function ApplicationsClient({ data }: ApplicationsClientProps) {
         rowClassName={getRowClassName}
         initialColumnVisibility={{
           passport_no: false,
-          company_name: false,
-          appointment_date: false,
           pickup_date: false,
           fee: false,
           invoice_status: false,
-          payment_status: false,
           notes: false,
           doc_total: false,
         }}

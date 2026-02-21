@@ -77,7 +77,11 @@
     "portalFormFields": "Form Alanlari",
     "visaTypesManagement": "Vize Türleri",
     "bookingTemplates": "Rezervasyon Şablonları",
-    "letterTemplates": "Niyet Mektubu"
+    "letterTemplates": "Niyet Mektubu",
+    "portalSetup": "Portal Ayarları",
+    "documentTemplates": "Belge Şablonları",
+    "financeHub": "Finans & Takip",
+    "countriesAndVisaTypes": "Ülkeler & Vize Türleri"
   },
   "auth": {
     "login": "Giriş Yap",
@@ -96,11 +100,17 @@
   },
   "dashboard": {
     "totalApplications": "Toplam Başvuru",
-    "pendingApplications": "Bekleyen Başvuru",
+    "pendingApplications": "Bekleyen",
     "completedApplications": "Tamamlanan",
     "totalDebt": "Toplam Borç",
+    "atConsulate": "Konsoloslukta",
+    "preparing": "Hazırlanan",
+    "needsAction": "İlgilenilmeli",
+    "stuckWarning": "{count} adet 3+ gün bekliyor",
     "recentApplications": "Son Başvurular",
     "recentAppointments": "Son Randevular",
+    "upcomingAppointments": "Yaklaşan Randevular (7 gün)",
+    "noUpcoming": "Bu hafta randevu yok",
     "thisWeekAppointments": "Bu Haftanın Randevuları",
     "lastWeekAppointments": "Geçen Haftanın Randevuları"
   },

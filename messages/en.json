@@ -77,7 +77,11 @@
     "portalGroup": "Customer Portal",
     "portalFormFields": "Form Fields",
     "bookingTemplates": "Booking Templates",
-    "letterTemplates": "Letter of Intent"
+    "letterTemplates": "Letter of Intent",
+    "portalSetup": "Portal Setup",
+    "documentTemplates": "Document Templates",
+    "financeHub": "Finance & Tracking",
+    "countriesAndVisaTypes": "Countries & Visa Types"
   },
   "auth": {
     "login": "Login",
@@ -96,11 +100,17 @@
   },
   "dashboard": {
     "totalApplications": "Total Applications",
-    "pendingApplications": "Pending Applications",
+    "pendingApplications": "Pending",
     "completedApplications": "Completed",
     "totalDebt": "Total Debt",
+    "atConsulate": "At Consulate",
+    "preparing": "In Preparation",
+    "needsAction": "Need attention",
+    "stuckWarning": "{count} stuck >3 days",
     "recentApplications": "Recent Applications",
     "recentAppointments": "Recent Appointments",
+    "upcomingAppointments": "Upcoming Appointments (7 days)",
+    "noUpcoming": "No upcoming appointments this week",
     "thisWeekAppointments": "This Week's Appointments",
     "lastWeekAppointments": "Last Week's Appointments"
   },

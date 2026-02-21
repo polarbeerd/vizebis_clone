@@ -4,12 +4,19 @@ from decimal import Decimal
 from datetime import datetime
 from dataclasses import dataclass
 from fontTools.ttLib import TTFont
+from fontTools import subset as ft_subset
 import io
+import os
+import logging
 
-# CONFIGURATION — defaults (Cabinn template)
-BOLD_FONT_PATH = "/usr/share/fonts/truetype/crosextra/Carlito-Bold.ttf"
-REGULAR_FONT_PATH = "/usr/share/fonts/truetype/crosextra/Carlito-Regular.ttf"
-ITALIC_FONT_PATH = "/usr/share/fonts/truetype/crosextra/Carlito-Italic.ttf"
+# Suppress fontTools subset warnings about optional tables (ASCP, MERG, meta)
+logging.getLogger("fontTools.subset").setLevel(logging.WARNING)
+
+# CONFIGURATION — Segoe UI fonts (matching the original booking template)
+_FONT_DIR = os.path.join(os.path.dirname(__file__), "fonts")
+BOLD_FONT_PATH = os.path.join(_FONT_DIR, "segoeuib.ttf")
+REGULAR_FONT_PATH = os.path.join(_FONT_DIR, "segoeui.ttf")
+ITALIC_FONT_PATH = os.path.join(_FONT_DIR, "segoeuii.ttf")
 
 CI_CENTER = 364.9
 CO_CENTER = 448.0
@@ -88,19 +95,76 @@ def _get_glyph_widths(font_path, first_char, last_char):
     tt.close()
     return widths
 
-def _replace_font(pdf, font_dict, new_font_path):
-    with open(new_font_path, "rb") as f:
-        data = f.read()
-    fc = min(int(font_dict.get("/FirstChar", 32)), 32)
-    lc = max(int(font_dict.get("/LastChar", 126)), 126)
-    widths = _get_glyph_widths(new_font_path, fc, lc)
+def _create_font_subset(font_path, codepoints):
+    """Create a minimal font subset containing only the specified Unicode codepoints."""
+    tt = TTFont(font_path)
+    subsetter = ft_subset.Subsetter()
+    # Populate with unicode codepoints
+    subsetter.populate(unicodes=codepoints)
+    subsetter.subset(tt)
+    buf = io.BytesIO()
+    tt.save(buf)
+    tt.close()
+    return buf.getvalue()
+
+def _replace_font(pdf, font_dict, new_font_path, needed_codepoints=None):
+    """Replace a font subset with a properly subsetted version of the new font.
+
+    Args:
+        pdf: pikepdf PDF object
+        font_dict: The font dictionary in the PDF
+        new_font_path: Path to the full replacement font
+        needed_codepoints: Set of Unicode codepoints that must be in the subset.
+                          If None, uses all WinAnsi chars from FC to LC.
+    """
+    orig_fc = int(font_dict.get("/FirstChar", 32))
+    orig_lc = int(font_dict.get("/LastChar", 126))
+    orig_widths = list(font_dict.get("/Widths", []))
+
+    # Determine character range — keep original range, extend only if needed
+    fc = orig_fc
+    lc = orig_lc
+    if needed_codepoints:
+        ascii_needed = {cp for cp in needed_codepoints if cp < 256}
+        if ascii_needed:
+            fc = min(fc, min(ascii_needed))
+            lc = max(lc, max(ascii_needed))
+
+    # Calculate widths from the new font for the full range
+    new_widths = _get_glyph_widths(new_font_path, fc, lc)
+
+    # Preserve original non-zero widths (they match the template's positioning)
+    # Only fill in widths for characters that were 0 (not in original subset)
+    final_widths = list(new_widths)  # start with new font widths
+    for i, orig_w in enumerate(orig_widths):
+        idx = (orig_fc - fc) + i
+        if 0 <= idx < len(final_widths) and float(orig_w) != 0:
+            # Keep the original width — it matches the template's text positioning
+            final_widths[idx] = Decimal(str(float(orig_w)))
+
+    # Build the set of codepoints for subsetting
+    subset_codepoints = set()
+    # Include all chars that have non-zero widths (original + new)
+    for i, w in enumerate(final_widths):
+        if float(w) != 0:
+            cc = fc + i
+            subset_codepoints.add(WIN_ANSI_MAP.get(cc, cc))
+    # Include explicitly needed codepoints
+    if needed_codepoints:
+        subset_codepoints.update(needed_codepoints)
+
+    # Create subsetted font (much smaller than full font)
+    subset_data = _create_font_subset(new_font_path, subset_codepoints)
+
+    # Update the PDF font dictionary
     font_dict[pikepdf.Name("/FirstChar")] = fc
     font_dict[pikepdf.Name("/LastChar")] = lc
-    font_dict[pikepdf.Name("/Widths")] = pikepdf.Array(widths)
+    font_dict[pikepdf.Name("/Widths")] = pikepdf.Array(final_widths)
+
     fd = font_dict.get("/FontDescriptor")
     if fd:
-        s = pikepdf.Stream(pdf, data)
-        s[pikepdf.Name("/Length1")] = len(data)
+        s = pikepdf.Stream(pdf, subset_data)
+        s[pikepdf.Name("/Length1")] = len(subset_data)
         fd[pikepdf.Name("/FontFile2")] = s
 
 def _esc(s):
@@ -184,6 +248,22 @@ def _replace_simple_text(stream, old_text, new_text, context=None):
 def _replace_tj_array_simple(stream, pattern, new_text):
     return re.sub(pattern, f"({_esc(new_text)})Tj", stream, count=1)
 
+def _collect_all_text_codepoints(booking):
+    """Collect all Unicode codepoints that appear in the booking data."""
+    all_text = (
+        booking.checkin_day + booking.checkin_month + booking.checkin_weekday +
+        booking.checkin_time + booking.checkout_day + booking.checkout_month +
+        booking.checkout_weekday + booking.checkout_time + booking.nights +
+        booking.confirmation_number + booking.pin_code + booking.guest_name +
+        booking.refund_date_str +
+        # Static text fragments that appear in replacements
+        "You'll get a full refund if you cancel before 11:59" +
+        "on . If you cancel from 12:00 on" +
+        ", you'll get a TL" +
+        " until 11:00 15:00 - 00:00"
+    )
+    return set(ord(c) for c in all_text)
+
 def edit_booking_pdf(template_bytes: bytes, booking: BookingData, edit_config: dict = None) -> bytes:
     """Edit a booking PDF template with booking data. Config-driven for different hotel templates."""
     if edit_config is None:
@@ -205,17 +285,20 @@ def edit_booking_pdf(template_bytes: bytes, booking: BookingData, edit_config: d
     pdf = pikepdf.open(io.BytesIO(template_bytes))
     page = pdf.pages[0]
 
-    # 1. Replace font subsets
+    # Collect all codepoints needed for the new booking text
+    needed_codepoints = _collect_all_text_codepoints(booking)
+
+    # 1. Replace font subsets (with proper subsetting for small file size)
     fonts = page["/Resources"]["/Font"]
     for name in bold_names:
         if name in fonts:
-            _replace_font(pdf, fonts[name], BOLD_FONT_PATH)
+            _replace_font(pdf, fonts[name], BOLD_FONT_PATH, needed_codepoints)
     for name in italic_names:
         if name in fonts:
-            _replace_font(pdf, fonts[name], ITALIC_FONT_PATH)
+            _replace_font(pdf, fonts[name], ITALIC_FONT_PATH, needed_codepoints)
     for name in regular_names:
         if name in fonts:
-            _replace_font(pdf, fonts[name], REGULAR_FONT_PATH)
+            _replace_font(pdf, fonts[name], REGULAR_FONT_PATH, needed_codepoints)
 
     # 2. Calculate centered positions
     bold = FontMetrics(BOLD_FONT_PATH)
