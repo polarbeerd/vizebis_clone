@@ -37,11 +37,37 @@ class BookingData:
     pin_code: str
     guest_name: str
     refund_date_str: str
+    num_guests: str = ""
+    refund_amount_tl: str = ""
+    price_base_tl: str = ""
+    price_vat_tl: str = ""
+    price_total_tl: str = ""
+    price_total_dkk: str = ""
 
-def booking_from_dates(checkin_date, checkout_date, confirmation_number, pin_code, guest_name, checkin_time=" 15:00 - 00:00", checkout_time=" until 11:00"):
+def _fmt_tl(val):
+    """Format a number as TL-style with comma thousands: 27158 -> '27,158'"""
+    return f"{int(round(val)):,}"
+
+def booking_from_dates(checkin_date, checkout_date, confirmation_number, pin_code, guest_name, checkin_time=" 15:00 - 00:00", checkout_time=" until 11:00", num_guests=1, refund_amount_tl=None, price_total_tl=None, price_total_dkk=None):
     ci = datetime.strptime(checkin_date, "%Y-%m-%d")
     co = datetime.strptime(checkout_date, "%Y-%m-%d")
     refund_date_str = f"{ci.day} {ci.strftime('%B')} {ci.year}"
+
+    # Calculate price breakdown (base + 25% VAT = total)
+    p_base_tl = ""
+    p_vat_tl = ""
+    p_total_tl = ""
+    p_total_dkk = ""
+    if price_total_tl is not None:
+        total = float(price_total_tl)
+        base = total / 1.25
+        vat = total - base
+        p_base_tl = _fmt_tl(base)
+        p_vat_tl = _fmt_tl(vat)
+        p_total_tl = _fmt_tl(total)
+    if price_total_dkk is not None:
+        p_total_dkk = _fmt_tl(price_total_dkk)
+
     return BookingData(
         checkin_day=str(ci.day), checkin_month=ci.strftime("%B").upper(),
         checkin_weekday=ci.strftime("%A"), checkin_time=checkin_time,
@@ -49,6 +75,8 @@ def booking_from_dates(checkin_date, checkout_date, confirmation_number, pin_cod
         checkout_weekday=co.strftime("%A"), checkout_time=checkout_time,
         nights=str((co - ci).days), confirmation_number=confirmation_number,
         pin_code=pin_code, guest_name=guest_name.upper(), refund_date_str=refund_date_str,
+        num_guests=str(num_guests), refund_amount_tl=_fmt_tl(refund_amount_tl) if refund_amount_tl is not None else "",
+        price_base_tl=p_base_tl, price_vat_tl=p_vat_tl, price_total_tl=p_total_tl, price_total_dkk=p_total_dkk,
     )
 
 class FontMetrics:
@@ -255,7 +283,8 @@ def _collect_all_text_codepoints(booking):
         booking.checkin_time + booking.checkout_day + booking.checkout_month +
         booking.checkout_weekday + booking.checkout_time + booking.nights +
         booking.confirmation_number + booking.pin_code + booking.guest_name +
-        booking.refund_date_str +
+        booking.refund_date_str + booking.num_guests + booking.refund_amount_tl +
+        booking.price_base_tl + booking.price_vat_tl + booking.price_total_tl + booking.price_total_dkk +
         # Static text fragments that appear in replacements
         "You'll get a full refund if you cancel before 11:59" +
         "on . If you cancel from 12:00 on" +
@@ -362,8 +391,52 @@ def edit_booking_pdf(template_bytes: bytes, booking: BookingData, edit_config: d
     refund1_pat = patterns.get("refund_line1", r"\[\(Y\)88\s*\(ou\'ll get a full r\)-?\d*\s*\(efund if you cancel before 11:\)\d*\s*\(59\)\]TJ")
     stream = _replace_tj_array_simple(stream, refund1_pat, "You'll get a full refund if you cancel before 11:59")
 
+    # Replace refund TL amount (the amount after "you'll get a TL")
+    if booking.refund_amount_tl:
+        refund_tl_cfg = patterns.get("refund_tl_amount", {})
+        old_tl = refund_tl_cfg.get("old_text", "")
+        if old_tl:
+            stream = _replace_simple_text(stream, old_tl, booking.refund_amount_tl, context=refund_tl_cfg.get("context"))
+        else:
+            # Auto-detect: find first number Tj after "you'll get a TL"
+            # Try both escaped (\') and unescaped (') apostrophe forms
+            tl_ctx = stream.find("you\\'ll get a TL")
+            if tl_ctx < 0:
+                tl_ctx = stream.find("you'll get a TL")
+            if tl_ctx >= 0:
+                num_match = re.search(r'\((\d[\d.,\s]*)\)Tj', stream[tl_ctx:])
+                if num_match:
+                    pos = tl_ctx + num_match.start()
+                    old_tj = num_match.group(0)
+                    new_tj = f"({_esc(booking.refund_amount_tl)})Tj"
+                    stream = stream[:pos] + new_tj + stream[pos + len(old_tj):]
+
+    # Replace number of guests in apartment section
+    if booking.num_guests and booking.num_guests != "1":
+        guests_cfg = patterns.get("num_guests", {})
+        old_guests = guests_cfg.get("old_text", "")
+        if old_guests:
+            stream = _replace_simple_text(stream, old_guests, booking.num_guests, context=guests_cfg.get("context"))
+
+    # Replace PRICE section amounts
+    if booking.price_base_tl:
+        price_base_cfg = patterns.get("price_base_tl", {"old_text": "21,727"})
+        stream = _replace_simple_text(stream, price_base_cfg["old_text"], booking.price_base_tl, context=price_base_cfg.get("context"))
+
+    if booking.price_vat_tl:
+        price_vat_cfg = patterns.get("price_vat_tl", {"old_text": "5,431"})
+        stream = _replace_simple_text(stream, price_vat_cfg["old_text"], booking.price_vat_tl, context=price_vat_cfg.get("context"))
+
+    if booking.price_total_tl:
+        price_total_cfg = patterns.get("price_total_tl", {"old_text": "27,158"})
+        stream = _replace_simple_text(stream, price_total_cfg["old_text"], booking.price_total_tl, context=price_total_cfg.get("context"))
+
+    if booking.price_total_dkk:
+        price_dkk_cfg = patterns.get("price_total_dkk", {"old_text": "3,915"})
+        stream = _replace_simple_text(stream, price_dkk_cfg["old_text"], booking.price_total_dkk, context=price_dkk_cfg.get("context"))
+
     # 4. Write back
-    contents.write(stream.encode('latin-1'))
+    contents.write(stream.encode('latin-1', errors='replace'))
 
     output = io.BytesIO()
     pdf.save(output)

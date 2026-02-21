@@ -5,8 +5,11 @@ export interface HotelRow {
   id: string;
   name: string;
   address: string;
+  postal_code: string | null;
+  city: string | null;
   email: string;
   phone: string;
+  phone_country_code: string | null;
   website: string | null;
   template_path: string;
   edit_config: Record<string, unknown>;

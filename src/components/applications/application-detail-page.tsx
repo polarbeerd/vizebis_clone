@@ -9,6 +9,7 @@ import { formatDate, formatCurrency } from "@/lib/utils";
 import { toast } from "sonner";
 import {
   ArrowLeft,
+  Bot,
   Copy,
   Edit,
   MessageSquare,
@@ -48,6 +49,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 import { GeneratedDocumentsTab } from "@/components/applications/generated-documents-tab";
+import { AutomationTab } from "@/components/applications/automation-tab";
 import { NotesTab } from "@/components/applications/notes-tab";
 import { SmsModal } from "@/components/applications/sms-modal";
 
@@ -780,6 +782,19 @@ export function ApplicationDetailPage({
         </CardHeader>
         <CardContent>
           <GeneratedDocumentsTab applicationId={applicationId} />
+        </CardContent>
+      </Card>
+
+      {/* ── Section 2.5: Automation ───────────────────────────── */}
+      <Card id="automation" className="border-2 border-purple-200 dark:border-purple-800">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2">
+            <Bot className="h-4 w-4" />
+            Automation
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <AutomationTab applicationId={applicationId} country={app.country ?? ""} />
         </CardContent>
       </Card>
 

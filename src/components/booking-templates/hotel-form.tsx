@@ -49,7 +49,10 @@ const hotelSchema = z.object({
   name: z.string().min(1, "Hotel name is required"),
   country: z.string().min(1, "Country is required"),
   address: z.string().min(1, "Address is required"),
+  postal_code: z.string().default(""),
+  city: z.string().default(""),
   email: z.string().email("Valid email required"),
+  phone_country_code: z.string().default(""),
   phone: z.string().min(1, "Phone is required"),
   website: z.string().default(""),
   type: z.enum(["individual", "group"]).default("individual"),
@@ -65,7 +68,10 @@ const DEFAULT_EDIT_CONFIG: Record<string, unknown> = {
     italic: ["/TT13"],
     regular: ["/TT3", "/TT4"],
   },
-  patterns: {},
+  patterns: {
+    // "refund_tl_amount": { "old_text": "12345", "context": "TL" },
+    // "num_guests": { "old_text": "1", "context": "guest" }
+  },
 };
 
 interface CountryOption {
@@ -106,7 +112,10 @@ export function HotelForm({
       name: "",
       country: "",
       address: "",
+      postal_code: "",
+      city: "",
       email: "",
+      phone_country_code: "",
       phone: "",
       website: "",
       type: "individual",
@@ -134,7 +143,10 @@ export function HotelForm({
         name: hotel.name ?? "",
         country: hotel.country ?? "",
         address: hotel.address ?? "",
+        postal_code: hotel.postal_code ?? "",
+        city: hotel.city ?? "",
         email: hotel.email ?? "",
+        phone_country_code: hotel.phone_country_code ?? "",
         phone: hotel.phone ?? "",
         website: hotel.website ?? "",
         type: (hotel.type as "individual" | "group") ?? "individual",
@@ -193,7 +205,10 @@ export function HotelForm({
           name: values.name,
           country: values.country,
           address: values.address,
+          postal_code: values.postal_code || null,
+          city: values.city || null,
           email: values.email,
+          phone_country_code: values.phone_country_code || null,
           phone: values.phone,
           website: values.website || null,
           type: values.type,
@@ -222,7 +237,10 @@ export function HotelForm({
           name: values.name,
           country: values.country,
           address: values.address,
+          postal_code: values.postal_code || null,
+          city: values.city || null,
           email: values.email,
+          phone_country_code: values.phone_country_code || null,
           phone: values.phone,
           website: values.website || null,
           type: values.type,
@@ -326,13 +344,13 @@ export function HotelForm({
                   )}
                 />
 
-                {/* Address */}
+                {/* Street Address */}
                 <FormField
                   control={form.control}
                   name="address"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>{t("address")} *</FormLabel>
+                      <FormLabel>Street address *</FormLabel>
                       <FormControl>
                         <Textarea rows={2} {...field} />
                       </FormControl>
@@ -340,6 +358,36 @@ export function HotelForm({
                     </FormItem>
                   )}
                 />
+
+                {/* Postal Code + City */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="postal_code"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Postal code</FormLabel>
+                        <FormControl>
+                          <Input placeholder="2300" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="city"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>City</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Copenhagen" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {/* Email */}
@@ -357,13 +405,28 @@ export function HotelForm({
                     )}
                   />
 
-                  {/* Phone */}
+                  {/* Phone Country Code */}
+                  <FormField
+                    control={form.control}
+                    name="phone_country_code"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Phone country code</FormLabel>
+                        <FormControl>
+                          <Input placeholder="0045" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* Phone (without country code) */}
                   <FormField
                     control={form.control}
                     name="phone"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>{t("phone")} *</FormLabel>
+                        <FormLabel>Phone (without country code) *</FormLabel>
                         <FormControl>
                           <Input {...field} />
                         </FormControl>

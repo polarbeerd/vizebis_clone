@@ -8,6 +8,7 @@ import {
   Building2,
   Edit,
   Eye,
+  FileDown,
   Globe,
   Mail,
   Phone,
@@ -37,6 +38,7 @@ import {
 } from "@/components/ui/dialog";
 import type { HotelRow } from "./page";
 import { HotelForm } from "@/components/booking-templates/hotel-form";
+import { CreateBookingDialog } from "@/components/booking-templates/create-booking-dialog";
 
 interface BookingTemplatesClientProps {
   data: HotelRow[];
@@ -44,6 +46,7 @@ interface BookingTemplatesClientProps {
 
 export function BookingTemplatesClient({ data }: BookingTemplatesClientProps) {
   const t = useTranslations("bookingTemplates");
+  const tCreate = useTranslations("createBooking");
   const tCommon = useTranslations("common");
   const router = useRouter();
 
@@ -57,6 +60,11 @@ export function BookingTemplatesClient({ data }: BookingTemplatesClientProps) {
     null
   );
   const [deleting, setDeleting] = React.useState(false);
+
+  const [createBookingOpen, setCreateBookingOpen] = React.useState(false);
+  const [createBookingHotel, setCreateBookingHotel] = React.useState<
+    HotelRow | undefined
+  >(undefined);
 
   const supabase = React.useMemo(() => createClient(), []);
 
@@ -172,6 +180,17 @@ export function BookingTemplatesClient({ data }: BookingTemplatesClientProps) {
             <RefreshCw className="mr-1 size-4" />
             {tCommon("refresh")}
           </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              setCreateBookingHotel(undefined);
+              setCreateBookingOpen(true);
+            }}
+          >
+            <FileDown className="mr-1 size-4" />
+            {tCreate("createBooking")}
+          </Button>
           <Button variant="default" size="sm" onClick={handleAddHotel}>
             <Plus className="mr-1 size-4" />
             {t("addHotel")}
@@ -271,6 +290,18 @@ export function BookingTemplatesClient({ data }: BookingTemplatesClientProps) {
                           variant="ghost"
                           size="icon"
                           className="size-8"
+                          onClick={() => {
+                            setCreateBookingHotel(hotel);
+                            setCreateBookingOpen(true);
+                          }}
+                          title={tCreate("createBooking")}
+                        >
+                          <FileDown className="size-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="size-8"
                           onClick={() => handlePreview(hotel)}
                           title={t("preview")}
                         >
@@ -310,6 +341,14 @@ export function BookingTemplatesClient({ data }: BookingTemplatesClientProps) {
         onOpenChange={setFormOpen}
         hotel={formHotel}
         onSuccess={handleFormSuccess}
+      />
+
+      {/* Create booking dialog */}
+      <CreateBookingDialog
+        open={createBookingOpen}
+        onOpenChange={setCreateBookingOpen}
+        hotels={data}
+        defaultHotel={createBookingHotel}
       />
 
       {/* Delete confirm dialog */}

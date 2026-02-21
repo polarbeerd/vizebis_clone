@@ -16,6 +16,10 @@ class BookingRequest(BaseModel):
     checkout_date: str
     confirmation_number: str | None = None
     pin_code: str | None = None
+    num_guests: int | None = None
+    refund_amount_tl: float | None = None
+    price_total_tl: float | None = None
+    price_total_dkk: float | None = None
     edit_config: dict = {}
 
 class HtmlToPdfRequest(BaseModel):
@@ -38,6 +42,10 @@ async def generate_booking(req: BookingRequest):
             confirmation_number=conf,
             pin_code=pin,
             guest_name=req.guest_name,
+            num_guests=req.num_guests or 1,
+            refund_amount_tl=req.refund_amount_tl,
+            price_total_tl=req.price_total_tl,
+            price_total_dkk=req.price_total_dkk,
         )
 
         pdf_bytes = edit_booking_pdf(template_bytes, booking, req.edit_config)
