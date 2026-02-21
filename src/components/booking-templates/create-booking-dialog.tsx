@@ -191,13 +191,19 @@ export function CreateBookingDialog({
         return;
       }
 
-      // Decode base64 → Blob → open in new tab
+      // Decode base64 → Blob → download/open
       const bytes = Uint8Array.from(atob(result.pdf_base64), (c) =>
         c.charCodeAt(0)
       );
       const blob = new Blob([bytes], { type: "application/pdf" });
       const url = URL.createObjectURL(blob);
-      window.open(url, "_blank");
+      const link = document.createElement("a");
+      link.href = url;
+      link.target = "_blank";
+      link.download = `booking-${values.guest_name.replace(/\s+/g, "-")}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
       setTimeout(() => URL.revokeObjectURL(url), 5 * 60 * 1000);
 
       toast.success(t("success"));
