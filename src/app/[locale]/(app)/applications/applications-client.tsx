@@ -9,14 +9,12 @@ import {
   AlertTriangle,
   Calendar,
   Copy,
-  Edit,
-  Eye,
-  Link2,
+  FileText,
   MessageSquare,
-  MoreHorizontal,
   Plus,
   Trash2,
 } from "lucide-react";
+import { Link } from "@/i18n/navigation";
 import {
   startOfMonth,
   endOfMonth,
@@ -57,7 +55,6 @@ import type { ApplicationRow } from "./page";
 
 import { ApplicationForm } from "@/components/applications/application-form";
 import type { ApplicationForForm } from "@/components/applications/application-form";
-import { ApplicationCard } from "@/components/applications/application-card";
 import { SmsModal } from "@/components/applications/sms-modal";
 import { DeletedApplications } from "@/components/applications/deleted-applications";
 
@@ -105,6 +102,7 @@ export function ApplicationsClient({ data }: ApplicationsClientProps) {
   const tCommon = useTranslations("common");
   const tPortal = useTranslations("portal");
   const tAppDocs = useTranslations("applicationDocuments");
+  const tGenDocs = useTranslations("generatedDocuments");
   const router = useRouter();
 
   // ── Date quick-filter state ──────────────────────────────────
@@ -117,9 +115,6 @@ export function ApplicationsClient({ data }: ApplicationsClientProps) {
   const [formApplication, setFormApplication] = React.useState<
     ApplicationForForm | undefined
   >(undefined);
-
-  const [detailOpen, setDetailOpen] = React.useState(false);
-  const [detailId, setDetailId] = React.useState<number | null>(null);
 
   const [smsOpen, setSmsOpen] = React.useState(false);
   const [smsApplication, setSmsApplication] = React.useState<{
@@ -142,33 +137,6 @@ export function ApplicationsClient({ data }: ApplicationsClientProps) {
   function handleNewApplication() {
     setFormApplication(undefined);
     setFormOpen(true);
-  }
-
-  function handleEditApplication(app: ApplicationRow) {
-    // Fetch full application for editing
-    fetchFullApplicationForEdit(app.id);
-  }
-
-  async function fetchFullApplicationForEdit(id: number) {
-    const { data: fullApp, error } = await supabase
-      .from("applications")
-      .select("*")
-      .eq("id", id)
-      .single();
-
-    if (error) {
-      console.error("Error fetching application for edit:", error);
-      toast.error(t("fetchError"));
-      return;
-    }
-
-    setFormApplication(fullApp as unknown as ApplicationForForm);
-    setFormOpen(true);
-  }
-
-  function handleViewApplication(app: ApplicationRow) {
-    setDetailId(app.id);
-    setDetailOpen(true);
   }
 
   function handleSmsApplication(app: ApplicationRow) {
@@ -209,12 +177,6 @@ export function ApplicationsClient({ data }: ApplicationsClientProps) {
 
   function handleFormSuccess() {
     router.refresh();
-  }
-
-  function handleDetailEdit(app: unknown) {
-    const detail = app as ApplicationForForm;
-    setFormApplication(detail);
-    setFormOpen(true);
   }
 
   function handleRestoreFromDeleted() {
@@ -408,6 +370,7 @@ export function ApplicationsClient({ data }: ApplicationsClientProps) {
         ),
         cell: ({ row }) => {
           const name = row.getValue("full_name") as string | null;
+          const id = row.original.id;
           const appointmentDate = row.original.appointment_date;
           const now = new Date();
           let warningIcon = null;
@@ -424,27 +387,18 @@ export function ApplicationsClient({ data }: ApplicationsClientProps) {
 
           return (
             <div className="flex items-center">
-              <span className="max-w-[180px] truncate font-medium">
+              <Link
+                href={`/applications/${id}`}
+                className="max-w-[180px] truncate font-medium hover:underline cursor-pointer text-foreground"
+              >
                 {name ?? "-"}
-              </span>
+              </Link>
               {warningIcon}
             </div>
           );
         },
         enableSorting: true,
         filterFn: "includesString",
-      },
-      {
-        accessorKey: "passport_no",
-        header: () => t("passportNo"),
-        cell: ({ row }) => row.getValue("passport_no") ?? "-",
-        enableSorting: false,
-      },
-      {
-        accessorKey: "company_name",
-        header: () => t("company"),
-        cell: ({ row }) => row.getValue("company_name") ?? "-",
-        enableSorting: false,
       },
       {
         accessorKey: "country",
@@ -462,15 +416,6 @@ export function ApplicationsClient({ data }: ApplicationsClientProps) {
           return date ? formatDate(date) : "-";
         },
         enableSorting: true,
-      },
-      {
-        accessorKey: "pickup_date",
-        header: () => t("pickupDate"),
-        cell: ({ row }) => {
-          const date = row.getValue("pickup_date") as string | null;
-          return date ? formatDate(date) : "-";
-        },
-        enableSorting: false,
       },
       {
         accessorKey: "phone",
@@ -642,46 +587,35 @@ export function ApplicationsClient({ data }: ApplicationsClientProps) {
       },
       {
         id: "actions",
-        size: 60,
+        size: 100,
         header: () => tCommon("actions"),
         cell: ({ row }) => {
           const application = row.original;
           return (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon-xs">
-                  <MoreHorizontal className="size-4" />
+            <div className="flex items-center gap-1">
+              <Link href={`/applications/${application.id}#documents`}>
+                <Button variant="ghost" size="icon-xs" title={tGenDocs("title")}>
+                  <FileText className="size-3.5" />
                 </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem
-                  onClick={() => handleViewApplication(application)}
-                >
-                  <Eye className="mr-2 size-3.5" />
-                  {tCommon("view")}
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => handleEditApplication(application)}
-                >
-                  <Edit className="mr-2 size-3.5" />
-                  {tCommon("edit")}
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => handleSmsApplication(application)}
-                >
-                  <MessageSquare className="mr-2 size-3.5" />
-                  {t("sendSms")}
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  variant="destructive"
-                  onClick={() => handleDeleteApplication(application)}
-                >
-                  <Trash2 className="mr-2 size-3.5" />
-                  {tCommon("delete")}
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+              </Link>
+              <Button
+                variant="ghost"
+                size="icon-xs"
+                title={t("sendSms")}
+                onClick={() => handleSmsApplication(application)}
+              >
+                <MessageSquare className="size-3.5" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon-xs"
+                title={tCommon("delete")}
+                className="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950"
+                onClick={() => handleDeleteApplication(application)}
+              >
+                <Trash2 className="size-3.5" />
+              </Button>
+            </div>
           );
         },
         enableSorting: false,
@@ -689,7 +623,7 @@ export function ApplicationsClient({ data }: ApplicationsClientProps) {
       },
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [t, tVisa, tInvoice, tPayment, tCommon, tPortal, tAppDocs]
+    [t, tVisa, tInvoice, tPayment, tCommon, tPortal, tAppDocs, tGenDocs]
   );
 
   // ── Filterable columns config ─────────────────────────────────
@@ -772,11 +706,8 @@ export function ApplicationsClient({ data }: ApplicationsClientProps) {
     const headers = [
       "ID",
       t("fullName"),
-      t("passportNo"),
-      t("company"),
       t("country"),
       t("appointmentDate"),
-      t("pickupDate"),
       t("phone"),
       t("consulateFee"),
       t("serviceFee"),
@@ -791,11 +722,8 @@ export function ApplicationsClient({ data }: ApplicationsClientProps) {
       [
         row.id,
         row.full_name ?? "",
-        row.passport_no ?? "",
-        row.company_name ?? "",
         row.country ?? "",
         row.appointment_date ?? "",
-        row.pickup_date ?? "",
         row.phone ?? "",
         row.consulate_fee ?? "",
         row.service_fee ?? "",
@@ -906,8 +834,6 @@ export function ApplicationsClient({ data }: ApplicationsClientProps) {
         onExportCsv={handleExportCsv}
         rowClassName={getRowClassName}
         initialColumnVisibility={{
-          passport_no: false,
-          pickup_date: false,
           fee: false,
           invoice_status: false,
           notes: false,
@@ -927,18 +853,6 @@ export function ApplicationsClient({ data }: ApplicationsClientProps) {
         onOpenChange={setFormOpen}
         application={formApplication}
         onSuccess={handleFormSuccess}
-      />
-
-      {/* ── Application Detail Sheet ────────────────────────── */}
-      <ApplicationCard
-        applicationId={detailId}
-        open={detailOpen}
-        onOpenChange={setDetailOpen}
-        onEdit={handleDetailEdit}
-        onSms={(app) => {
-          setSmsApplication(app);
-          setSmsOpen(true);
-        }}
       />
 
       {/* ── SMS Modal ───────────────────────────────────────── */}

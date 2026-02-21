@@ -50,7 +50,7 @@ src/
 │   │   │   ├── layout.tsx          # Sidebar + Header + ChatWidget + auth check
 │   │   │   ├── loading.tsx         # Loading spinner
 │   │   │   ├── dashboard/          # Actionable stats (pending, at consulate, preparing) + upcoming appointments + recent apps
-│   │   │   ├── applications/       # DataTable + CRUD + filters + color coding + tracking_code + inline status dropdown
+│   │   │   ├── applications/       # DataTable + CRUD + filters + color coding + tracking_code + inline status dropdown + /[id] full-page detail
 │   │   │   ├── companies/          # DataTable + CRUD + active/passive toggle
 │   │   │   ├── appointments/       # DataTable + CRUD
 │   │   │   ├── calendar/           # Monthly grid calendar
@@ -115,7 +115,7 @@ src/
 │   ├── dashboard/
 │   │   └── stat-card.tsx          # Reusable stat card (5 color variants)
 │   ├── data-table/                # 4 components: table, toolbar, pagination, column-header
-│   ├── applications/              # application-card (tabbed detail), application-form, application-detail, generated-documents-tab, notes-tab, sms-modal, deleted-applications
+│   ├── applications/              # application-detail-page (full-page), application-form, generated-documents-tab, notes-tab, sms-modal, deleted-applications
 │   ├── booking-templates/         # hotel-form
 │   ├── letter-templates/          # example-form, letter-editor (Tiptap WYSIWYG)
 │   ├── companies/                 # company-form
@@ -250,8 +250,8 @@ Portal uses **service role client** (bypasses RLS) since visitors are unauthenti
 ### Admin Locale Switching
 `AdminLocaleProvider` wraps the admin layout for instant language switching via React state (no page reload). Uses `NextIntlClientProvider` override with pre-imported messages. `LocaleSwitcher` uses `useAdminLocale()` hook. Same pattern as portal's `PortalLocaleProvider`.
 
-### Application Edit Form — Portal-First Tabs
-When editing a portal-sourced application (`custom_fields` exists), the form defaults to "Customer Data" tab showing all submitted fields. Admin workflow fields go to "Process Tracking" tab. For admin-created apps (no `custom_fields`), classic tabs are shown: Personal Info, Passport & Visa, Process Tracking. Controlled by `isPortalApp` boolean.
+### Application Detail Page — Portal Data as Source of Truth
+Clicking a customer name in the applications list navigates to `/applications/[id]`, a full-page detail view. ALL customer data is rendered from `custom_fields` JSONB (the portal submission), grouped by section and ordered by `sort_order` from `portal_field_assignments` and `portal_smart_field_assignments` tables — mirroring the portal form layout. Section headers use the same i18n keys as the portal (`portalApply` namespace). Old vizebis admin columns (`company_id`, `passport_no`, `pickup_date`, `gender`, etc.) are dead — never populated for portal apps. The only admin-editable fields are: visa status, appointment date/time, finance fields, and notes. The list page table only shows: ID, Tracking Code, Source, Full Name, Country, Appointment Date, Phone, Payment Status, Visa Status, Actions.
 
 ### Per-Country Config Pattern
 Tables like `document_checklists` and `portal_form_fields` share the same pattern: filter by `country` + `visa_type`, admin CRUD via DataTable with country/visa dropdowns, "copy from" feature to clone configs between combos. Follow this pattern for any new per-country per-visa config.
@@ -269,7 +269,7 @@ Auto-generation fires on portal submission (`actions.ts`) via `generateDocuments
 ### FULLY FUNCTIONAL (39 routes) — Connected to Supabase
 - Authentication (login, register, logout, session management)
 - Dashboard (actionable stats: pending/at consulate/preparing + upcoming appointments in 7 days + recent apps)
-- Applications (full CRUD, 40+ fields, tracking code, CSV export, color coding, inline visa status dropdown, tabbed detail card with generated documents)
+- Applications (full CRUD, portal custom_fields as source of truth, tracking code, CSV export, color coding, inline visa status dropdown, full-page detail with section-grouped customer data + generated documents + notes)
 - Companies, Appointments, Calendar (full CRUD)
 - Documents, Tags, Forms, Passwords (full CRUD)
 - Finance reports (debt-individual, debt-corporate, at-consulate, country-reports)
