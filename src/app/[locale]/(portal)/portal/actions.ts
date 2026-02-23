@@ -445,6 +445,27 @@ export async function getSmartFieldAssignments(
   });
 }
 
+async function getCountryFees(
+  countryName: string
+): Promise<{ service_fee: number; consulate_fee: number; currency: string }> {
+  const supabase = createServiceClient();
+  const { data } = await supabase
+    .from("countries")
+    .select("service_fee, consulate_fee, currency")
+    .eq("name", countryName)
+    .single();
+
+  if (!data) {
+    return { service_fee: 0, consulate_fee: 0, currency: "EUR" };
+  }
+
+  return {
+    service_fee: Number(data.service_fee) || 0,
+    consulate_fee: Number(data.consulate_fee) || 0,
+    currency: (data.currency as string) || "EUR",
+  };
+}
+
 export async function createPortalApplication(data: {
   standardFields: Record<string, string>;
   customFields: Record<string, string>;
@@ -480,6 +501,9 @@ export async function createPortalApplication(data: {
       : {}),
   };
 
+  // Lookup country-based fees
+  const fees = await getCountryFees(data.country);
+
   // Insert the application
   const { data: app, error } = await supabase
     .from("applications")
@@ -497,9 +521,9 @@ export async function createPortalApplication(data: {
       source: "portal",
       payment_status: "odenmedi",
       invoice_status: "fatura_yok",
-      currency: "TL",
-      consulate_fee: 0,
-      service_fee: 0,
+      currency: fees.currency,
+      consulate_fee: fees.consulate_fee,
+      service_fee: fees.service_fee,
     })
     .select("id, tracking_code")
     .single();
@@ -856,6 +880,9 @@ export async function addGroupMember(data: {
       : {}),
   };
 
+  // Lookup country-based fees
+  const fees = await getCountryFees(data.country);
+
   const { data: app, error } = await supabase
     .from("applications")
     .insert({
@@ -874,9 +901,9 @@ export async function addGroupMember(data: {
       group_id: data.groupId,
       payment_status: "odenmedi",
       invoice_status: "fatura_yok",
-      currency: "TL",
-      consulate_fee: 0,
-      service_fee: 0,
+      currency: fees.currency,
+      consulate_fee: fees.consulate_fee,
+      service_fee: fees.service_fee,
     })
     .select("id, tracking_code, full_name, passport_no, id_number, date_of_birth, visa_type, custom_fields")
     .single();

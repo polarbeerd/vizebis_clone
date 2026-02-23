@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { Edit, MoreHorizontal, Plus, Trash2 } from "lucide-react";
 
 import { createClient } from "@/lib/supabase/client";
+import { formatCurrency } from "@/lib/utils";
 import { DataTable } from "@/components/data-table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -64,6 +65,9 @@ export function CountriesClient({ data }: CountriesClientProps) {
       flag_emoji: country.flag_emoji,
       is_active: country.is_active,
       sort_order: country.sort_order,
+      service_fee: country.service_fee,
+      consulate_fee: country.consulate_fee,
+      currency: country.currency,
     });
     setFormOpen(true);
   }
@@ -125,6 +129,24 @@ export function CountriesClient({ data }: CountriesClientProps) {
             {row.getValue("is_active") ? tCommon("active") : tCommon("passive")}
           </Badge>
         ),
+      },
+      {
+        accessorKey: "service_fee",
+        header: () => t("serviceFee"),
+        cell: ({ row }) => {
+          const fee = Number(row.original.service_fee) || 0;
+          const cur = (row.original.currency as "TL" | "USD" | "EUR") || "EUR";
+          return fee > 0 ? formatCurrency(fee, cur) : "—";
+        },
+      },
+      {
+        accessorKey: "consulate_fee",
+        header: () => t("consulateFee"),
+        cell: ({ row }) => {
+          const fee = Number(row.original.consulate_fee) || 0;
+          const cur = (row.original.currency as "TL" | "USD" | "EUR") || "EUR";
+          return fee > 0 ? formatCurrency(fee, cur) : "—";
+        },
       },
       {
         accessorKey: "sort_order",

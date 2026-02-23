@@ -27,6 +27,13 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 // Schema
 const countrySchema = z.object({
@@ -34,6 +41,9 @@ const countrySchema = z.object({
   flag_emoji: z.string().default(""),
   is_active: z.boolean().default(true),
   sort_order: z.coerce.number().default(0),
+  service_fee: z.coerce.number().min(0).default(0),
+  consulate_fee: z.coerce.number().min(0).default(0),
+  currency: z.string().default("EUR"),
 });
 
 type CountryFormValues = z.output<typeof countrySchema>;
@@ -44,6 +54,9 @@ export interface CountryForForm {
   flag_emoji?: string | null;
   is_active?: boolean;
   sort_order?: number;
+  service_fee?: number;
+  consulate_fee?: number;
+  currency?: string;
 }
 
 interface CountryFormProps {
@@ -74,6 +87,9 @@ export function CountryForm({
       flag_emoji: "",
       is_active: true,
       sort_order: 0,
+      service_fee: 0,
+      consulate_fee: 0,
+      currency: "EUR",
     },
   });
 
@@ -85,6 +101,9 @@ export function CountryForm({
         flag_emoji: country.flag_emoji ?? "",
         is_active: country.is_active ?? true,
         sort_order: country.sort_order ?? 0,
+        service_fee: country.service_fee ?? 0,
+        consulate_fee: country.consulate_fee ?? 0,
+        currency: country.currency ?? "EUR",
       });
     } else if (open && !country) {
       form.reset({
@@ -92,6 +111,9 @@ export function CountryForm({
         flag_emoji: "",
         is_active: true,
         sort_order: 0,
+        service_fee: 0,
+        consulate_fee: 0,
+        currency: "EUR",
       });
     }
   }, [open, country, form]);
@@ -104,6 +126,9 @@ export function CountryForm({
       flag_emoji: values.flag_emoji || null,
       is_active: values.is_active,
       sort_order: values.sort_order,
+      service_fee: values.service_fee,
+      consulate_fee: values.consulate_fee,
+      currency: values.currency,
     };
 
     try {
@@ -183,6 +208,61 @@ export function CountryForm({
                   <FormControl>
                     <Input type="number" {...field} />
                   </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <div className="grid grid-cols-2 gap-3">
+              <FormField
+                control={form.control}
+                name="service_fee"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t("serviceFee")}</FormLabel>
+                    <FormControl>
+                      <Input type="number" step="0.01" min="0" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="consulate_fee"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t("consulateFee")}</FormLabel>
+                    <FormControl>
+                      <Input type="number" step="0.01" min="0" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <FormField
+              control={form.control}
+              name="currency"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{t("currency")}</FormLabel>
+                  <Select
+                    onValueChange={field.onChange}
+                    value={field.value}
+                  >
+                    <FormControl>
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder={t("selectCurrency")} />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="EUR">EUR</SelectItem>
+                      <SelectItem value="USD">USD</SelectItem>
+                      <SelectItem value="TL">TL</SelectItem>
+                    </SelectContent>
+                  </Select>
                   <FormMessage />
                 </FormItem>
               )}

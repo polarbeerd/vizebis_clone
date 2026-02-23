@@ -1381,7 +1381,11 @@
     "saveError": "Failed to save country.",
     "deleteConfirmTitle": "Delete Country",
     "deleteConfirmDescription": "Are you sure you want to delete {name}?",
-    "noCountries": "No countries added yet."
+    "noCountries": "No countries added yet.",
+    "serviceFee": "Service Fee",
+    "consulateFee": "Consulate Fee",
+    "currency": "Currency",
+    "selectCurrency": "Select currency"
   },
   "applicationDetail": {
     "portalData": "Portal Data",
@@ -1955,6 +1959,9 @@
     "yourTrackingCode": "Your Tracking Code",
     "keepThisCode": "Keep this code — you can use it to track your application",
     "paymentMethods": "Supported Payment Methods",
-    "weWillContactYou": "We will contact you shortly"
+    "weWillContactYou": "We will contact you shortly",
+    "payLater": "I'll pay later",
+    "payLaterTitle": "Application Received!",
+    "payLaterDesc": "Your application has been submitted successfully. You can complete the payment at any time by revisiting this page."
   }
 }

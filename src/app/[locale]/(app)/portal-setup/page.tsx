@@ -19,6 +19,9 @@ export interface CountryRow {
   flag_emoji: string | null;
   is_active: boolean;
   sort_order: number;
+  service_fee: number;
+  consulate_fee: number;
+  currency: string;
 }
 
 export interface VisaTypeRow {
@@ -48,7 +51,7 @@ export default async function PortalSetupPage() {
       .order("sort_order"),
     supabase
       .from("countries")
-      .select("id, name, flag_emoji, is_active, sort_order")
+      .select("id, name, flag_emoji, is_active, sort_order, service_fee, consulate_fee, currency")
       .order("sort_order", { ascending: true }),
     supabase
       .from("visa_types")
@@ -84,6 +87,9 @@ export default async function PortalSetupPage() {
       flag_emoji: c.flag_emoji as string | null,
       is_active: c.is_active as boolean,
       sort_order: c.sort_order as number,
+      service_fee: Number(c.service_fee) || 0,
+      consulate_fee: Number(c.consulate_fee) || 0,
+      currency: (c.currency as string) || "EUR",
     })
   );
 

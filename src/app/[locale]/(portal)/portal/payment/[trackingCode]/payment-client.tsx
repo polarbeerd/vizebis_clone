@@ -31,6 +31,7 @@ export function PaymentClient({ application, error }: PaymentClientProps) {
   const t = useTranslations("payment");
   const locale = useLocale();
   const [processing, setProcessing] = useState(false);
+  const [payLater, setPayLater] = useState(false);
 
   // ── Error state ──
   if (error || !application) {
@@ -183,6 +184,52 @@ export function PaymentClient({ application, error }: PaymentClientProps) {
             className="text-sm text-slate-400 dark:text-slate-500"
           >
             {t("weWillContactYou")}
+          </motion.p>
+        </motion.div>
+      </div>
+    );
+  }
+
+  // ── Pay Later confirmation state ──
+  if (payLater) {
+    return (
+      <div className="mx-auto w-full max-w-lg px-1 py-8 sm:px-0 sm:py-16">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.5 }}
+          className="flex flex-col items-center text-center"
+        >
+          <motion.div
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            transition={{
+              type: "spring",
+              stiffness: 200,
+              damping: 12,
+              delay: 0.2,
+            }}
+            className="mb-6 flex h-24 w-24 items-center justify-center rounded-full bg-[#FEBEBF] shadow-xl shadow-[#FEBEBF]/30"
+          >
+            <Check className="h-12 w-12 text-white" strokeWidth={3} />
+          </motion.div>
+
+          <motion.h2
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+            className="mb-2 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl dark:text-white"
+          >
+            {t("payLaterTitle")}
+          </motion.h2>
+
+          <motion.p
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4 }}
+            className="mb-2 max-w-sm text-base text-slate-500 dark:text-slate-400"
+          >
+            {t("payLaterDesc")}
           </motion.p>
         </motion.div>
       </div>
@@ -342,6 +389,23 @@ export function PaymentClient({ application, error }: PaymentClientProps) {
             <span className="text-xs text-slate-400 dark:text-slate-500">
               {t("securePaymentDesc")}
             </span>
+          </motion.div>
+
+          {/* Pay Later button */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.7 }}
+            className="mt-3 flex justify-center"
+          >
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setPayLater(true)}
+              className="text-xs text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300"
+            >
+              {t("payLater")}
+            </Button>
           </motion.div>
         </div>
       </motion.div>

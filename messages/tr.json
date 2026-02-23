@@ -1381,7 +1381,11 @@
     "saveError": "Ulke kaydedilirken hata olustu.",
     "deleteConfirmTitle": "Ulkeyi Sil",
     "deleteConfirmDescription": "{name} ulkesini silmek istediginize emin misiniz?",
-    "noCountries": "Henuz ulke eklenmemis."
+    "noCountries": "Henuz ulke eklenmemis.",
+    "serviceFee": "Hizmet Bedeli",
+    "consulateFee": "Konsolosluk Ücreti",
+    "currency": "Para Birimi",
+    "selectCurrency": "Para birimi seçin"
   },
   "applicationDetail": {
     "portalData": "Portal Verileri",
@@ -1955,6 +1959,9 @@
     "yourTrackingCode": "Takip Kodunuz",
     "keepThisCode": "Bu kodu saklayın — başvurunuzu takip etmek için kullanabilirsiniz",
     "paymentMethods": "Desteklenen Ödeme Yöntemleri",
-    "weWillContactYou": "Sizinle en kısa sürede iletişime geçeceğiz"
+    "weWillContactYou": "Sizinle en kısa sürede iletişime geçeceğiz",
+    "payLater": "Daha sonra ödeyeceğim",
+    "payLaterTitle": "Başvurunuz Alındı!",
+    "payLaterDesc": "Başvurunuz başarıyla gönderildi. Bu sayfayı tekrar ziyaret ederek dilediğiniz zaman ödemenizi tamamlayabilirsiniz."
   }
 }
