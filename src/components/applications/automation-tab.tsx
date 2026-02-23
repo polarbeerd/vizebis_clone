@@ -8,8 +8,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue
 } from "@/components/ui/select";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Separator } from "@/components/ui/separator";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import {
-  Bot, Play, Loader2, AlertCircle, CheckCircle2, Clock, RefreshCw
+  Play, Loader2, AlertCircle, CheckCircle2, Clock,
+  Square, RotateCcw, Terminal, Eye, EyeOff
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -49,16 +54,30 @@ const statusIcons: Record<string, React.ReactNode> = {
   pending: <Clock className="h-4 w-4" />,
   queued: <Clock className="h-4 w-4" />,
   running: <Loader2 className="h-4 w-4 animate-spin" />,
-  completed: <CheckCircle2 className="h-4 w-4" />,
-  failed: <AlertCircle className="h-4 w-4" />,
-  cancelled: <AlertCircle className="h-4 w-4" />,
+  completed: <CheckCircle2 className="h-4 w-4 text-green-600" />,
+  failed: <AlertCircle className="h-4 w-4 text-red-600" />,
+  cancelled: <Square className="h-4 w-4 text-gray-500" />,
 };
+
+/** Extract step number from progress string like "Step 5/20 — Waiting for OTP..." */
+function parseProgress(progress: string | null): { step: number; total: number } | null {
+  if (!progress) return null;
+  const m = progress.match(/Step (\d+)\/(\d+)/);
+  if (!m) return null;
+  return { step: parseInt(m[1]), total: parseInt(m[2]) };
+}
 
 export function AutomationTab({ applicationId, country }: AutomationTabProps) {
   const [jobs, setJobs] = React.useState<AutomationJob[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [starting, setStarting] = React.useState(false);
+  const [cancelling, setCancelling] = React.useState(false);
   const [selectedStages, setSelectedStages] = React.useState("mfa");
+  const [headless, setHeadless] = React.useState(true);
+  // Accumulate progress logs for the active job
+  const [progressLog, setProgressLog] = React.useState<string[]>([]);
+  const prevProgressRef = React.useRef<string | null>(null);
+  const logEndRef = React.useRef<HTMLDivElement>(null);
 
   const supabase = React.useMemo(() => createClient(), []);
 
@@ -77,25 +96,51 @@ export function AutomationTab({ applicationId, country }: AutomationTabProps) {
     fetchJobs();
   }, [fetchJobs]);
 
-  // Poll every 5s when there's an active job
+  // Poll every 3s when there's an active job
   const activeJob = jobs.find((j) =>
     ["pending", "queued", "running"].includes(j.status)
   );
 
   React.useEffect(() => {
     if (!activeJob) return;
-    const interval = setInterval(fetchJobs, 5000);
+    const interval = setInterval(fetchJobs, 3000);
     return () => clearInterval(interval);
   }, [activeJob, fetchJobs]);
 
+  // Accumulate progress messages into log
+  React.useEffect(() => {
+    if (!activeJob?.stage_progress) return;
+    if (activeJob.stage_progress !== prevProgressRef.current) {
+      prevProgressRef.current = activeJob.stage_progress;
+      const time = new Date().toLocaleTimeString();
+      setProgressLog((prev) => [...prev, `[${time}] ${activeJob.stage_progress}`]);
+    }
+  }, [activeJob?.stage_progress]);
+
+  // Auto-scroll log
+  React.useEffect(() => {
+    logEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [progressLog]);
+
+  // Reset log when a new job starts
+  React.useEffect(() => {
+    if (activeJob && progressLog.length === 0 && activeJob.stage_progress) {
+      const time = new Date().toLocaleTimeString();
+      setProgressLog([`[${time}] ${activeJob.stage_progress}`]);
+      prevProgressRef.current = activeJob.stage_progress;
+    }
+  }, [activeJob, progressLog.length]);
+
   async function handleStartAutomation() {
     setStarting(true);
+    setProgressLog([]);
+    prevProgressRef.current = null;
     try {
       const stages = selectedStages === "all" ? ["mfa", "vfs"] : [selectedStages];
       const res = await fetch("/api/automation/jobs", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ application_id: applicationId, stages }),
+        body: JSON.stringify({ application_id: applicationId, stages, headless }),
       });
 
       if (!res.ok) {
@@ -113,6 +158,35 @@ export function AutomationTab({ applicationId, country }: AutomationTabProps) {
     }
   }
 
+  async function handleCancel(jobId: string) {
+    setCancelling(true);
+    try {
+      const res = await fetch(`/api/automation/jobs/${jobId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "cancel" }),
+      });
+
+      if (!res.ok) {
+        toast.error("Failed to cancel job");
+        return;
+      }
+
+      toast.success("Job cancelled");
+      await fetchJobs();
+    } catch {
+      toast.error("Failed to cancel job");
+    } finally {
+      setCancelling(false);
+    }
+  }
+
+  async function handleRetry() {
+    setProgressLog([]);
+    prevProgressRef.current = null;
+    await handleStartAutomation();
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-8">
@@ -121,9 +195,15 @@ export function AutomationTab({ applicationId, country }: AutomationTabProps) {
     );
   }
 
+  const completedJobs = jobs.filter(
+    (j) => !["pending", "queued", "running"].includes(j.status)
+  );
+  const lastJob = completedJobs[0];
+  const canRetry = !activeJob && lastJob && ["failed", "cancelled"].includes(lastJob.status);
+
   return (
     <div className="space-y-4">
-      {/* Start automation controls */}
+      {/* Start / Retry controls */}
       {!activeJob && (
         <div className="flex items-center gap-3">
           <Select value={selectedStages} onValueChange={setSelectedStages}>
@@ -136,112 +216,192 @@ export function AutomationTab({ applicationId, country }: AutomationTabProps) {
               <SelectItem value="all">MFA + VFS</SelectItem>
             </SelectContent>
           </Select>
-          <Button
-            size="sm"
-            onClick={handleStartAutomation}
-            disabled={starting}
-          >
-            {starting ? (
-              <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
-            ) : (
-              <Play className="mr-1.5 h-3.5 w-3.5" />
-            )}
-            Start Automation
-          </Button>
+          <div className="flex items-center gap-2">
+            <Switch
+              id="headless-toggle"
+              checked={!headless}
+              onCheckedChange={(checked) => setHeadless(!checked)}
+            />
+            <Label htmlFor="headless-toggle" className="text-xs cursor-pointer flex items-center gap-1">
+              {headless ? (
+                <EyeOff className="h-3.5 w-3.5 text-muted-foreground" />
+              ) : (
+                <Eye className="h-3.5 w-3.5 text-green-600" />
+              )}
+              {headless ? "Headless" : "Visible"}
+            </Label>
+          </div>
+          {canRetry ? (
+            <Button size="sm" onClick={handleRetry} disabled={starting}>
+              {starting ? (
+                <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <RotateCcw className="mr-1.5 h-3.5 w-3.5" />
+              )}
+              Retry
+            </Button>
+          ) : (
+            <Button size="sm" onClick={handleStartAutomation} disabled={starting}>
+              {starting ? (
+                <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Play className="mr-1.5 h-3.5 w-3.5" />
+              )}
+              Start Automation
+            </Button>
+          )}
         </div>
       )}
 
       {/* Active job card */}
       {activeJob && (
         <Card className="border-2 border-yellow-200 dark:border-yellow-800">
-          <CardHeader className="pb-3">
+          <CardHeader className="pb-2">
             <div className="flex items-center justify-between">
               <CardTitle className="text-base flex items-center gap-2">
                 {statusIcons[activeJob.status]}
                 Active Job
               </CardTitle>
-              <Badge variant="outline" className={statusColors[activeJob.status]}>
-                {activeJob.status}
-              </Badge>
+              <div className="flex items-center gap-2">
+                <Badge variant="outline" className={statusColors[activeJob.status]}>
+                  {activeJob.status}
+                </Badge>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => handleCancel(activeJob.id)}
+                  disabled={cancelling}
+                  className="h-7 px-2 text-xs text-red-600 border-red-200 hover:bg-red-50 dark:text-red-400 dark:border-red-800 dark:hover:bg-red-900/20"
+                >
+                  {cancelling ? (
+                    <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                  ) : (
+                    <Square className="mr-1 h-3 w-3" />
+                  )}
+                  Cancel
+                </Button>
+              </div>
             </div>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              {activeJob.current_stage && (
-                <p className="text-sm">
-                  <span className="text-muted-foreground">Stage:</span>{" "}
-                  <span className="font-medium">{activeJob.current_stage.toUpperCase()}</span>
-                </p>
-              )}
-              {activeJob.stage_progress && (
-                <p className="text-sm">
-                  <span className="text-muted-foreground">Progress:</span>{" "}
-                  {activeJob.stage_progress}
-                </p>
-              )}
-              {activeJob.mfa_case_number && (
-                <p className="text-sm">
-                  <span className="text-muted-foreground">MFA Case #:</span>{" "}
-                  <span className="font-mono font-medium">{activeJob.mfa_case_number}</span>
-                </p>
-              )}
-              {activeJob.error_message && (
-                <div className="flex items-start gap-2 text-sm text-red-600 dark:text-red-400">
-                  <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
-                  {activeJob.error_message}
+          <CardContent className="space-y-3">
+            {/* Progress bar */}
+            {(() => {
+              const p = parseProgress(activeJob.stage_progress);
+              if (!p) return null;
+              const pct = Math.round((p.step / p.total) * 100);
+              return (
+                <div className="space-y-1">
+                  <div className="flex justify-between text-xs text-muted-foreground">
+                    <span>{activeJob.current_stage?.toUpperCase()} — Step {p.step}/{p.total}</span>
+                    <span>{pct}%</span>
+                  </div>
+                  <div className="h-2 rounded-full bg-muted overflow-hidden">
+                    <div
+                      className="h-full rounded-full bg-yellow-500 transition-all duration-500"
+                      style={{ width: `${pct}%` }}
+                    />
+                  </div>
                 </div>
-              )}
-              <p className="text-xs text-muted-foreground">
-                Started: {activeJob.started_at ? new Date(activeJob.started_at).toLocaleString() : "Pending..."}
+              );
+            })()}
+
+            {/* Current step description */}
+            {activeJob.stage_progress && (
+              <p className="text-sm font-medium">
+                {activeJob.stage_progress.replace(/^Step \d+\/\d+ — /, "")}
               </p>
-            </div>
+            )}
+
+            {activeJob.mfa_case_number && (
+              <p className="text-sm">
+                <span className="text-muted-foreground">MFA Case #:</span>{" "}
+                <span className="font-mono font-medium">{activeJob.mfa_case_number}</span>
+              </p>
+            )}
+
+            {activeJob.error_message && (
+              <div className="flex items-start gap-2 text-sm text-red-600 dark:text-red-400">
+                <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
+                {activeJob.error_message}
+              </div>
+            )}
+
+            {/* Live logs */}
+            {progressLog.length > 0 && (
+              <>
+                <Separator />
+                <div>
+                  <div className="flex items-center gap-1.5 mb-1.5">
+                    <Terminal className="h-3.5 w-3.5 text-muted-foreground" />
+                    <span className="text-xs font-medium text-muted-foreground">Activity Log</span>
+                  </div>
+                  <ScrollArea className="h-32 rounded-md border bg-muted/30 p-2">
+                    <div className="space-y-0.5 font-mono text-xs">
+                      {progressLog.map((line, i) => (
+                        <p key={i} className={i === progressLog.length - 1 ? "text-foreground" : "text-muted-foreground"}>
+                          {line}
+                        </p>
+                      ))}
+                      <div ref={logEndRef} />
+                    </div>
+                  </ScrollArea>
+                </div>
+              </>
+            )}
+
+            <p className="text-xs text-muted-foreground">
+              Started: {activeJob.started_at ? new Date(activeJob.started_at).toLocaleString() : "Pending..."}
+            </p>
           </CardContent>
         </Card>
       )}
 
       {/* Job history */}
-      {jobs.filter((j) => !["pending", "queued", "running"].includes(j.status)).length > 0 && (
+      {completedJobs.length > 0 && (
         <div>
           <h4 className="text-sm font-medium text-muted-foreground mb-2">Job History</h4>
           <div className="space-y-2">
-            {jobs
-              .filter((j) => !["pending", "queued", "running"].includes(j.status))
-              .map((job) => (
-                <div
-                  key={job.id}
-                  className="flex items-center justify-between p-3 rounded-lg border bg-muted/30"
-                >
-                  <div className="flex items-center gap-3">
-                    {statusIcons[job.status]}
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <Badge variant="outline" className={`text-xs ${statusColors[job.status]}`}>
-                          {job.status}
-                        </Badge>
-                        {job.current_stage && (
-                          <span className="text-xs text-muted-foreground">
-                            {job.current_stage.toUpperCase()}
-                          </span>
-                        )}
-                      </div>
-                      {job.mfa_case_number && (
-                        <p className="text-xs mt-0.5">
-                          Case #: <span className="font-mono">{job.mfa_case_number}</span>
-                        </p>
-                      )}
-                      {job.error_message && (
-                        <p className="text-xs text-red-600 dark:text-red-400 mt-0.5 max-w-md truncate">
-                          {job.error_message}
-                        </p>
+            {completedJobs.map((job) => (
+              <div
+                key={job.id}
+                className="flex items-center justify-between p-3 rounded-lg border bg-muted/30"
+              >
+                <div className="flex items-center gap-3">
+                  {statusIcons[job.status]}
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline" className={`text-xs ${statusColors[job.status]}`}>
+                        {job.status}
+                      </Badge>
+                      {job.current_stage && (
+                        <span className="text-xs text-muted-foreground">
+                          {job.current_stage.toUpperCase()}
+                        </span>
                       )}
                     </div>
-                  </div>
-                  <div className="text-xs text-muted-foreground text-right">
-                    <p>{new Date(job.created_at).toLocaleDateString()}</p>
-                    <p>{new Date(job.created_at).toLocaleTimeString()}</p>
+                    {job.stage_progress && (
+                      <p className="text-xs mt-0.5 text-muted-foreground">
+                        {job.stage_progress}
+                      </p>
+                    )}
+                    {job.mfa_case_number && (
+                      <p className="text-xs mt-0.5">
+                        Case #: <span className="font-mono">{job.mfa_case_number}</span>
+                      </p>
+                    )}
+                    {job.error_message && (
+                      <p className="text-xs text-red-600 dark:text-red-400 mt-0.5 max-w-md truncate">
+                        {job.error_message}
+                      </p>
+                    )}
                   </div>
                 </div>
-              ))}
+                <div className="text-xs text-muted-foreground text-right">
+                  <p>{new Date(job.created_at).toLocaleDateString()}</p>
+                  <p>{new Date(job.created_at).toLocaleTimeString()}</p>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       )}

@@ -710,6 +710,47 @@ export async function getApplicationDocuments(
 }
 
 // ──────────────────────────────────────────────────────────────
+// Payment — Server Actions
+// ──────────────────────────────────────────────────────────────
+
+export interface PaymentApplication {
+  id: number;
+  tracking_code: string;
+  full_name: string | null;
+  country: string | null;
+  visa_type: string | null;
+  service_fee: number;
+  consulate_fee: number;
+  currency: string;
+  payment_status: string;
+}
+
+export async function getApplicationForPayment(
+  trackingCode: string
+): Promise<{ data: PaymentApplication | null; error: string | null }> {
+  if (!trackingCode || trackingCode.trim().length === 0) {
+    return { data: null, error: "INVALID_CODE" };
+  }
+
+  const supabase = createServiceClient();
+
+  const { data, error } = await supabase
+    .from("applications")
+    .select(
+      "id, tracking_code, full_name, country, visa_type, service_fee, consulate_fee, currency, payment_status"
+    )
+    .eq("tracking_code", trackingCode.trim())
+    .eq("is_deleted", false)
+    .single();
+
+  if (error || !data) {
+    return { data: null, error: "NOT_FOUND" };
+  }
+
+  return { data: data as PaymentApplication, error: null };
+}
+
+// ──────────────────────────────────────────────────────────────
 // Group Applications — Server Actions
 // ──────────────────────────────────────────────────────────────
 

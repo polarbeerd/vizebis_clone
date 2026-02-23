@@ -317,6 +317,13 @@ export function ApplicationDetailPage({
           }
         }
         payload.custom_fields = updated;
+
+        // Sync full_name if name or surname changed
+        const newName = (updated.name as string) ?? "";
+        const newSurname = (updated.surname as string) ?? "";
+        if (newName || newSurname) {
+          payload.full_name = `${newName} ${newSurname}`.trim();
+        }
       }
 
       const { error } = await supabase

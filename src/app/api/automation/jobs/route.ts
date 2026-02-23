@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
   }
 
   const body = await request.json();
-  const { application_id, stages = ["mfa"] } = body;
+  const { application_id, stages = ["mfa"], headless = true } = body;
 
   if (!application_id) {
     return NextResponse.json(
@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
       .limit(1)
       .single();
 
-    const hotelRaw = hotelDoc?.booking_hotels as Record<string, unknown> | null;
+    const hotelRaw = hotelDoc?.booking_hotels as unknown as Record<string, unknown> | null;
     const hotelData = hotelRaw
       ? {
           name: hotelRaw.name as string,
@@ -119,7 +119,7 @@ export async function POST(request: NextRequest) {
       webhook_secret: webhookSecret,
       stages,
       dry_run: false,
-      headless: true,
+      headless: !!headless,
       application_data: applicationData,
       hotel_data: hotelData,
     };

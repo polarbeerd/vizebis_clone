@@ -21,6 +21,7 @@ import {
   MapPin,
   ShieldCheck,
   Lightbulb,
+  CreditCard,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -36,6 +37,7 @@ import {
 } from "@/components/ui/select";
 import { PhoneInput } from "@/components/portal/phone-input";
 import { SegmentedControl } from "@/components/portal/segmented-control";
+import { useRouter } from "@/i18n/navigation";
 import { toast } from "sonner";
 import { SmartFieldRenderer } from "@/components/portal/smart-fields/smart-field-renderer";
 import { hasSmartFieldComponent } from "@/components/portal/smart-fields/registry";
@@ -76,7 +78,7 @@ const ALL_STEPS = [
   { key: "stepGuide", icon: FileText, id: "guide" },
   { key: "stepChoice", icon: Users, id: "choice" },
   { key: "stepInfo", icon: User, id: "info" },
-  { key: "stepConfirmation", icon: CheckCircle2, id: "confirmation" },
+  { key: "stepPayment", icon: CreditCard, id: "payment" },
 ] as const;
 
 const STEPS_WITHOUT_GUIDE = ALL_STEPS.filter((s) => s.id !== "guide");
@@ -198,6 +200,7 @@ export function ApplyClient({ countries, visaTypes }: ApplyClientProps) {
   const tCommon = useTranslations("common");
   const tPortal = useTranslations("portal");
   const locale = useLocale();
+  const router = useRouter();
 
   // Locale-aware helpers
   const countryDisplayName = (c: CountryOption) =>
@@ -222,7 +225,6 @@ export function ApplyClient({ countries, visaTypes }: ApplyClientProps) {
   const [guides, setGuides] = useState<PortalContentItem[]>([]);
   const [hasGuides, setHasGuides] = useState<boolean | null>(null); // null = unknown yet
   const [guideAcknowledged, setGuideAcknowledged] = useState(false);
-  const [trackingCode, setTrackingCode] = useState("");
   const [smartAssignments, setSmartAssignments] = useState<SmartFieldAssignment[]>([]);
   const [smartFieldData, setSmartFieldData] = useState<Record<string, Record<string, unknown>>>({});
   const [smartSubmitted, setSmartSubmitted] = useState(false);
@@ -251,7 +253,7 @@ export function ApplyClient({ countries, visaTypes }: ApplyClientProps) {
       (step === 2 && s.id === "guide") ||
       (step === 3 && s.id === "choice") ||
       (step === 4 && s.id === "info") ||
-      (step === 5 && s.id === "confirmation")
+      (step === 5 && s.id === "payment")
   );
   const activeStepLabel = activeSteps[stepperIndex >= 0 ? stepperIndex : 0];
 
@@ -443,8 +445,8 @@ export function ApplyClient({ countries, visaTypes }: ApplyClientProps) {
         setSubmitting(false);
         return;
       }
-      setTrackingCode(result.trackingCode);
-      setStep(5);
+      // Redirect to payment page
+      router.push(`/portal/payment/${result.trackingCode}`);
     } catch {
       toast.error(t("uploadError"));
     } finally {
@@ -544,8 +546,8 @@ export function ApplyClient({ countries, visaTypes }: ApplyClientProps) {
         toast.error(t("uploadError"));
         return;
       }
-      setTrackingCode(result.trackingCode);
-      setStep(5);
+      // Redirect to payment page
+      router.push(`/portal/payment/${result.trackingCode}`);
     } catch {
       toast.error(t("uploadError"));
     } finally {
@@ -611,16 +613,6 @@ export function ApplyClient({ countries, visaTypes }: ApplyClientProps) {
       toast.error(t("uploadError"));
     } finally {
       setSubmitting(false);
-    }
-  };
-
-  // ── Copy tracking code ──
-  const handleCopyCode = async () => {
-    try {
-      await navigator.clipboard.writeText(trackingCode);
-      toast.success(t("codeCopied"));
-    } catch {
-      toast.error("Could not copy");
     }
   };
 
@@ -911,7 +903,7 @@ export function ApplyClient({ countries, visaTypes }: ApplyClientProps) {
               (step === 2 && stepId === "guide") ||
               (step === 3 && stepId === "choice") ||
               (step === 4 && stepId === "info") ||
-              (step === 5 && stepId === "confirmation");
+              (step === 5 && stepId === "payment");
             const isComplete =
               (stepId === "country" && step > 1) ||
               (stepId === "guide" && step > 2) ||
@@ -1558,95 +1550,7 @@ export function ApplyClient({ countries, visaTypes }: ApplyClientProps) {
           </motion.div>
         )}
 
-        {/* ═══════ STEP 5 — Confirmation ═══════ */}
-        {step === 5 && (
-          <motion.div
-            key="step5"
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95 }}
-            transition={{ duration: 0.35 }}
-            className="flex flex-col items-center text-center"
-          >
-            <motion.div
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              transition={{ type: "spring", stiffness: 200, damping: 12, delay: 0.2 }}
-              className="mb-6 flex h-24 w-24 items-center justify-center rounded-full bg-[#FEBEBF] shadow-xl shadow-[#FEBEBF]/30"
-            >
-              <motion.div
-                initial={{ pathLength: 0, opacity: 0 }}
-                animate={{ pathLength: 1, opacity: 1 }}
-                transition={{ delay: 0.5, duration: 0.5 }}
-              >
-                <Check className="h-12 w-12 text-white" strokeWidth={3} />
-              </motion.div>
-            </motion.div>
-
-            <motion.h2
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.4 }}
-              className="mb-2 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl dark:text-white"
-            >
-              {t("confirmationTitle")}
-            </motion.h2>
-
-            <motion.p
-              initial={{ opacity: 0, y: 15 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.5 }}
-              className="mb-8 text-base text-slate-500 sm:text-lg dark:text-slate-400"
-            >
-              {t("confirmationContact")}
-            </motion.p>
-
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.6 }}
-              className="mb-8 cursor-pointer rounded-xl border border-slate-200 bg-slate-50 px-6 py-3 dark:border-slate-700 dark:bg-slate-800"
-              onClick={handleCopyCode}
-            >
-              <p className="text-xs text-slate-400 dark:text-slate-500">{t("referenceNumber")}</p>
-              <p className="mt-1 font-mono text-lg font-bold text-slate-900 dark:text-white">{trackingCode}</p>
-              <p className="mt-1 text-xs text-brand-500">{t("copyCode")}</p>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.7 }}
-            >
-              <Button
-                variant="outline"
-                className="h-11 rounded-xl px-6"
-                onClick={() => {
-                  setStep(1);
-                  setSelectedCountry("");
-                  setSelectedCity("");
-                  setSelectedVisaType("");
-                  setFormFields([]);
-                  setSmartAssignments([]);
-                  setSmartFieldData({});
-                  setGuides([]);
-                  setHasGuides(null);
-                  setGuideAcknowledged(false);
-                  setTrackingCode("");
-                  setFormSubmitted(false);
-                  setSmartSubmitted(false);
-                  setApplicationMode(null);
-                  setGroupData(null);
-                  setGroupMembers([]);
-                  setGroupSubStep("create");
-                  setEditingMember(null);
-                }}
-              >
-                {t("submitAnother")}
-              </Button>
-            </motion.div>
-          </motion.div>
-        )}
+        {/* Step 5 is now handled by /portal/payment/[trackingCode] */}
       </AnimatePresence>
     </div>
   );

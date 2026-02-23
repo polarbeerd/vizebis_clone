@@ -5,7 +5,7 @@
 - **Project:** Visa consulting management platform — "Unusual Consulting"
 - **Brand:** "our experience is your power" — modern, playful, professional
 - **Logo:** `public/logo.jpg` (black bg, pink/cream "UNUSUAL CONSULTING" text)
-- **Status:** 51 routes total — 39 fully functional, 7 UI-only (being phased out), 1 broken, 4 portal
+- **Status:** 53 routes total — 41 fully functional, 7 UI-only (being phased out), 1 broken, 4 portal
 - **Run:** `npm run dev` → http://localhost:3000
 - **Build:** `npm run build` (passing clean)
 - **Supabase project:** `vizebiscopy` — anon key connected, service role key placeholder
@@ -32,6 +32,7 @@
 | Rich Text Editor | Tiptap | latest |
 | PDF Generation | Python FastAPI + pikepdf (sidecar service) | 9.0.x |
 | AI (Letter of Intent) | Gemini 2.5 Flash API | v1beta |
+| Payments | Mollie (@mollie/api-client) | latest |
 
 ---
 
@@ -96,14 +97,20 @@ src/
 │   │       └── portal/
 │   │           ├── page.tsx                         # Redirects to /portal/apply
 │   │           ├── actions.ts                       # Server actions (service role client)
-│   │           ├── apply/page.tsx + apply-client.tsx # 4-step apply wizard (dynamic fields)
+│   │           ├── apply/page.tsx + apply-client.tsx # 4-step apply wizard → redirects to payment
+│   │           ├── payment/
+│   │           │   ├── [trackingCode]/page.tsx + payment-client.tsx  # Payment summary + Pay Now (Mollie)
+│   │           │   └── complete/page.tsx + complete-client.tsx       # Post-payment result (auto-polls status)
 │   │           └── [trackingCode]/
 │   │               ├── page.tsx + status-client.tsx  # Animated status timeline + details
 │   │               ├── edit/page.tsx + edit-client.tsx   # Personal info form
 │   │               └── upload/page.tsx + upload-client.tsx # Document upload
 │   ├── api/
 │   │   ├── generate-documents/    # POST: fire-and-forget document generation trigger
-│   │   └── extract-pdf-text/      # POST: extract text from uploaded PDF (letter examples)
+│   │   ├── extract-pdf-text/      # POST: extract text from uploaded PDF (letter examples)
+│   │   └── payments/
+│   │       ├── create/route.ts    # POST: creates Mollie payment session, returns checkout URL
+│   │       └── webhook/route.ts   # POST: Mollie webhook, updates payment_status to 'odendi'
 │   └── globals.css
 ├── components/
 │   ├── ui/                        # 25 shadcn/ui components
@@ -259,6 +266,9 @@ Tables like `document_checklists` and `portal_form_fields` share the same patter
 ### Document Generation Pattern
 Auto-generation fires on portal submission (`actions.ts`) via `generateDocumentsForApplication()` — fire-and-forget with `.catch()`. Generates booking PDF (via Python sidecar + pikepdf with Segoe UI font subsetting) and letter of intent (via Gemini 2.5 Flash API). Hotel selection is country-aware: filters by application's country first, falls back to any active hotel if no match. Group submissions share a single randomly-picked hotel via `sharedHotelId` parameter. Status tracked in `generated_documents` table (generating → ready/error). Client polls via setTimeout after triggering `/api/generate-documents`. Admin can view/download/regenerate from the Generated Documents tab in the application card.
 
+### Payment Integration Pattern (Mollie)
+After portal form submission, customers are redirected to `/portal/payment/[trackingCode]` — shows fee summary (applicant name, country, visa type, service fee + consulate fee breakdown) with a "Pay Now" button. Three states: fee set (show payment card), no fee yet (admin hasn't set pricing → "we'll contact you"), already paid (checkmark). Clicking "Pay Now" calls `POST /api/payments/create` which creates a Mollie payment session and returns a checkout URL. Customer completes payment on Mollie's hosted page. Mollie sends webhook to `POST /api/payments/webhook` which updates `payment_status` to `'odendi'` and `payment_method` to `'sanal_pos'`. Customer is redirected to `/portal/payment/complete?code=TRACKING_CODE` which auto-polls `getApplicationForPayment()` every 2-3 seconds up to 6 times to detect the webhook update. Currency mapping: app uses TL/USD/EUR, Mollie needs TRY/USD/EUR. **No tracking codes are shown to customers** — the company contacts customers directly. Env var: `MOLLIE_API_KEY`.
+
 ### Dynamic Form Pattern
 `portal_form_fields` defines fields with `is_standard` (maps to `applications` column) vs custom (stored in `applications.custom_fields` JSONB). Zod schema is built dynamically at runtime from fetched field definitions. Use `zodResolver(schema) as any` to avoid TS generic mismatch with `useForm`.
 
@@ -266,7 +276,7 @@ Auto-generation fires on portal submission (`actions.ts`) via `generateDocuments
 
 ## Current Status — What Works vs What Doesn't
 
-### FULLY FUNCTIONAL (39 routes) — Connected to Supabase
+### FULLY FUNCTIONAL (41 routes) — Connected to Supabase
 - Authentication (login, register, logout, session management)
 - Dashboard (actionable stats: pending/at consulate/preparing + upcoming appointments in 7 days + recent apps)
 - Applications (full CRUD, portal custom_fields as source of truth, tracking code, CSV export, color coding, inline visa status dropdown, full-page detail with section-grouped customer data + generated documents + notes)
@@ -277,7 +287,8 @@ Auto-generation fires on portal submission (`actions.ts`) via `generateDocuments
 - Referral report (CRUD + performance)
 - Settings (7 tabs), Email management, Profile, Notifications, Logs, CDN files
 - Customer Portal (status timeline, edit info, upload docs)
-- Portal Apply Wizard (4-step: country select, guides, dynamic form + document upload, confirmation)
+- Portal Apply Wizard (4-step: country select, guides, dynamic form + document upload, payment redirect)
+- Payment Flow (payment summary page, Mollie checkout, post-payment result with auto-polling)
 - Portal Admin (document checklists, form fields, portal content, countries, visa types)
 - Booking Templates (hotel CRUD grouped by country, PDF template upload, edit config JSON)
 - Letter Templates (example letter CRUD, PDF text extraction, Gemini generation settings)
@@ -363,6 +374,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ...                                  # ✅ Real
 SUPABASE_SERVICE_ROLE_KEY=your-service-role-key-here                  # ❌ Placeholder — get from Supabase dashboard > Settings > API
 PDF_SERVICE_URL=http://localhost:8000                                  # Python FastAPI sidecar (local) — Railway: https://vizebisclone-production.up.railway.app
 GEMINI_API_KEY=...                                                    # For letter of intent generation (Gemini 2.5 Flash)
+MOLLIE_API_KEY=test_...                                                # ❌ Placeholder — get from Mollie dashboard
 # Future:
 # OPENAI_API_KEY=sk-...                                              # For AI features
 # WHATSAPP_API_TOKEN=...                                             # For WhatsApp Business API
