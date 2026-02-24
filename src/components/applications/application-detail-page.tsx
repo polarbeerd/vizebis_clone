@@ -24,7 +24,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Separator } from "@/components/ui/separator";
 import {
   Select,
   SelectContent,
@@ -72,12 +71,6 @@ const visaStatusColorMap: Record<string, string> = {
   pasaport_teslim: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300",
 };
 
-const invoiceStatusKeyMap: Record<string, string> = {
-  fatura_yok: "none",
-  fatura_var: "exists",
-  fatura_kesildi: "issued",
-};
-
 const paymentStatusKeyMap: Record<string, string> = {
   odenmedi: "unpaid",
   odendi: "paid",
@@ -117,6 +110,99 @@ interface ApplicationDetailPageProps {
   smartAssignments: Record<string, any>[];
 }
 
+// ── Stable field components (outside parent to avoid re-mount on every render) ──
+function FieldValue({
+  fieldKey,
+  type = "text",
+  editMode,
+  editData,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  app,
+  onUpdate,
+}: {
+  fieldKey: string;
+  type?: string;
+  editMode: boolean;
+  editData: Record<string, unknown>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  app: Record<string, any>;
+  onUpdate: (key: string, value: unknown) => void;
+}) {
+  if (editMode) {
+    const val = editData[fieldKey] ?? "";
+    if (type === "textarea") {
+      return (
+        <Textarea
+          className="text-sm"
+          rows={2}
+          value={String(val)}
+          onChange={(e) => onUpdate(fieldKey, e.target.value)}
+        />
+      );
+    }
+    return (
+      <Input
+        className="h-8 text-sm"
+        type={type}
+        value={String(val)}
+        onChange={(e) => onUpdate(fieldKey, e.target.value)}
+      />
+    );
+  }
+
+  const raw = app[fieldKey];
+  if (raw == null || raw === "") return <span className="text-muted-foreground">-</span>;
+  if (type === "date") return <span className="text-sm">{formatDate(String(raw))}</span>;
+  return <span className="text-sm">{String(raw)}</span>;
+}
+
+function FieldRow({
+  label,
+  fieldKey,
+  type = "text",
+  editMode,
+  editData,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  app,
+  onUpdate,
+}: {
+  label: string;
+  fieldKey: string;
+  type?: string;
+  editMode: boolean;
+  editData: Record<string, unknown>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  app: Record<string, any>;
+  onUpdate: (key: string, value: unknown) => void;
+}) {
+  return (
+    <div className="grid grid-cols-3 gap-2 py-1.5 items-center">
+      <span className="text-muted-foreground text-sm">{label}</span>
+      <div className="col-span-2">
+        <FieldValue
+          fieldKey={fieldKey}
+          type={type}
+          editMode={editMode}
+          editData={editData}
+          app={app}
+          onUpdate={onUpdate}
+        />
+      </div>
+    </div>
+  );
+}
+
+function ReadOnlyRow({ label, value }: { label: string; value: React.ReactNode }) {
+  return (
+    <div className="grid grid-cols-3 gap-2 py-1.5 items-center">
+      <span className="text-muted-foreground text-sm">{label}</span>
+      <div className="col-span-2">
+        <span className="text-sm">{value || <span className="text-muted-foreground">-</span>}</span>
+      </div>
+    </div>
+  );
+}
+
 // ── Section DB key → i18n key mapping (matches portal) ───────────
 const SECTION_I18N_MAP: Record<string, string> = {
   personal_details: "sectionPersonalDetails",
@@ -150,7 +236,6 @@ export function ApplicationDetailPage({
   const tDetail = useTranslations("applicationDetail");
   const tApply = useTranslations("portalApply");
   const tVisa = useTranslations("visaStatus");
-  const tInvoice = useTranslations("invoiceStatus");
   const tPayment = useTranslations("paymentStatus");
   const tPaymentMethod = useTranslations("paymentMethod");
   const tCommon = useTranslations("common");
@@ -234,15 +319,7 @@ export function ApplicationDetailPage({
       consulate_fee: app.consulate_fee ?? 0,
       service_fee: app.service_fee ?? 0,
       currency: app.currency ?? "TL",
-      invoice_status: app.invoice_status ?? "fatura_yok",
-      invoice_date: app.invoice_date ?? "",
-      invoice_number: app.invoice_number ?? "",
       payment_status: app.payment_status ?? "odenmedi",
-      payment_date: app.payment_date ?? "",
-      payment_method: app.payment_method ?? "",
-      payment_note: app.payment_note ?? "",
-      assignment_note: app.assignment_note ?? "",
-      notes: app.notes ?? "",
     });
 
     // Initialize portal edits from custom_fields
@@ -379,72 +456,6 @@ export function ApplicationDetailPage({
     }
     setDeleting(false);
     setDeleteConfirmOpen(false);
-  }
-
-  // ── Helper: editable or read-only field (for admin fields) ─────
-  function FieldValue({
-    fieldKey,
-    type = "text",
-  }: {
-    fieldKey: string;
-    type?: string;
-  }) {
-    if (editMode) {
-      const val = editData[fieldKey] ?? "";
-      if (type === "textarea") {
-        return (
-          <Textarea
-            className="text-sm"
-            rows={2}
-            value={String(val)}
-            onChange={(e) => updateField(fieldKey, e.target.value)}
-          />
-        );
-      }
-      return (
-        <Input
-          className="h-8 text-sm"
-          type={type}
-          value={String(val)}
-          onChange={(e) => updateField(fieldKey, e.target.value)}
-        />
-      );
-    }
-
-    const raw = app[fieldKey];
-    if (raw == null || raw === "") return <span className="text-muted-foreground">-</span>;
-    if (type === "date") return <span className="text-sm">{formatDate(String(raw))}</span>;
-    return <span className="text-sm">{String(raw)}</span>;
-  }
-
-  function FieldRow({
-    label,
-    fieldKey,
-    type = "text",
-  }: {
-    label: string;
-    fieldKey: string;
-    type?: string;
-  }) {
-    return (
-      <div className="grid grid-cols-3 gap-2 py-1.5 items-center">
-        <span className="text-muted-foreground text-sm">{label}</span>
-        <div className="col-span-2">
-          <FieldValue fieldKey={fieldKey} type={type} />
-        </div>
-      </div>
-    );
-  }
-
-  function ReadOnlyRow({ label, value }: { label: string; value: React.ReactNode }) {
-    return (
-      <div className="grid grid-cols-3 gap-2 py-1.5 items-center">
-        <span className="text-muted-foreground text-sm">{label}</span>
-        <div className="col-span-2">
-          <span className="text-sm">{value || <span className="text-muted-foreground">-</span>}</span>
-        </div>
-      </div>
-    );
   }
 
   // ── Helper: get label for a field key from fieldDefs ────────────
@@ -848,8 +859,8 @@ export function ApplicationDetailPage({
                 )}
               </div>
             </div>
-            <FieldRow label={t("appointmentDate")} fieldKey="appointment_date" type="date" />
-            <FieldRow label={t("appointmentTime")} fieldKey="appointment_time" type="time" />
+            <FieldRow label={t("appointmentDate")} fieldKey="appointment_date" type="date" editMode={editMode} editData={editData} app={app} onUpdate={updateField} />
+            <FieldRow label={t("appointmentTime")} fieldKey="appointment_time" type="time" editMode={editMode} editData={editData} app={app} onUpdate={updateField} />
           </div>
         </CardContent>
       </Card>
@@ -861,8 +872,8 @@ export function ApplicationDetailPage({
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-1">
-            <FieldRow label={t("consulateFee")} fieldKey="consulate_fee" type="number" />
-            <FieldRow label={t("serviceFee")} fieldKey="service_fee" type="number" />
+            <FieldRow label={t("serviceFee")} fieldKey="service_fee" type="number" editMode={editMode} editData={editData} app={app} onUpdate={updateField} />
+            <FieldRow label={t("consulateFee")} fieldKey="consulate_fee" type="number" editMode={editMode} editData={editData} app={app} onUpdate={updateField} />
 
             {/* Currency */}
             <div className="grid grid-cols-3 gap-2 py-1.5 items-center">
@@ -887,40 +898,6 @@ export function ApplicationDetailPage({
                 )}
               </div>
             </div>
-
-            {/* Invoice Status */}
-            <div className="grid grid-cols-3 gap-2 py-1.5 items-center">
-              <span className="text-muted-foreground text-sm">{t("invoiceStatus")}</span>
-              <div className="col-span-2">
-                {editMode ? (
-                  <Select
-                    value={String(editData.invoice_status ?? "fatura_yok")}
-                    onValueChange={(v) => updateField("invoice_status", v)}
-                  >
-                    <SelectTrigger className="h-8 text-sm">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="fatura_yok">{tInvoice("none")}</SelectItem>
-                      <SelectItem value="fatura_var">{tInvoice("exists")}</SelectItem>
-                      <SelectItem value="fatura_kesildi">{tInvoice("issued")}</SelectItem>
-                    </SelectContent>
-                  </Select>
-                ) : (
-                  <span className="text-sm">
-                    {app.invoice_status
-                      ? tInvoice(
-                          (invoiceStatusKeyMap[app.invoice_status] ??
-                            app.invoice_status) as Parameters<typeof tInvoice>[0]
-                        )
-                      : "-"}
-                  </span>
-                )}
-              </div>
-            </div>
-
-            <FieldRow label={t("invoiceDate")} fieldKey="invoice_date" type="date" />
-            <FieldRow label={t("invoiceNumber")} fieldKey="invoice_number" />
 
             {/* Payment Status */}
             <div className="grid grid-cols-3 gap-2 py-1.5 items-center">
@@ -952,49 +929,26 @@ export function ApplicationDetailPage({
               </div>
             </div>
 
-            <FieldRow label={t("paymentDate")} fieldKey="payment_date" type="date" />
+            {/* Payment Method — read-only context when paid */}
+            {app.payment_method && (
+              <ReadOnlyRow
+                label={t("paymentMethod")}
+                value={
+                  tPaymentMethod(
+                    (paymentMethodKeyMap[app.payment_method] ??
+                      app.payment_method) as Parameters<typeof tPaymentMethod>[0]
+                  )
+                }
+              />
+            )}
 
-            {/* Payment Method */}
-            <div className="grid grid-cols-3 gap-2 py-1.5 items-center">
-              <span className="text-muted-foreground text-sm">{t("paymentMethod")}</span>
-              <div className="col-span-2">
-                {editMode ? (
-                  <Select
-                    value={String(editData.payment_method ?? "")}
-                    onValueChange={(v) => updateField("payment_method", v)}
-                  >
-                    <SelectTrigger className="h-8 text-sm">
-                      <SelectValue placeholder={tPaymentMethod("select")} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="nakit">{tPaymentMethod("cash")}</SelectItem>
-                      <SelectItem value="kredi_karti">{tPaymentMethod("creditCard")}</SelectItem>
-                      <SelectItem value="havale_eft">{tPaymentMethod("bankTransfer")}</SelectItem>
-                      <SelectItem value="sanal_pos">{tPaymentMethod("virtualPos")}</SelectItem>
-                    </SelectContent>
-                  </Select>
-                ) : (
-                  <span className="text-sm">
-                    {app.payment_method
-                      ? tPaymentMethod(
-                          (paymentMethodKeyMap[app.payment_method] ??
-                            app.payment_method) as Parameters<typeof tPaymentMethod>[0]
-                        )
-                      : "-"}
-                  </span>
-                )}
-              </div>
-            </div>
-
-            <FieldRow label={t("paymentNote")} fieldKey="payment_note" />
-          </div>
-
-          <Separator className="my-4" />
-
-          {/* Other: reference, assigned user, assignment note */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-1">
-            <FieldRow label={t("assignmentNote")} fieldKey="assignment_note" type="textarea" />
-            <FieldRow label={t("notes")} fieldKey="notes" type="textarea" />
+            {/* Payment Date — read-only context when paid */}
+            {app.payment_date && (
+              <ReadOnlyRow
+                label={t("paymentDate")}
+                value={formatDate(String(app.payment_date))}
+              />
+            )}
           </div>
         </CardContent>
       </Card>
