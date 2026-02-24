@@ -724,6 +724,57 @@ export interface PaymentApplication {
   payment_status: string;
 }
 
+export async function lookupApplicationByPassport(
+  passportNo: string
+): Promise<{ data: PaymentApplication | null; error: string | null }> {
+  if (!passportNo || passportNo.trim().length === 0) {
+    return { data: null, error: "INVALID_PASSPORT" };
+  }
+
+  const supabase = createServiceClient();
+
+  // Find the most recent unpaid application for this passport number
+  const { data, error } = await supabase
+    .from("applications")
+    .select(
+      "id, tracking_code, full_name, country, visa_type, service_fee, consulate_fee, currency, payment_status"
+    )
+    .eq("passport_no", passportNo.trim())
+    .eq("is_deleted", false)
+    .neq("payment_status", "odendi")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    console.error("Error looking up application by passport:", error);
+    return { data: null, error: "LOOKUP_FAILED" };
+  }
+
+  if (data) {
+    return { data: data as PaymentApplication, error: null };
+  }
+
+  // No unpaid application found — check if there's any application with this passport (already paid)
+  const { data: paidApp } = await supabase
+    .from("applications")
+    .select(
+      "id, tracking_code, full_name, country, visa_type, service_fee, consulate_fee, currency, payment_status"
+    )
+    .eq("passport_no", passportNo.trim())
+    .eq("is_deleted", false)
+    .eq("payment_status", "odendi")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (paidApp) {
+    return { data: paidApp as PaymentApplication, error: null };
+  }
+
+  return { data: null, error: "NOT_FOUND" };
+}
+
 export async function getApplicationForPayment(
   trackingCode: string
 ): Promise<{ data: PaymentApplication | null; error: string | null }> {

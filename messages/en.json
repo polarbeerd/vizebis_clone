@@ -1962,6 +1962,16 @@
     "weWillContactYou": "We will contact you shortly",
     "payLater": "I'll pay later",
     "payLaterTitle": "Application Received!",
-    "payLaterDesc": "Your application has been submitted successfully. You can complete the payment at any time by revisiting this page."
+    "payLaterDesc": "Your application has been submitted successfully. You can complete the payment at any time by revisiting this page.",
+    "lookupTitle": "Complete Your Payment",
+    "lookupSubtitle": "Enter your passport number to find your application and complete payment.",
+    "passportNumber": "Passport Number",
+    "passportPlaceholder": "Enter your passport number...",
+    "findApplication": "Find My Application",
+    "searching": "Searching...",
+    "noApplicationFound": "No application found",
+    "noApplicationFoundDesc": "We couldn't find an unpaid application with that passport number. Please double-check and try again, or start a new application.",
+    "applyNow": "Apply Now",
+    "alreadyPaidMessage": "All applications for this passport have already been paid."
   }
 }

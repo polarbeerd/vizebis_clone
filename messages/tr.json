@@ -1962,6 +1962,16 @@
     "weWillContactYou": "Sizinle en kısa sürede iletişime geçeceğiz",
     "payLater": "Daha sonra ödeyeceğim",
     "payLaterTitle": "Başvurunuz Alındı!",
-    "payLaterDesc": "Başvurunuz başarıyla gönderildi. Bu sayfayı tekrar ziyaret ederek dilediğiniz zaman ödemenizi tamamlayabilirsiniz."
+    "payLaterDesc": "Başvurunuz başarıyla gönderildi. Bu sayfayı tekrar ziyaret ederek dilediğiniz zaman ödemenizi tamamlayabilirsiniz.",
+    "lookupTitle": "Ödemenizi Tamamlayın",
+    "lookupSubtitle": "Başvurunuzu bulmak ve ödemenizi tamamlamak için pasaport numaranızı girin.",
+    "passportNumber": "Pasaport Numarası",
+    "passportPlaceholder": "Pasaport numaranızı girin...",
+    "findApplication": "Başvurumu Bul",
+    "searching": "Aranıyor...",
+    "noApplicationFound": "Başvuru bulunamadı",
+    "noApplicationFoundDesc": "Bu pasaport numarasına ait ödenmemiş bir başvuru bulunamadı. Lütfen kontrol edip tekrar deneyin veya yeni bir başvuru oluşturun.",
+    "applyNow": "Başvuru Yap",
+    "alreadyPaidMessage": "Bu pasaporta ait tüm başvurular zaten ödenmiş."
   }
 }
