@@ -17,11 +17,21 @@ export async function POST(request: NextRequest) {
 
     const payment = await mollieClient.payments.get(paymentId);
     const metadata = payment.metadata as {
-      application_id: string;
-      tracking_code: string;
+      application_ids?: string;
+      application_id?: string;
+      tracking_code?: string;
     };
 
-    if (!metadata?.application_id) {
+    // Support both new format (application_ids, comma-separated) and old format (application_id, singular)
+    let ids: number[] = [];
+    if (metadata?.application_ids) {
+      ids = metadata.application_ids.split(",").map(Number).filter((n) => !isNaN(n));
+    } else if (metadata?.application_id) {
+      const id = Number(metadata.application_id);
+      if (!isNaN(id)) ids = [id];
+    }
+
+    if (ids.length === 0) {
       console.error("Webhook: missing metadata on payment", paymentId);
       return new Response("OK", { status: 200 });
     }
@@ -35,7 +45,7 @@ export async function POST(request: NextRequest) {
           payment_status: "odendi",
           payment_method: "sanal_pos",
         })
-        .eq("id", Number(metadata.application_id));
+        .in("id", ids);
     }
 
     return new Response("OK", { status: 200 });

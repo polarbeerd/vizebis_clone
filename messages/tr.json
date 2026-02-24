@@ -1306,7 +1306,8 @@
     "viewDocument": "Görüntüle",
     "required": "Bu alan zorunludur",
     "exactChars": "Tam olarak {count} karakter olmalidir",
-    "invalidEmail": "Lütfen geçerli bir e-posta adresi girin"
+    "invalidEmail": "Lütfen geçerli bir e-posta adresi girin",
+    "completePayment": "Ödemeyi Tamamla"
   },
   "documentChecklists": {
     "title": "Belge Kontrol Listeleri",
@@ -1972,6 +1973,10 @@
     "noApplicationFound": "Başvuru bulunamadı",
     "noApplicationFoundDesc": "Bu pasaport numarasına ait ödenmemiş bir başvuru bulunamadı. Lütfen kontrol edip tekrar deneyin veya yeni bir başvuru oluşturun.",
     "applyNow": "Başvuru Yap",
-    "alreadyPaidMessage": "Bu pasaporta ait tüm başvurular zaten ödenmiş."
+    "alreadyPaidMessage": "Bu pasaporta ait tüm başvurular zaten ödenmiş.",
+    "groupPaymentTitle": "Grup Ödemesi",
+    "memberName": "Üye",
+    "childExempt": "12 yaş altı — Muaf",
+    "membersCount": "{count} üye"
   }
 }

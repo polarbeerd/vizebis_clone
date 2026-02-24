@@ -15,25 +15,26 @@ import type { PaymentApplication } from "../../actions";
 import { getApplicationForPayment } from "../../actions";
 
 interface CompleteClientProps {
-  application: PaymentApplication | null;
+  applications: PaymentApplication[];
   error: string | null;
 }
 
 type PaymentState = "success" | "processing" | "failed";
 
 export function CompleteClient({
-  application: initialApp,
+  applications: initialApps,
   error,
 }: CompleteClientProps) {
   const t = useTranslations("payment");
-  const [application, setApplication] = useState(initialApp);
+  const [applications, setApplications] = useState(initialApps);
   const [pollCount, setPollCount] = useState(0);
 
-  const isPaid = application?.payment_status === "odendi";
+  const firstApp = applications[0] ?? null;
+  const allPaid = applications.length > 0 && applications.every((a) => a.payment_status === "odendi");
 
-  const state: PaymentState = error
+  const state: PaymentState = error || applications.length === 0
     ? "failed"
-    : isPaid
+    : allPaid
       ? "success"
       : pollCount < 6
         ? "processing"
@@ -41,21 +42,21 @@ export function CompleteClient({
 
   // Poll for payment status updates (webhook may be slightly delayed)
   const pollStatus = useCallback(async () => {
-    if (!application?.tracking_code || isPaid) return;
+    if (!firstApp?.tracking_code || allPaid) return;
     try {
       const result = await getApplicationForPayment(
-        application.tracking_code
+        firstApp.tracking_code
       );
-      if (result.data) {
-        setApplication(result.data);
+      if (result.data && result.data.length > 0) {
+        setApplications(result.data);
       }
     } catch {
       // ignore polling errors
     }
-  }, [application?.tracking_code, isPaid]);
+  }, [firstApp?.tracking_code, allPaid]);
 
   useEffect(() => {
-    if (isPaid || !application || pollCount >= 6) return;
+    if (allPaid || applications.length === 0 || pollCount >= 6) return;
 
     const timer = setTimeout(
       () => {
@@ -66,10 +67,10 @@ export function CompleteClient({
     );
 
     return () => clearTimeout(timer);
-  }, [pollCount, isPaid, application, pollStatus]);
+  }, [pollCount, allPaid, applications, pollStatus]);
 
   // ── Error / not found ──
-  if (!application) {
+  if (applications.length === 0) {
     return (
       <div className="mx-auto w-full max-w-lg px-1 py-8 sm:px-0 sm:py-16">
         <motion.div
@@ -240,7 +241,7 @@ export function CompleteClient({
 
             <div className="flex flex-col gap-3 sm:flex-row">
               <Link
-                href={`/portal/payment/${application.tracking_code}`}
+                href={`/portal/payment/${firstApp.tracking_code}`}
               >
                 <Button className="h-11 rounded-xl bg-[#FEBEBF] px-6 text-white shadow-md shadow-[#FEBEBF]/25 hover:brightness-90">
                   <RefreshCw className="mr-2 h-4 w-4" />

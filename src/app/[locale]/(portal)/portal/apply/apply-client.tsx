@@ -37,7 +37,7 @@ import {
 } from "@/components/ui/select";
 import { PhoneInput } from "@/components/portal/phone-input";
 import { SegmentedControl } from "@/components/portal/segmented-control";
-import { useRouter } from "@/i18n/navigation";
+import { useRouter, Link } from "@/i18n/navigation";
 import { toast } from "sonner";
 import { SmartFieldRenderer } from "@/components/portal/smart-fields/smart-field-renderer";
 import { hasSmartFieldComponent } from "@/components/portal/smart-fields/registry";
@@ -868,6 +868,17 @@ export function ApplyClient({
   // ────────────────────────────────────────────────────────────
   return (
     <div className="mx-auto w-full max-w-2xl px-1 py-4 sm:px-0 sm:py-6">
+      {/* Complete Payment link */}
+      <div className="mb-4 flex justify-end">
+        <Link
+          href="/portal/pay"
+          className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-300"
+        >
+          <CreditCard className="h-3.5 w-3.5" />
+          {tPortal("completePayment")}
+        </Link>
+      </div>
+
       {/* ── Stepper ── */}
       <div className="mb-8 sm:mb-10">
         <div className="mx-auto flex max-w-xs items-center sm:max-w-xl">

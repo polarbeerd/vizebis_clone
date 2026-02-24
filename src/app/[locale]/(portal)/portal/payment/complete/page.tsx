@@ -9,10 +9,10 @@ export default async function CompletePage({ searchParams }: CompletePageProps) 
   const { code } = await searchParams;
 
   if (!code) {
-    return <CompleteClient application={null} error="INVALID_CODE" />;
+    return <CompleteClient applications={[]} error="INVALID_CODE" />;
   }
 
-  const { data: application, error } = await getApplicationForPayment(code);
+  const { data: applications, error } = await getApplicationForPayment(code);
 
-  return <CompleteClient application={application} error={error} />;
+  return <CompleteClient applications={applications ?? []} error={error} />;
 }

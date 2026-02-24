@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import createMollieClient from "@mollie/api-client";
 import { createServiceClient } from "@/lib/supabase/service";
+import { differenceInYears } from "date-fns";
 
 const CURRENCY_MAP: Record<string, string> = {
   TL: "TRY",
@@ -8,52 +9,67 @@ const CURRENCY_MAP: Record<string, string> = {
   EUR: "EUR",
 };
 
+function isChildExempt(dob: string | null): boolean {
+  if (!dob) return false;
+  const age = differenceInYears(new Date(), new Date(dob));
+  return age <= 11;
+}
+
 export async function POST(request: NextRequest) {
   try {
-    const { trackingCode, locale } = await request.json();
+    const body = await request.json();
+    const { applicationIds, locale } = body;
 
-    if (!trackingCode) {
+    if (!applicationIds || !Array.isArray(applicationIds) || applicationIds.length === 0) {
       return NextResponse.json(
-        { error: "Missing tracking code" },
+        { error: "Missing application IDs" },
         { status: 400 }
       );
     }
 
     const supabase = createServiceClient();
-    const { data: app, error: dbError } = await supabase
+
+    // Fetch all applications by IDs
+    const { data: apps, error: dbError } = await supabase
       .from("applications")
       .select(
-        "id, tracking_code, full_name, country, visa_type, service_fee, consulate_fee, currency, payment_status"
+        "id, tracking_code, full_name, date_of_birth, country, visa_type, service_fee, consulate_fee, currency, payment_status"
       )
-      .eq("tracking_code", trackingCode)
-      .eq("is_deleted", false)
-      .single();
+      .in("id", applicationIds)
+      .eq("is_deleted", false);
 
-    if (dbError || !app) {
+    if (dbError || !apps || apps.length === 0) {
       return NextResponse.json(
-        { error: "Application not found" },
+        { error: "Applications not found" },
         { status: 404 }
       );
     }
 
-    if (app.payment_status === "odendi") {
+    // Verify none are already paid
+    const alreadyPaid = apps.filter((a) => a.payment_status === "odendi");
+    if (alreadyPaid.length > 0) {
       return NextResponse.json(
-        { error: "Already paid" },
+        { error: "One or more applications already paid" },
         { status: 400 }
       );
     }
 
-    const totalFee =
-      (Number(app.service_fee) || 0) + (Number(app.consulate_fee) || 0);
+    // Calculate total: sum fees, skip children <=11
+    let totalFee = 0;
+    for (const app of apps) {
+      if (isChildExempt(app.date_of_birth as string | null)) continue;
+      totalFee += (Number(app.service_fee) || 0) + (Number(app.consulate_fee) || 0);
+    }
 
     if (totalFee <= 0) {
       return NextResponse.json(
-        { error: "No fee set for this application" },
+        { error: "No fee set for these applications" },
         { status: 400 }
       );
     }
 
-    const currency = CURRENCY_MAP[app.currency as string] || "EUR";
+    const firstApp = apps[0];
+    const currency = CURRENCY_MAP[firstApp.currency as string] || "EUR";
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
     const loc = locale || "tr";
 
@@ -61,17 +77,21 @@ export async function POST(request: NextRequest) {
       apiKey: process.env.MOLLIE_API_KEY!,
     });
 
+    const description = apps.length === 1
+      ? `Visa Application - ${firstApp.tracking_code}`
+      : `Group Visa Application - ${apps.length} members`;
+
     const payment = await mollieClient.payments.create({
       amount: {
         value: totalFee.toFixed(2),
         currency,
       },
-      description: `Visa Application - ${app.tracking_code}`,
-      redirectUrl: `${appUrl}/${loc}/portal/payment/complete?code=${app.tracking_code}`,
+      description,
+      redirectUrl: `${appUrl}/${loc}/portal/payment/complete?code=${firstApp.tracking_code}`,
       webhookUrl: `${appUrl}/api/payments/webhook`,
       metadata: {
-        application_id: String(app.id),
-        tracking_code: app.tracking_code as string,
+        application_ids: apps.map((a) => a.id).join(","),
+        tracking_code: firstApp.tracking_code as string,
       },
     });
 

@@ -1306,7 +1306,8 @@
     "viewDocument": "View",
     "required": "This field is required",
     "exactChars": "Must be exactly {count} characters",
-    "invalidEmail": "Please enter a valid email address"
+    "invalidEmail": "Please enter a valid email address",
+    "completePayment": "Complete Payment"
   },
   "documentChecklists": {
     "title": "Document Checklists",
@@ -1972,6 +1973,10 @@
     "noApplicationFound": "No application found",
     "noApplicationFoundDesc": "We couldn't find an unpaid application with that passport number. Please double-check and try again, or start a new application.",
     "applyNow": "Apply Now",
-    "alreadyPaidMessage": "All applications for this passport have already been paid."
+    "alreadyPaidMessage": "All applications for this passport have already been paid.",
+    "groupPaymentTitle": "Group Payment",
+    "memberName": "Member",
+    "childExempt": "Under 12 — Exempt",
+    "membersCount": "{count} members"
   }
 }

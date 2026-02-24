@@ -7,10 +7,10 @@ interface PaymentPageProps {
 
 export default async function PaymentPage({ params }: PaymentPageProps) {
   const { trackingCode } = await params;
-  const { data: application, error } =
+  const { data: applications, error } =
     await getApplicationForPayment(trackingCode);
 
   return (
-    <PaymentClient application={application} error={error} />
+    <PaymentClient applications={applications ?? []} error={error} />
   );
 }

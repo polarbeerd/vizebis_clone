@@ -716,17 +716,39 @@ export interface PaymentApplication {
   id: number;
   tracking_code: string;
   full_name: string | null;
+  date_of_birth: string | null;
   country: string | null;
   visa_type: string | null;
   service_fee: number;
   consulate_fee: number;
   currency: string;
   payment_status: string;
+  group_id: number | null;
+}
+
+const PAYMENT_SELECT =
+  "id, tracking_code, full_name, date_of_birth, country, visa_type, service_fee, consulate_fee, currency, payment_status, group_id";
+
+async function expandToGroup(
+  app: PaymentApplication
+): Promise<PaymentApplication[]> {
+  if (!app.group_id) return [app];
+
+  const supabase = createServiceClient();
+  const { data, error } = await supabase
+    .from("applications")
+    .select(PAYMENT_SELECT)
+    .eq("group_id", app.group_id)
+    .eq("is_deleted", false)
+    .order("id", { ascending: true });
+
+  if (error || !data || data.length === 0) return [app];
+  return data as PaymentApplication[];
 }
 
 export async function lookupApplicationByPassport(
   passportNo: string
-): Promise<{ data: PaymentApplication | null; error: string | null }> {
+): Promise<{ data: PaymentApplication[] | null; error: string | null }> {
   if (!passportNo || passportNo.trim().length === 0) {
     return { data: null, error: "INVALID_PASSPORT" };
   }
@@ -736,9 +758,7 @@ export async function lookupApplicationByPassport(
   // Find the most recent unpaid application for this passport number
   const { data, error } = await supabase
     .from("applications")
-    .select(
-      "id, tracking_code, full_name, country, visa_type, service_fee, consulate_fee, currency, payment_status"
-    )
+    .select(PAYMENT_SELECT)
     .eq("passport_no", passportNo.trim())
     .eq("is_deleted", false)
     .neq("payment_status", "odendi")
@@ -752,15 +772,14 @@ export async function lookupApplicationByPassport(
   }
 
   if (data) {
-    return { data: data as PaymentApplication, error: null };
+    const apps = await expandToGroup(data as PaymentApplication);
+    return { data: apps, error: null };
   }
 
   // No unpaid application found — check if there's any application with this passport (already paid)
   const { data: paidApp } = await supabase
     .from("applications")
-    .select(
-      "id, tracking_code, full_name, country, visa_type, service_fee, consulate_fee, currency, payment_status"
-    )
+    .select(PAYMENT_SELECT)
     .eq("passport_no", passportNo.trim())
     .eq("is_deleted", false)
     .eq("payment_status", "odendi")
@@ -769,7 +788,8 @@ export async function lookupApplicationByPassport(
     .maybeSingle();
 
   if (paidApp) {
-    return { data: paidApp as PaymentApplication, error: null };
+    const apps = await expandToGroup(paidApp as PaymentApplication);
+    return { data: apps, error: null };
   }
 
   return { data: null, error: "NOT_FOUND" };
@@ -777,27 +797,51 @@ export async function lookupApplicationByPassport(
 
 export async function getApplicationForPayment(
   trackingCode: string
-): Promise<{ data: PaymentApplication | null; error: string | null }> {
+): Promise<{ data: PaymentApplication[] | null; error: string | null }> {
   if (!trackingCode || trackingCode.trim().length === 0) {
     return { data: null, error: "INVALID_CODE" };
   }
 
   const supabase = createServiceClient();
+  const code = trackingCode.trim();
 
+  // First try applications table
   const { data, error } = await supabase
     .from("applications")
-    .select(
-      "id, tracking_code, full_name, country, visa_type, service_fee, consulate_fee, currency, payment_status"
-    )
-    .eq("tracking_code", trackingCode.trim())
+    .select(PAYMENT_SELECT)
+    .eq("tracking_code", code)
     .eq("is_deleted", false)
     .single();
 
-  if (error || !data) {
-    return { data: null, error: "NOT_FOUND" };
+  if (!error && data) {
+    const apps = await expandToGroup(data as PaymentApplication);
+    return { data: apps, error: null };
   }
 
-  return { data: data as PaymentApplication, error: null };
+  // Fallback: if code starts with GRP-, try application_groups table
+  if (code.startsWith("GRP-")) {
+    const { data: group } = await supabase
+      .from("application_groups")
+      .select("id")
+      .eq("tracking_code", code)
+      .single();
+
+    if (group) {
+      const groupId = (group as Record<string, unknown>).id as number;
+      const { data: members } = await supabase
+        .from("applications")
+        .select(PAYMENT_SELECT)
+        .eq("group_id", groupId)
+        .eq("is_deleted", false)
+        .order("id", { ascending: true });
+
+      if (members && members.length > 0) {
+        return { data: members as PaymentApplication[], error: null };
+      }
+    }
+  }
+
+  return { data: null, error: "NOT_FOUND" };
 }
 
 // ──────────────────────────────────────────────────────────────

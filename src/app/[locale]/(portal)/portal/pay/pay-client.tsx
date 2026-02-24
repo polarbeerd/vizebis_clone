@@ -20,9 +20,7 @@ export function PayClient() {
   const t = useTranslations("payment");
   const [passportNo, setPassportNo] = useState("");
   const [isPending, startTransition] = useTransition();
-  const [application, setApplication] = useState<PaymentApplication | null>(
-    null
-  );
+  const [applications, setApplications] = useState<PaymentApplication[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [searched, setSearched] = useState(false);
 
@@ -31,24 +29,24 @@ export function PayClient() {
     if (!passportNo.trim()) return;
 
     setError(null);
-    setApplication(null);
+    setApplications([]);
 
     startTransition(async () => {
       const result = await lookupApplicationByPassport(passportNo.trim());
 
-      if (result.error || !result.data) {
+      if (result.error || !result.data || result.data.length === 0) {
         setError(result.error ?? "NOT_FOUND");
         setSearched(true);
         return;
       }
 
-      setApplication(result.data);
+      setApplications(result.data);
       setSearched(true);
     });
   };
 
-  // Show the payment component once an application is found
-  if (application) {
+  // Show the payment component once applications are found
+  if (applications.length > 0) {
     return (
       <AnimatePresence mode="wait">
         <motion.div
@@ -58,7 +56,7 @@ export function PayClient() {
           exit={{ opacity: 0, x: -50 }}
           transition={{ duration: 0.4 }}
         >
-          <PaymentClient application={application} error={null} />
+          <PaymentClient applications={applications} error={null} />
         </motion.div>
       </AnimatePresence>
     );
