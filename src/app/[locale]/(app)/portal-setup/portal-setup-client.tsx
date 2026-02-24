@@ -5,23 +5,19 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { PortalFormFieldsClient } from "../portal-form-fields/portal-form-fields-client";
 import { CountriesClient } from "../countries/countries-client";
 import { VisaTypesClient } from "../visa-types/visa-types-client";
-import type { CountryOption, VisaTypeOption, CountryRow, VisaTypeRow } from "./page";
+import type { CountryRow, VisaTypeRow } from "./page";
 import type { FieldDefinition } from "@/components/portal-form-fields/field-definition-form";
 import type { SmartTemplate } from "@/components/portal-form-fields/field-assignment-view";
 
 interface PortalSetupClientProps {
-  countriesActive: CountryOption[];
   countriesAll: CountryRow[];
-  visaTypesActive: VisaTypeOption[];
   visaTypesAll: VisaTypeRow[];
   definitions: FieldDefinition[];
   smartTemplates: SmartTemplate[];
 }
 
 export function PortalSetupClient({
-  countriesActive,
   countriesAll,
-  visaTypesActive,
   visaTypesAll,
   definitions,
   smartTemplates,
@@ -41,9 +37,7 @@ export function PortalSetupClient({
         <TabsContent value="form-fields" className="mt-4">
           <PortalFormFieldsClient
             definitions={definitions}
-            countries={countriesActive}
             smartTemplates={smartTemplates}
-            visaTypes={visaTypesActive}
           />
         </TabsContent>
 

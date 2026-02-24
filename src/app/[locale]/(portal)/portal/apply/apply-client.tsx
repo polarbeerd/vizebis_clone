@@ -48,8 +48,6 @@ import {
 } from "@/config/application-cities";
 import {
   getPortalContent,
-  getFormFields,
-  getSmartFieldAssignments,
   createPortalApplication,
   createGroup,
   getGroupMembers,
@@ -193,9 +191,16 @@ function SectionCard({
 interface ApplyClientProps {
   countries: CountryOption[];
   visaTypes: VisaTypeOption[];
+  formFields: FormField[];
+  smartAssignments: SmartFieldAssignment[];
 }
 
-export function ApplyClient({ countries, visaTypes }: ApplyClientProps) {
+export function ApplyClient({
+  countries,
+  visaTypes,
+  formFields: initialFormFields,
+  smartAssignments: initialSmartAssignments,
+}: ApplyClientProps) {
   const t = useTranslations("portalApply");
   const tCommon = useTranslations("common");
   const tPortal = useTranslations("portal");
@@ -221,15 +226,19 @@ export function ApplyClient({ countries, visaTypes }: ApplyClientProps) {
   const [selectedCountry, setSelectedCountry] = useState("");
   const [selectedCity, setSelectedCity] = useState("");
   const [selectedVisaType, setSelectedVisaType] = useState("");
-  const [formFields, setFormFields] = useState<FormField[]>([]);
+  // Fields are preloaded server-side (global — no country/visa filter)
+  const filteredSmartAssignments = useMemo(
+    () => initialSmartAssignments.filter((a) => hasSmartFieldComponent(a.template_key)),
+    [initialSmartAssignments]
+  );
+  const [formFields, setFormFields] = useState<FormField[]>(initialFormFields);
   const [guides, setGuides] = useState<PortalContentItem[]>([]);
   const [hasGuides, setHasGuides] = useState<boolean | null>(null); // null = unknown yet
   const [guideAcknowledged, setGuideAcknowledged] = useState(false);
-  const [smartAssignments, setSmartAssignments] = useState<SmartFieldAssignment[]>([]);
+  const [smartAssignments, setSmartAssignments] = useState<SmartFieldAssignment[]>(filteredSmartAssignments);
   const [smartFieldData, setSmartFieldData] = useState<Record<string, Record<string, unknown>>>({});
   const [smartSubmitted, setSmartSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [loadingFields, setLoadingFields] = useState(false);
   const [loadingGuides, setLoadingGuides] = useState(false);
   const [formSubmitted, setFormSubmitted] = useState(false);
   const [applicationMode, setApplicationMode] = useState<"individual" | "group" | null>(null);
@@ -267,20 +276,11 @@ export function ApplyClient({ countries, visaTypes }: ApplyClientProps) {
     defaultValues,
   });
 
-  const resetFormWithFields = useCallback(
-    (fields: FormField[]) => {
-      const defaults = buildDefaultValues(fields);
-      form.reset(defaults);
-    },
-    [form]
-  );
-
   // ── Country selection handler ──
   const handleCountrySelect = useCallback(async (countryName: string) => {
     setSelectedCountry(countryName);
     setSelectedCity("");
     setSelectedVisaType("");
-    setFormFields([]);
     setGuides([]);
     setHasGuides(null);
     setGuideAcknowledged(false);
@@ -303,33 +303,12 @@ export function ApplyClient({ countries, visaTypes }: ApplyClientProps) {
     }
   }, [t]);
 
-  // ── Visa type selection in Step 3 ──
+  // ── Visa type selection — fields are already loaded (global) ──
   const handleVisaTypeChange = useCallback(
-    async (visaType: string) => {
+    (visaType: string) => {
       setSelectedVisaType(visaType);
-      setLoadingFields(true);
-      setFormFields([]);
-      setSmartAssignments([]);
-      setSmartFieldData({});
-      setSmartSubmitted(false);
-
-      try {
-        const [fields, smartAssigns] = await Promise.all([
-          getFormFields(selectedCountry, visaType),
-          getSmartFieldAssignments(selectedCountry, visaType),
-        ]);
-        setFormFields(fields);
-        resetFormWithFields(fields);
-        setSmartAssignments(
-          smartAssigns.filter((a) => hasSmartFieldComponent(a.template_key))
-        );
-      } catch {
-        toast.error(t("uploadError"));
-      } finally {
-        setLoadingFields(false);
-      }
     },
-    [selectedCountry, t, resetFormWithFields]
+    []
   );
 
   // ── Step navigation ──
@@ -493,35 +472,31 @@ export function ApplyClient({ countries, visaTypes }: ApplyClientProps) {
   const handleAddMember = () => {
     setEditingMember(null);
     setSelectedVisaType("");
-    setFormFields([]);
-    setSmartAssignments([]);
     setSmartFieldData({});
     setSmartSubmitted(false);
     setFormSubmitted(false);
-    form.reset({});
+    form.reset(buildDefaultValues(formFields));
     setGroupSubStep("member");
   };
 
   const handleEditMember = (member: GroupMember) => {
     setEditingMember(member);
-    // Pre-fill visa type - will trigger field loading
+    // Pre-fill visa type
     if (member.visa_type) {
-      handleVisaTypeChange(member.visa_type);
+      setSelectedVisaType(member.visa_type);
     }
     // Pre-fill form values from custom_fields
     if (member.custom_fields) {
       const cf = member.custom_fields as Record<string, string>;
-      setTimeout(() => {
-        for (const [key, value] of Object.entries(cf)) {
-          if (key !== "_smart" && key !== "application_city") {
-            form.setValue(key, value as string);
-          }
+      for (const [key, value] of Object.entries(cf)) {
+        if (key !== "_smart" && key !== "application_city") {
+          form.setValue(key, value as string);
         }
-        // Restore smart field data
-        if (cf._smart) {
-          setSmartFieldData(cf._smart as unknown as Record<string, Record<string, unknown>>);
-        }
-      }, 500);
+      }
+      // Restore smart field data
+      if (cf._smart) {
+        setSmartFieldData(cf._smart as unknown as Record<string, Record<string, unknown>>);
+      }
     }
     setGroupSubStep("member");
   };
@@ -1449,20 +1424,8 @@ export function ApplyClient({ countries, visaTypes }: ApplyClientProps) {
                 </div>
               </SectionCard>
 
-              {/* Loading indicator */}
-              {loadingFields && (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="flex items-center justify-center gap-2 py-8 text-brand-500"
-                >
-                  <Loader2 className="h-5 w-5 animate-spin" />
-                  <span className="text-sm">{tCommon("loading")}</span>
-                </motion.div>
-              )}
-
               {/* No fields warning */}
-              {!loadingFields && selectedVisaType && formFields.length === 0 && smartAssignments.length === 0 && (
+              {selectedVisaType && formFields.length === 0 && smartAssignments.length === 0 && (
                 <motion.div
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -1476,7 +1439,7 @@ export function ApplyClient({ countries, visaTypes }: ApplyClientProps) {
               )}
 
               {/* Dynamic sectioned form */}
-              {!loadingFields && (formFields.length > 0 || smartAssignments.length > 0) && (
+              {(formFields.length > 0 || smartAssignments.length > 0) && (
                 <motion.div
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -1532,7 +1495,7 @@ export function ApplyClient({ countries, visaTypes }: ApplyClientProps) {
               )}
 
               {/* Back button when no fields */}
-              {!loadingFields && formFields.length === 0 && smartAssignments.length === 0 && (
+              {formFields.length === 0 && smartAssignments.length === 0 && (
                 <div className="mt-6 flex items-center sm:mt-8">
                   <Button
                     variant="outline"

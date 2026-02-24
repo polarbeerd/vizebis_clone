@@ -3,40 +3,18 @@ import { PortalFormFieldsClient } from "./portal-form-fields-client";
 import type { FieldDefinition } from "@/components/portal-form-fields/field-definition-form";
 import type { SmartTemplate } from "@/components/portal-form-fields/field-assignment-view";
 
-export interface CountryOption {
-  id: number;
-  name: string;
-  flag_emoji: string | null;
-}
-
-export interface VisaTypeOption {
-  value: string;
-  label_en: string;
-  label_tr: string;
-}
-
 export default async function PortalFormFieldsPage() {
   const supabase = await createClient();
 
-  const [definitionsRes, countriesRes, smartTemplatesRes, visaTypesRes] = await Promise.all([
+  const [definitionsRes, smartTemplatesRes] = await Promise.all([
     supabase
       .from("portal_field_definitions")
       .select("*")
       .order("created_at", { ascending: true }),
     supabase
-      .from("countries")
-      .select("id, name, flag_emoji")
-      .eq("is_active", true)
-      .order("sort_order"),
-    supabase
       .from("portal_smart_field_templates")
       .select("id, template_key, label, label_tr, description, description_tr, sub_fields")
       .order("id", { ascending: true }),
-    supabase
-      .from("visa_types")
-      .select("value, label_en, label_tr")
-      .eq("is_active", true)
-      .order("sort_order"),
   ]);
 
   const definitions: FieldDefinition[] = (definitionsRes.data ?? []).map(
@@ -55,14 +33,6 @@ export default async function PortalFormFieldsPage() {
     })
   );
 
-  const countries: CountryOption[] = (countriesRes.data ?? []).map(
-    (c: Record<string, unknown>) => ({
-      id: c.id as number,
-      name: c.name as string,
-      flag_emoji: c.flag_emoji as string | null,
-    })
-  );
-
   const smartTemplates: SmartTemplate[] = (smartTemplatesRes.data ?? []).map(
     (t: Record<string, unknown>) => ({
       id: t.id as number,
@@ -75,20 +45,10 @@ export default async function PortalFormFieldsPage() {
     })
   );
 
-  const visaTypes: VisaTypeOption[] = (visaTypesRes.data ?? []).map(
-    (v: Record<string, unknown>) => ({
-      value: v.value as string,
-      label_en: v.label_en as string,
-      label_tr: v.label_tr as string,
-    })
-  );
-
   return (
     <PortalFormFieldsClient
       definitions={definitions}
-      countries={countries}
       smartTemplates={smartTemplates}
-      visaTypes={visaTypes}
     />
   );
 }

@@ -56,8 +56,6 @@ const SECTION_OPTIONS = [
 export interface FieldAssignment {
   id: number;
   definition_id: number;
-  country: string;
-  visa_type: string;
   is_required: boolean;
   sort_order: number;
   section: string;
@@ -89,8 +87,6 @@ type UnifiedItem =
   | { kind: "smart"; id: string; data: SmartAssignment };
 
 interface FieldAssignmentViewProps {
-  country: string;
-  visaType: string;
   allDefinitions: FieldDefinition[];
   smartTemplates: SmartTemplate[];
   onRefresh: () => void;
@@ -280,8 +276,6 @@ function SortableSmartRow({
 
 // ── Main component ──
 export function FieldAssignmentView({
-  country,
-  visaType,
   allDefinitions,
   smartTemplates,
   onRefresh,
@@ -344,25 +338,24 @@ export function FieldAssignmentView({
     [supabase]
   );
 
-  // Fetch both regular and smart assignments
+  // Fetch both regular and smart assignments (global: country IS NULL, visa_type IS NULL)
   const fetchAssignments = React.useCallback(async () => {
-    if (!country || !visaType) return;
     setLoading(true);
 
     const [regularRes, smartRes] = await Promise.all([
       supabase
         .from("portal_field_assignments")
         .select(
-          "id, definition_id, country, visa_type, is_required, sort_order, section, definition:portal_field_definitions(field_key, field_label, field_type)"
+          "id, definition_id, is_required, sort_order, section, definition:portal_field_definitions(field_key, field_label, field_type)"
         )
-        .eq("country", country)
-        .eq("visa_type", visaType)
+        .is("country", null)
+        .is("visa_type", null)
         .order("sort_order", { ascending: true }),
       supabase
         .from("portal_smart_field_assignments")
         .select("id, template_key, is_required, sort_order, section")
-        .eq("country", country)
-        .eq("visa_type", visaType)
+        .is("country", null)
+        .is("visa_type", null)
         .order("sort_order", { ascending: true }),
     ]);
 
@@ -375,8 +368,6 @@ export function FieldAssignmentView({
         return {
           id: row.id as number,
           definition_id: row.definition_id as number,
-          country: row.country as string,
-          visa_type: row.visa_type as string,
           is_required: row.is_required as boolean,
           sort_order: row.sort_order as number,
           section: (row.section as string) ?? "other",
@@ -403,7 +394,7 @@ export function FieldAssignmentView({
     setSmartAssignments(normalized.smart);
 
     setLoading(false);
-  }, [country, visaType, supabase, normalizeSortOrders]);
+  }, [supabase, normalizeSortOrders]);
 
   React.useEffect(() => {
     fetchAssignments();
@@ -437,18 +428,17 @@ export function FieldAssignmentView({
     return items;
   }, [assignments, smartAssignments]);
 
-  // ── Assign a field ──
+  // ── Assign a field (global) ──
   async function handleAssign(definitionId: number) {
     setAssigningId(definitionId);
-    // Use max + 1 to avoid collisions
     const maxOrder = unifiedItems.length > 0
       ? Math.max(...unifiedItems.map((i) => i.data.sort_order))
       : -1;
 
     const { error } = await supabase.from("portal_field_assignments").insert({
       definition_id: definitionId,
-      country,
-      visa_type: visaType,
+      country: null,
+      visa_type: null,
       is_required: true,
       sort_order: maxOrder + 1,
       section: "other",
@@ -466,7 +456,7 @@ export function FieldAssignmentView({
     setAssigningId(null);
   }
 
-  // ── Assign a smart field ──
+  // ── Assign a smart field (global) ──
   async function handleAssignSmart(templateKey: string) {
     setAssigningSmartKey(templateKey);
     const maxOrder = unifiedItems.length > 0
@@ -475,8 +465,8 @@ export function FieldAssignmentView({
 
     const { error } = await supabase.from("portal_smart_field_assignments").insert({
       template_key: templateKey,
-      country,
-      visa_type: visaType,
+      country: null,
+      visa_type: null,
       is_required: false,
       sort_order: maxOrder + 1,
       section: "other",
@@ -510,14 +500,14 @@ export function FieldAssignmentView({
     }
   }
 
-  // ── Remove smart assignment ──
+  // ── Remove smart assignment (global) ──
   async function handleRemoveSmart(templateKey: string) {
     const { error } = await supabase
       .from("portal_smart_field_assignments")
       .delete()
       .eq("template_key", templateKey)
-      .eq("country", country)
-      .eq("visa_type", visaType);
+      .is("country", null)
+      .is("visa_type", null);
 
     if (error) {
       console.error("Error removing smart assignment:", error);

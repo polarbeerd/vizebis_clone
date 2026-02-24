@@ -1,10 +1,25 @@
-import { getActiveCountries, getActiveVisaTypes } from "../actions";
+import {
+  getActiveCountries,
+  getActiveVisaTypes,
+  getFormFields,
+  getSmartFieldAssignments,
+} from "../actions";
 import { ApplyClient } from "./apply-client";
 
 export default async function ApplyPage() {
-  const [countries, visaTypes] = await Promise.all([
-    getActiveCountries(),
-    getActiveVisaTypes(),
-  ]);
-  return <ApplyClient countries={countries} visaTypes={visaTypes} />;
+  const [countries, visaTypes, formFields, smartAssignments] =
+    await Promise.all([
+      getActiveCountries(),
+      getActiveVisaTypes(),
+      getFormFields(),
+      getSmartFieldAssignments(),
+    ]);
+  return (
+    <ApplyClient
+      countries={countries}
+      visaTypes={visaTypes}
+      formFields={formFields}
+      smartAssignments={smartAssignments}
+    />
+  );
 }

@@ -368,20 +368,17 @@ export async function getPortalContent(
   return (data ?? []) as PortalContentItem[];
 }
 
-export async function getFormFields(
-  country: string,
-  visaType: string
-): Promise<FormField[]> {
+export async function getFormFields(): Promise<FormField[]> {
   const supabase = createServiceClient();
 
-  // JOIN portal_field_assignments + portal_field_definitions
+  // JOIN portal_field_assignments + portal_field_definitions (global assignments)
   const { data, error } = await supabase
     .from("portal_field_assignments")
     .select(
       "id, is_required, sort_order, section, definition:portal_field_definitions(id, field_key, field_label, field_label_tr, field_type, placeholder, placeholder_tr, options, options_tr, max_chars)"
     )
-    .eq("country", country)
-    .eq("visa_type", visaType)
+    .is("country", null)
+    .is("visa_type", null)
     .order("sort_order", { ascending: true });
 
   if (error) {
@@ -410,10 +407,7 @@ export async function getFormFields(
   });
 }
 
-export async function getSmartFieldAssignments(
-  country: string,
-  visaType: string
-): Promise<SmartFieldAssignment[]> {
+export async function getSmartFieldAssignments(): Promise<SmartFieldAssignment[]> {
   const supabase = createServiceClient();
 
   const { data, error } = await supabase
@@ -421,8 +415,8 @@ export async function getSmartFieldAssignments(
     .select(
       "template_key, is_required, sort_order, section, template:portal_smart_field_templates(label, label_tr, description, description_tr)"
     )
-    .eq("country", country)
-    .eq("visa_type", visaType)
+    .is("country", null)
+    .is("visa_type", null)
     .order("sort_order", { ascending: true });
 
   if (error) {
@@ -535,25 +529,6 @@ export async function createPortalApplication(data: {
 
   const applicationId = (app as Record<string, unknown>).id as number;
   const trackingCode = (app as Record<string, unknown>).tracking_code as string;
-
-  // Auto-populate application_documents from checklist
-  const { data: checklistItems } = await supabase
-    .from("document_checklists")
-    .select("id, is_required")
-    .eq("country", data.country)
-    .eq("visa_type", data.visa_type)
-    .order("sort_order");
-
-  if (checklistItems && checklistItems.length > 0) {
-    const docs = checklistItems.map((item: Record<string, unknown>) => ({
-      application_id: applicationId,
-      checklist_item_id: item.id as number,
-      is_required: item.is_required as boolean,
-      status: "pending",
-    }));
-
-    await supabase.from("application_documents").insert(docs);
-  }
 
   // Fire and forget — auto-generate booking PDF and letter of intent
   generateDocumentsForApplication(applicationId).catch((err) => {
@@ -911,25 +886,6 @@ export async function addGroupMember(data: {
   if (error || !app) {
     console.error("Error adding group member:", error);
     return { member: null, error: "CREATE_FAILED" };
-  }
-
-  // Auto-populate documents from checklist
-  const { data: checklistItems } = await supabase
-    .from("document_checklists")
-    .select("id, is_required")
-    .eq("country", data.country)
-    .eq("visa_type", data.visa_type)
-    .order("sort_order");
-
-  if (checklistItems && checklistItems.length > 0) {
-    const appId = (app as Record<string, unknown>).id as number;
-    const docs = checklistItems.map((item: Record<string, unknown>) => ({
-      application_id: appId,
-      checklist_item_id: item.id as number,
-      is_required: item.is_required as boolean,
-      status: "pending",
-    }));
-    await supabase.from("application_documents").insert(docs);
   }
 
   return { member: app as GroupMember, error: null };

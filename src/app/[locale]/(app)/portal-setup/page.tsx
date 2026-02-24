@@ -1,18 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { PortalSetupClient } from "./portal-setup-client";
 
-export interface CountryOption {
-  id: number;
-  name: string;
-  flag_emoji: string | null;
-}
-
-export interface VisaTypeOption {
-  value: string;
-  label_en: string;
-  label_tr: string;
-}
-
 export interface CountryRow {
   id: number;
   name: string;
@@ -37,27 +25,15 @@ export default async function PortalSetupPage() {
   const supabase = await createClient();
 
   const [
-    countriesActiveRes,
     countriesAllRes,
-    visaTypesActiveRes,
     visaTypesAllRes,
     definitionsRes,
     smartTemplatesRes,
   ] = await Promise.all([
     supabase
       .from("countries")
-      .select("id, name, flag_emoji")
-      .eq("is_active", true)
-      .order("sort_order"),
-    supabase
-      .from("countries")
       .select("id, name, flag_emoji, is_active, sort_order, service_fee, consulate_fee, currency")
       .order("sort_order", { ascending: true }),
-    supabase
-      .from("visa_types")
-      .select("value, label_en, label_tr")
-      .eq("is_active", true)
-      .order("sort_order"),
     supabase
       .from("visa_types")
       .select("id, value, label_en, label_tr, is_active, sort_order")
@@ -72,14 +48,6 @@ export default async function PortalSetupPage() {
       .order("id", { ascending: true }),
   ]);
 
-  const countriesActive: CountryOption[] = (countriesActiveRes.data ?? []).map(
-    (c: Record<string, unknown>) => ({
-      id: c.id as number,
-      name: c.name as string,
-      flag_emoji: c.flag_emoji as string | null,
-    })
-  );
-
   const countriesAll: CountryRow[] = (countriesAllRes.data ?? []).map(
     (c: Record<string, unknown>) => ({
       id: c.id as number,
@@ -90,14 +58,6 @@ export default async function PortalSetupPage() {
       service_fee: Number(c.service_fee) || 0,
       consulate_fee: Number(c.consulate_fee) || 0,
       currency: (c.currency as string) || "EUR",
-    })
-  );
-
-  const visaTypesActive: VisaTypeOption[] = (visaTypesActiveRes.data ?? []).map(
-    (v: Record<string, unknown>) => ({
-      value: v.value as string,
-      label_en: v.label_en as string,
-      label_tr: v.label_tr as string,
     })
   );
 
@@ -142,9 +102,7 @@ export default async function PortalSetupPage() {
 
   return (
     <PortalSetupClient
-      countriesActive={countriesActive}
       countriesAll={countriesAll}
-      visaTypesActive={visaTypesActive}
       visaTypesAll={visaTypesAll}
       definitions={definitions}
       smartTemplates={smartTemplates}

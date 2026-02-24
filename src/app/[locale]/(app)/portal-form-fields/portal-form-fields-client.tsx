@@ -12,13 +12,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -39,20 +32,15 @@ import {
   FieldAssignmentView,
   type SmartTemplate,
 } from "@/components/portal-form-fields/field-assignment-view";
-import type { CountryOption, VisaTypeOption } from "./page";
 
 interface PortalFormFieldsClientProps {
   definitions: FieldDefinition[];
-  countries: CountryOption[];
   smartTemplates: SmartTemplate[];
-  visaTypes: VisaTypeOption[];
 }
 
 export function PortalFormFieldsClient({
   definitions,
-  countries,
   smartTemplates,
-  visaTypes: visaTypeOptions,
 }: PortalFormFieldsClientProps) {
   const t = useTranslations("portalFormFields");
   const tCommon = useTranslations("common");
@@ -87,17 +75,8 @@ export function PortalFormFieldsClient({
     Map<number, number>
   >(new Map());
 
-  // Filter state for assignments
-  const [selectedCountry, setSelectedCountry] = React.useState("");
-  const [selectedVisaType, setSelectedVisaType] = React.useState("");
-
   // Field library collapsible
   const [libraryOpen, setLibraryOpen] = React.useState(false);
-
-  const visaTypes = visaTypeOptions.map((vt) => ({
-    value: vt.value,
-    label: locale === "tr" ? vt.label_tr : vt.label_en,
-  }));
 
   // Fetch assignment counts
   const fetchAssignmentCounts = React.useCallback(async () => {
@@ -208,8 +187,6 @@ export function PortalFormFieldsClient({
     setSmartEditLoading(false);
   }
 
-  const bothSelected = selectedCountry !== "" && selectedVisaType !== "";
-
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -219,56 +196,14 @@ export function PortalFormFieldsClient({
       </div>
 
       {/* ══════════════════════════════════════════════════
-          SECTION 1: Country + Visa Type → Field Assignments
+          SECTION 1: Global Field Assignments
          ══════════════════════════════════════════════════ */}
       <div>
-        {/* Country + Visa Type dropdowns */}
-        <div className="mb-4 flex flex-wrap items-center gap-3">
-          <Select value={selectedCountry} onValueChange={setSelectedCountry}>
-            <SelectTrigger className="h-9 w-[220px]">
-              <SelectValue placeholder={t("selectCountry")} />
-            </SelectTrigger>
-            <SelectContent>
-              {countries.map((country) => (
-                <SelectItem key={country.id} value={country.name}>
-                  {country.flag_emoji ? `${country.flag_emoji} ` : ""}
-                  {country.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          <Select value={selectedVisaType} onValueChange={setSelectedVisaType}>
-            <SelectTrigger className="h-9 w-[200px]">
-              <SelectValue placeholder={t("selectVisaType")} />
-            </SelectTrigger>
-            <SelectContent>
-              {visaTypes.map((vt) => (
-                <SelectItem key={vt.value} value={vt.value}>
-                  {vt.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        {/* Assignment view or empty state */}
-        {bothSelected ? (
-          <FieldAssignmentView
-            key={`${selectedCountry}-${selectedVisaType}`}
-            country={selectedCountry}
-            visaType={selectedVisaType}
-            allDefinitions={definitions}
-            smartTemplates={smartTemplates}
-            onRefresh={fetchAssignmentCounts}
-          />
-        ) : (
-          <div className="flex items-center justify-center rounded-md border border-dashed py-8">
-            <p className="text-xs text-muted-foreground">
-              {t("selectCountry")} & {t("selectVisaType")}
-            </p>
-          </div>
-        )}
+        <FieldAssignmentView
+          allDefinitions={definitions}
+          smartTemplates={smartTemplates}
+          onRefresh={fetchAssignmentCounts}
+        />
       </div>
 
       {/* ══════════════════════════════════════════════════
