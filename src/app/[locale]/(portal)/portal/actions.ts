@@ -765,17 +765,40 @@ async function expandToGroup(
 export async function lookupApplicationByPassport(
   passportNo: string
 ): Promise<{ data: PaymentApplication[] | null; error: string | null }> {
-  if (!passportNo || passportNo.trim().length === 0) {
-    return { data: null, error: "INVALID_PASSPORT" };
+  return lookupApplicationByIdOrPassport(passportNo);
+}
+
+export async function lookupApplicationByIdOrPassport(
+  identifier: string
+): Promise<{ data: PaymentApplication[] | null; error: string | null }> {
+  if (!identifier || identifier.trim().length === 0) {
+    return { data: null, error: "INVALID_IDENTIFIER" };
   }
 
   const supabase = createServiceClient();
+  const trimmed = identifier.trim();
 
-  // Find the most recent unpaid application for this passport number
-  const { data, error } = await supabase
+  // Try id_number first (TC Kimlik — easier for Turkish customers to remember)
+  const { data: byId } = await supabase
     .from("applications")
     .select(PAYMENT_SELECT)
-    .eq("passport_no", passportNo.trim())
+    .eq("id_number", trimmed)
+    .eq("is_deleted", false)
+    .neq("payment_status", "odendi")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (byId) {
+    const apps = await expandToGroup(byId as PaymentApplication);
+    return { data: apps, error: null };
+  }
+
+  // Fall back to passport_no
+  const { data: byPassport, error } = await supabase
+    .from("applications")
+    .select(PAYMENT_SELECT)
+    .eq("passport_no", trimmed)
     .eq("is_deleted", false)
     .neq("payment_status", "odendi")
     .order("created_at", { ascending: false })
@@ -783,28 +806,43 @@ export async function lookupApplicationByPassport(
     .maybeSingle();
 
   if (error) {
-    console.error("Error looking up application by passport:", error);
+    console.error("Error looking up application:", error);
     return { data: null, error: "LOOKUP_FAILED" };
   }
 
-  if (data) {
-    const apps = await expandToGroup(data as PaymentApplication);
+  if (byPassport) {
+    const apps = await expandToGroup(byPassport as PaymentApplication);
     return { data: apps, error: null };
   }
 
-  // No unpaid application found — check if there's any application with this passport (already paid)
-  const { data: paidApp } = await supabase
+  // No unpaid found — check already-paid (id_number first, then passport_no)
+  const { data: paidById } = await supabase
     .from("applications")
     .select(PAYMENT_SELECT)
-    .eq("passport_no", passportNo.trim())
+    .eq("id_number", trimmed)
     .eq("is_deleted", false)
     .eq("payment_status", "odendi")
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
 
-  if (paidApp) {
-    const apps = await expandToGroup(paidApp as PaymentApplication);
+  if (paidById) {
+    const apps = await expandToGroup(paidById as PaymentApplication);
+    return { data: apps, error: null };
+  }
+
+  const { data: paidByPassport } = await supabase
+    .from("applications")
+    .select(PAYMENT_SELECT)
+    .eq("passport_no", trimmed)
+    .eq("is_deleted", false)
+    .eq("payment_status", "odendi")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (paidByPassport) {
+    const apps = await expandToGroup(paidByPassport as PaymentApplication);
     return { data: apps, error: null };
   }
 

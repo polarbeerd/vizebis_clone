@@ -12,13 +12,13 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "@/i18n/navigation";
-import { lookupApplicationByPassport } from "../actions";
+import { lookupApplicationByIdOrPassport } from "../actions";
 import type { PaymentApplication } from "../actions";
 import { PaymentClient } from "../payment/[trackingCode]/payment-client";
 
 export function PayClient() {
   const t = useTranslations("payment");
-  const [passportNo, setPassportNo] = useState("");
+  const [identifier, setIdentifier] = useState("");
   const [isPending, startTransition] = useTransition();
   const [applications, setApplications] = useState<PaymentApplication[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -26,13 +26,13 @@ export function PayClient() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!passportNo.trim()) return;
+    if (!identifier.trim()) return;
 
     setError(null);
     setApplications([]);
 
     startTransition(async () => {
-      const result = await lookupApplicationByPassport(passportNo.trim());
+      const result = await lookupApplicationByIdOrPassport(identifier.trim());
 
       if (result.error || !result.data || result.data.length === 0) {
         setError(result.error ?? "NOT_FOUND");
@@ -101,25 +101,25 @@ export function PayClient() {
               {/* Passport Input */}
               <div className="mb-5">
                 <label
-                  htmlFor="passport-no"
+                  htmlFor="identifier"
                   className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300"
                 >
-                  {t("passportNumber")}
+                  {t("identifierLabel")}
                 </label>
                 <div className="relative">
                   <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                   <input
-                    id="passport-no"
+                    id="identifier"
                     type="text"
-                    value={passportNo}
+                    value={identifier}
                     onChange={(e) => {
-                      setPassportNo(e.target.value.toUpperCase());
+                      setIdentifier(e.target.value.toUpperCase());
                       if (searched) {
                         setSearched(false);
                         setError(null);
                       }
                     }}
-                    placeholder={t("passportPlaceholder")}
+                    placeholder={t("identifierPlaceholder")}
                     className="h-12 w-full rounded-xl border border-slate-200 bg-white/80 pl-10 pr-4 text-sm text-slate-900 outline-none transition-all placeholder:text-slate-400 focus:border-[#FEBEBF] focus:ring-2 focus:ring-[#FEBEBF]/20 dark:border-slate-700 dark:bg-slate-800/80 dark:text-white dark:placeholder:text-slate-500 dark:focus:border-[#FEBEBF]"
                     autoComplete="off"
                   />
@@ -134,7 +134,7 @@ export function PayClient() {
               >
                 <Button
                   type="submit"
-                  disabled={isPending || !passportNo.trim()}
+                  disabled={isPending || !identifier.trim()}
                   className="relative h-12 w-full rounded-xl bg-[#FEBEBF] text-base font-semibold text-white shadow-lg shadow-[#FEBEBF]/25 transition-all hover:brightness-90 hover:shadow-xl hover:shadow-[#FEBEBF]/30 disabled:opacity-60"
                 >
                   {isPending ? (
