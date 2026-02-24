@@ -125,6 +125,20 @@ function parseData(value: Record<string, unknown>): EmploymentStatusData {
   };
 }
 
+// Hook to manage overflow during Framer Motion height animations.
+// overflow-hidden is needed during animate/exit to prevent layout jumps,
+// but must switch to overflow-visible once settled so dropdowns aren't clipped.
+function useAnimOverflow() {
+  const [overflow, setOverflow] = React.useState(false); // true = visible
+  return {
+    className: overflow ? "overflow-visible" : "overflow-hidden",
+    onAnimationComplete: (def: string) => {
+      if (def === "animate") setOverflow(true);
+    },
+    onAnimationStart: () => setOverflow(false),
+  };
+}
+
 export function EmploymentStatus({
   value,
   onChange,
@@ -136,6 +150,13 @@ export function EmploymentStatus({
   const tShared = useTranslations("smartFields.shared");
   const data = parseData(value);
   const showErrors = !!submitted;
+
+  // Overflow toggles for each AnimatePresence section
+  const employedYesOverflow = useAnimOverflow();
+  const occupationOtherOverflow = useAnimOverflow();
+  const employedNoOverflow = useAnimOverflow();
+  const studentYesOverflow = useAnimOverflow();
+  const retiredOverflow = useAnimOverflow();
 
   function update(partial: Partial<EmploymentStatusData>) {
     onChange({ ...value, ...partial });
@@ -448,7 +469,9 @@ export function EmploymentStatus({
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
             transition={{ duration: 0.25 }}
-            className="space-y-4 overflow-hidden"
+            className={`space-y-4 ${employedYesOverflow.className}`}
+            onAnimationComplete={employedYesOverflow.onAnimationComplete}
+            onAnimationStart={employedYesOverflow.onAnimationStart}
           >
             {/* Occupation */}
             <div>
@@ -481,7 +504,9 @@ export function EmploymentStatus({
                   animate={{ opacity: 1, height: "auto" }}
                   exit={{ opacity: 0, height: 0 }}
                   transition={{ duration: 0.2 }}
-                  className="overflow-hidden"
+                  className={occupationOtherOverflow.className}
+                  onAnimationComplete={occupationOtherOverflow.onAnimationComplete}
+                  onAnimationStart={occupationOtherOverflow.onAnimationStart}
                 >
                   <div>
                     <Label className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">
@@ -546,7 +571,9 @@ export function EmploymentStatus({
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
             transition={{ duration: 0.25 }}
-            className="space-y-4 overflow-hidden"
+            className={`space-y-4 ${employedNoOverflow.className}`}
+            onAnimationComplete={employedNoOverflow.onAnimationComplete}
+            onAnimationStart={employedNoOverflow.onAnimationStart}
           >
             {/* Q2: Are you a student? */}
             <div>
@@ -577,7 +604,9 @@ export function EmploymentStatus({
                   animate={{ opacity: 1, height: "auto" }}
                   exit={{ opacity: 0, height: 0 }}
                   transition={{ duration: 0.25 }}
-                  className="overflow-hidden"
+                  className={studentYesOverflow.className}
+                  onAnimationComplete={studentYesOverflow.onAnimationComplete}
+                  onAnimationStart={studentYesOverflow.onAnimationStart}
                 >
                   {renderEntityFields(
                     "school",
@@ -608,7 +637,9 @@ export function EmploymentStatus({
                   animate={{ opacity: 1, height: "auto" }}
                   exit={{ opacity: 0, height: 0 }}
                   transition={{ duration: 0.25 }}
-                  className="overflow-hidden"
+                  className={retiredOverflow.className}
+                  onAnimationComplete={retiredOverflow.onAnimationComplete}
+                  onAnimationStart={retiredOverflow.onAnimationStart}
                 >
                   <div>
                     <Label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">

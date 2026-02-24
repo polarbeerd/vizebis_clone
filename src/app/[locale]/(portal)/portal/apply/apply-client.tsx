@@ -868,17 +868,6 @@ export function ApplyClient({
   // ────────────────────────────────────────────────────────────
   return (
     <div className="mx-auto w-full max-w-2xl px-1 py-4 sm:px-0 sm:py-6">
-      {/* Complete Payment link */}
-      <div className="mb-4 flex justify-end">
-        <Link
-          href="/portal/pay"
-          className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-300"
-        >
-          <CreditCard className="h-3.5 w-3.5" />
-          {tPortal("completePayment")}
-        </Link>
-      </div>
-
       {/* ── Stepper ── */}
       <div className="mb-8 sm:mb-10">
         <div className="mx-auto flex max-w-xs items-center sm:max-w-xl">
@@ -1024,6 +1013,41 @@ export function ApplyClient({
                 <Loader2 className="h-6 w-6 animate-spin text-[#FEBEBF]" />
               </div>
             )}
+
+            {/* Complete Payment section */}
+            <motion.div
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3, duration: 0.4 }}
+              className="mt-10"
+            >
+              <div className="flex items-center gap-3 mb-5">
+                <div className="h-px flex-1 bg-slate-200 dark:bg-slate-700" />
+                <span className="text-xs font-medium text-slate-400 dark:text-slate-500">
+                  {t("or")}
+                </span>
+                <div className="h-px flex-1 bg-slate-200 dark:bg-slate-700" />
+              </div>
+
+              <Link href="/portal/pay">
+                <div className="group flex items-center justify-between rounded-2xl border border-slate-200/60 bg-white/70 px-5 py-4 shadow-sm backdrop-blur-md transition-all hover:border-[#FEBEBF]/40 hover:shadow-md sm:px-6 dark:border-slate-700/60 dark:bg-slate-900/70 dark:hover:border-[#FEBEBF]/30">
+                  <div className="flex items-center gap-3.5">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#FEBEBF]/15 text-[#FEBEBF] transition-colors group-hover:bg-[#FEBEBF]/25 dark:bg-[#FEBEBF]/10">
+                      <CreditCard className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">
+                        {tPortal("completePayment")}
+                      </p>
+                      <p className="text-xs text-slate-400 dark:text-slate-500">
+                        {tPortal("completePaymentDesc")}
+                      </p>
+                    </div>
+                  </div>
+                  <ArrowRight className="h-4 w-4 text-slate-300 transition-transform group-hover:translate-x-1 group-hover:text-[#FEBEBF] dark:text-slate-600" />
+                </div>
+              </Link>
+            </motion.div>
           </motion.div>
         )}
 

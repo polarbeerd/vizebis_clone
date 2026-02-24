@@ -63,7 +63,7 @@ export function PhoneInput({
     <div className="relative">
       <div
         className={cn(
-          "flex items-center overflow-hidden rounded-xl border border-input bg-background ring-ring/10 transition-shadow focus-within:ring-[3px] focus-within:border-ring",
+          "flex items-center rounded-xl border border-input bg-background ring-ring/10 transition-shadow focus-within:ring-[3px] focus-within:border-ring",
           ariaInvalid &&
             "border-destructive ring-destructive/20 focus-within:border-destructive focus-within:ring-destructive/20",
           className
