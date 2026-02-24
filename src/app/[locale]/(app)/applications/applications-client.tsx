@@ -8,9 +8,8 @@ import { toast } from "sonner";
 import {
   AlertTriangle,
   Calendar,
+  ChevronDown,
   Copy,
-  FileText,
-  MessageSquare,
   Plus,
   Trash2,
 } from "lucide-react";
@@ -50,12 +49,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { formatCurrency, formatDate } from "@/lib/utils";
+import { formatCurrency } from "@/lib/utils";
 import type { ApplicationRow } from "./page";
 
 import { ApplicationForm } from "@/components/applications/application-form";
 import type { ApplicationForForm } from "@/components/applications/application-form";
-import { SmsModal } from "@/components/applications/sms-modal";
 import { DeletedApplications } from "@/components/applications/deleted-applications";
 
 // ── Visa status -> translation key map ──────────────────────────
@@ -102,7 +100,6 @@ export function ApplicationsClient({ data }: ApplicationsClientProps) {
   const tCommon = useTranslations("common");
   const tPortal = useTranslations("portal");
   const tAppDocs = useTranslations("applicationDocuments");
-  const tGenDocs = useTranslations("generatedDocuments");
   const router = useRouter();
 
   // ── Date quick-filter state ──────────────────────────────────
@@ -115,13 +112,6 @@ export function ApplicationsClient({ data }: ApplicationsClientProps) {
   const [formApplication, setFormApplication] = React.useState<
     ApplicationForForm | undefined
   >(undefined);
-
-  const [smsOpen, setSmsOpen] = React.useState(false);
-  const [smsApplication, setSmsApplication] = React.useState<{
-    id: number;
-    full_name: string | null;
-    phone: string | null;
-  } | null>(null);
 
   const [deletedOpen, setDeletedOpen] = React.useState(false);
 
@@ -137,15 +127,6 @@ export function ApplicationsClient({ data }: ApplicationsClientProps) {
   function handleNewApplication() {
     setFormApplication(undefined);
     setFormOpen(true);
-  }
-
-  function handleSmsApplication(app: ApplicationRow) {
-    setSmsApplication({
-      id: app.id,
-      full_name: app.full_name,
-      phone: app.phone,
-    });
-    setSmsOpen(true);
   }
 
   function handleDeleteApplication(app: ApplicationRow) {
@@ -407,15 +388,24 @@ export function ApplicationsClient({ data }: ApplicationsClientProps) {
         enableSorting: false,
       },
       {
-        accessorKey: "appointment_date",
-        header: ({ column }) => (
-          <DataTableColumnHeader column={column} title={t("appointmentDate")} />
-        ),
+        accessorKey: "id_number",
+        header: () => t("idNumber"),
         cell: ({ row }) => {
-          const date = row.getValue("appointment_date") as string | null;
-          return date ? formatDate(date) : "-";
+          const val = row.getValue("id_number") as string | null;
+          return val ? <span className="font-mono text-xs">{val}</span> : "-";
         },
-        enableSorting: true,
+        size: 120,
+        enableSorting: false,
+      },
+      {
+        accessorKey: "passport_no",
+        header: () => t("passportNo"),
+        cell: ({ row }) => {
+          const val = row.getValue("passport_no") as string | null;
+          return val ? <span className="font-mono text-xs">{val}</span> : "-";
+        },
+        size: 120,
+        enableSorting: false,
       },
       {
         accessorKey: "phone",
@@ -457,8 +447,55 @@ export function ApplicationsClient({ data }: ApplicationsClientProps) {
       {
         accessorKey: "payment_status",
         header: () => t("paymentStatus"),
-        cell: ({ row }) =>
-          paymentStatusBadge(row.getValue("payment_status") as string | null),
+        cell: ({ row }) => {
+          const currentStatus = row.getValue("payment_status") as string | null;
+          if (!currentStatus) return "-";
+
+          const paymentOptions = [
+            { value: "odenmedi", key: "unpaid" },
+            { value: "odendi", key: "paid" },
+          ];
+
+          return (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="cursor-pointer inline-flex items-center gap-1 rounded-md px-0.5 -mx-0.5 transition-all hover:bg-muted/60 hover:scale-105 active:scale-95">
+                  {paymentStatusBadge(currentStatus)}
+                  <ChevronDown className="size-3 text-muted-foreground" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-36">
+                {paymentOptions.map((opt) => {
+                  const label = tPayment(opt.key as Parameters<typeof tPayment>[0]);
+                  const isCurrent = opt.value === currentStatus;
+                  return (
+                    <DropdownMenuItem
+                      key={opt.value}
+                      disabled={isCurrent}
+                      className={isCurrent ? "font-bold opacity-60" : ""}
+                      onClick={async (e) => {
+                        e.stopPropagation();
+                        const supabase = createClient();
+                        const { error } = await supabase
+                          .from("applications")
+                          .update({ payment_status: opt.value })
+                          .eq("id", row.original.id);
+                        if (error) {
+                          toast.error(error.message);
+                        } else {
+                          toast.success(`${row.original.full_name}: ${label}`);
+                          router.refresh();
+                        }
+                      }}
+                    >
+                      {label}
+                    </DropdownMenuItem>
+                  );
+                })}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          );
+        },
         filterFn: (row, id, value: string[]) => {
           return value.includes(row.getValue(id) as string);
         },
@@ -484,8 +521,9 @@ export function ApplicationsClient({ data }: ApplicationsClientProps) {
           return (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className="cursor-pointer hover:opacity-80 transition-opacity">
+                <button className="cursor-pointer rounded-md px-0.5 -mx-0.5 transition-all hover:bg-muted/60 hover:scale-105 active:scale-95 inline-flex items-center gap-1">
                   {visaStatusBadge(currentStatus)}
+                  <ChevronDown className="size-3 text-muted-foreground" />
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start" className="w-48">
@@ -587,30 +625,30 @@ export function ApplicationsClient({ data }: ApplicationsClientProps) {
       },
       {
         id: "actions",
-        size: 100,
+        size: 80,
         header: () => tCommon("actions"),
         cell: ({ row }) => {
           const application = row.original;
+          const phone = application.phone ? String(application.phone).replace(/\D/g, "") : "";
           return (
             <div className="flex items-center gap-1">
-              <Link href={`/applications/${application.id}#documents`}>
-                <Button variant="ghost" size="icon-xs" title={tGenDocs("title")}>
-                  <FileText className="size-3.5" />
-                </Button>
-              </Link>
               <Button
                 variant="ghost"
                 size="icon-xs"
-                title={t("sendSms")}
-                onClick={() => handleSmsApplication(application)}
+                title="WhatsApp"
+                className="text-green-600 hover:text-green-700 hover:bg-green-50 dark:text-green-400 dark:hover:bg-green-950 transition-all hover:scale-110 active:scale-90"
+                disabled={!phone}
+                onClick={() => {
+                  if (phone) window.open(`https://wa.me/${phone}`, "_blank");
+                }}
               >
-                <MessageSquare className="size-3.5" />
+                <svg className="size-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
               </Button>
               <Button
                 variant="ghost"
                 size="icon-xs"
                 title={tCommon("delete")}
-                className="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950"
+                className="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950 transition-all hover:scale-110 active:scale-90"
                 onClick={() => handleDeleteApplication(application)}
               >
                 <Trash2 className="size-3.5" />
@@ -623,7 +661,7 @@ export function ApplicationsClient({ data }: ApplicationsClientProps) {
       },
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [t, tVisa, tInvoice, tPayment, tCommon, tPortal, tAppDocs, tGenDocs]
+    [t, tVisa, tInvoice, tPayment, tCommon, tPortal, tAppDocs]
   );
 
   // ── Filterable columns config ─────────────────────────────────
@@ -853,13 +891,6 @@ export function ApplicationsClient({ data }: ApplicationsClientProps) {
         onOpenChange={setFormOpen}
         application={formApplication}
         onSuccess={handleFormSuccess}
-      />
-
-      {/* ── SMS Modal ───────────────────────────────────────── */}
-      <SmsModal
-        application={smsApplication}
-        open={smsOpen}
-        onOpenChange={setSmsOpen}
       />
 
       {/* ── Deleted Applications Viewer ─────────────────────── */}

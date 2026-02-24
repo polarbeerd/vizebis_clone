@@ -7,6 +7,8 @@ export interface ApplicationRow {
   country: string | null;
   appointment_date: string | null;
   phone: string | null;
+  id_number: string | null;
+  passport_no: string | null;
   consulate_fee: number | null;
   service_fee: number | null;
   currency: string | null;
@@ -33,6 +35,8 @@ export default async function ApplicationsPage() {
       country,
       appointment_date,
       phone,
+      id_number,
+      passport_no,
       consulate_fee,
       service_fee,
       currency,
@@ -72,6 +76,8 @@ export default async function ApplicationsPage() {
     country: app.country as string | null,
     appointment_date: app.appointment_date as string | null,
     phone: app.phone as string | null,
+    id_number: app.id_number as string | null,
+    passport_no: app.passport_no as string | null,
     consulate_fee: app.consulate_fee as number | null,
     service_fee: app.service_fee as number | null,
     currency: app.currency as string | null,

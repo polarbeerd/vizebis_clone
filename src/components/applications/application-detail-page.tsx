@@ -12,7 +12,6 @@ import {
   Bot,
   Copy,
   Edit,
-  MessageSquare,
   Trash2,
   Save,
   X,
@@ -50,7 +49,6 @@ import {
 import { GeneratedDocumentsTab } from "@/components/applications/generated-documents-tab";
 import { AutomationTab } from "@/components/applications/automation-tab";
 import { NotesTab } from "@/components/applications/notes-tab";
-import { SmsModal } from "@/components/applications/sms-modal";
 
 // ── Status maps ────────────────────────────────────────────────────
 const visaStatusKeyMap: Record<string, string> = {
@@ -308,7 +306,6 @@ export function ApplicationDetailPage({
   // ── Modal states ────────────────────────────────────────────────
   const [deleteConfirmOpen, setDeleteConfirmOpen] = React.useState(false);
   const [deleting, setDeleting] = React.useState(false);
-  const [smsOpen, setSmsOpen] = React.useState(false);
 
   // ── Initialize edit data when entering edit mode ────────────────
   function enterEditMode() {
@@ -654,7 +651,7 @@ export function ApplicationDetailPage({
               {app.visa_status && (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <button className="cursor-pointer hover:opacity-80 transition-opacity">
+                    <button className="cursor-pointer rounded-md px-0.5 -mx-0.5 transition-all hover:bg-muted/60 hover:scale-105 active:scale-95">
                       <Badge
                         variant="outline"
                         className={`text-xs ${visaStatusColorMap[app.visa_status] ?? ""}`}
@@ -763,11 +760,15 @@ export function ApplicationDetailPage({
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setSmsOpen(true)}
+                onClick={() => {
+                  const phone = String(app.phone ?? "").replace(/\D/g, "");
+                  if (phone) window.open(`https://wa.me/${phone}`, "_blank");
+                }}
                 disabled={!app.phone}
+                className="text-green-600 hover:text-green-700 hover:bg-green-50 dark:text-green-400 dark:hover:bg-green-950 transition-all active:scale-95"
               >
-                <MessageSquare className="mr-1.5 size-3.5" />
-                SMS
+                <svg className="mr-1.5 size-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+                WhatsApp
               </Button>
               <Button
                 variant="outline"
@@ -783,48 +784,16 @@ export function ApplicationDetailPage({
         </div>
       </div>
 
-      {/* ── Section 1: Customer Data (from custom_fields) ──── */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base">{tDetail("customerData")}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {renderCustomerData()}
-        </CardContent>
-      </Card>
-
-      {/* ── Section 2: Generated Documents ────────────────────── */}
-      <Card id="documents" className="border-2 border-blue-200 dark:border-blue-800">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base">{tGenDocs("title")}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <GeneratedDocumentsTab applicationId={applicationId} />
-        </CardContent>
-      </Card>
-
-      {/* ── Section 2.5: Automation ───────────────────────────── */}
-      <Card id="automation" className="border-2 border-purple-200 dark:border-purple-800">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base flex items-center gap-2">
-            <Bot className="h-4 w-4" />
-            Automation
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <AutomationTab applicationId={applicationId} country={app.country ?? ""} />
-        </CardContent>
-      </Card>
-
-      {/* ── Section 3: Process Tracking (appointment + status) ── */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base">{tDetail("processTrackingSection")}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-1">
+      {/* ── Process Tracking + Finance (side-by-side, compact) ── */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Process Tracking */}
+        <Card>
+          <CardHeader className="pb-1">
+            <CardTitle className="text-base">{tDetail("processTrackingSection")}</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-0">
             {/* Visa Status */}
-            <div className="grid grid-cols-3 gap-2 py-1.5 items-center">
+            <div className="grid grid-cols-3 gap-2 py-1 items-center">
               <span className="text-muted-foreground text-sm">{t("visaStatus")}</span>
               <div className="col-span-2">
                 {editMode ? (
@@ -859,24 +828,41 @@ export function ApplicationDetailPage({
                 )}
               </div>
             </div>
-            <FieldRow label={t("appointmentDate")} fieldKey="appointment_date" type="date" editMode={editMode} editData={editData} app={app} onUpdate={updateField} />
-            <FieldRow label={t("appointmentTime")} fieldKey="appointment_time" type="time" editMode={editMode} editData={editData} app={app} onUpdate={updateField} />
-          </div>
-        </CardContent>
-      </Card>
+            <div className="grid grid-cols-3 gap-2 py-1 items-center">
+              <span className="text-muted-foreground text-sm">{t("appointmentDate")}</span>
+              <div className="col-span-2">
+                <FieldValue fieldKey="appointment_date" type="date" editMode={editMode} editData={editData} app={app} onUpdate={updateField} />
+              </div>
+            </div>
+            <div className="grid grid-cols-3 gap-2 py-1 items-center">
+              <span className="text-muted-foreground text-sm">{t("appointmentTime")}</span>
+              <div className="col-span-2">
+                <FieldValue fieldKey="appointment_time" type="time" editMode={editMode} editData={editData} app={app} onUpdate={updateField} />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
-      {/* ── Section 4: Finance ────────────────────────────────── */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base">{tDetail("financeSection")}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-1">
-            <FieldRow label={t("serviceFee")} fieldKey="service_fee" type="number" editMode={editMode} editData={editData} app={app} onUpdate={updateField} />
-            <FieldRow label={t("consulateFee")} fieldKey="consulate_fee" type="number" editMode={editMode} editData={editData} app={app} onUpdate={updateField} />
-
+        {/* Finance */}
+        <Card>
+          <CardHeader className="pb-1">
+            <CardTitle className="text-base">{tDetail("financeSection")}</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-0">
+            <div className="grid grid-cols-3 gap-2 py-1 items-center">
+              <span className="text-muted-foreground text-sm">{t("serviceFee")}</span>
+              <div className="col-span-2">
+                <FieldValue fieldKey="service_fee" type="number" editMode={editMode} editData={editData} app={app} onUpdate={updateField} />
+              </div>
+            </div>
+            <div className="grid grid-cols-3 gap-2 py-1 items-center">
+              <span className="text-muted-foreground text-sm">{t("consulateFee")}</span>
+              <div className="col-span-2">
+                <FieldValue fieldKey="consulate_fee" type="number" editMode={editMode} editData={editData} app={app} onUpdate={updateField} />
+              </div>
+            </div>
             {/* Currency */}
-            <div className="grid grid-cols-3 gap-2 py-1.5 items-center">
+            <div className="grid grid-cols-3 gap-2 py-1 items-center">
               <span className="text-muted-foreground text-sm">{t("currency")}</span>
               <div className="col-span-2">
                 {editMode ? (
@@ -898,9 +884,8 @@ export function ApplicationDetailPage({
                 )}
               </div>
             </div>
-
             {/* Payment Status */}
-            <div className="grid grid-cols-3 gap-2 py-1.5 items-center">
+            <div className="grid grid-cols-3 gap-2 py-1 items-center">
               <span className="text-muted-foreground text-sm">{t("paymentStatus")}</span>
               <div className="col-span-2">
                 {editMode ? (
@@ -928,32 +913,67 @@ export function ApplicationDetailPage({
                 )}
               </div>
             </div>
-
             {/* Payment Method — read-only context when paid */}
             {app.payment_method && (
-              <ReadOnlyRow
-                label={t("paymentMethod")}
-                value={
-                  tPaymentMethod(
-                    (paymentMethodKeyMap[app.payment_method] ??
-                      app.payment_method) as Parameters<typeof tPaymentMethod>[0]
-                  )
-                }
-              />
+              <div className="grid grid-cols-3 gap-2 py-1 items-center">
+                <span className="text-muted-foreground text-sm">{t("paymentMethod")}</span>
+                <div className="col-span-2">
+                  <span className="text-sm">
+                    {tPaymentMethod(
+                      (paymentMethodKeyMap[app.payment_method] ??
+                        app.payment_method) as Parameters<typeof tPaymentMethod>[0]
+                    )}
+                  </span>
+                </div>
+              </div>
             )}
-
             {/* Payment Date — read-only context when paid */}
             {app.payment_date && (
-              <ReadOnlyRow
-                label={t("paymentDate")}
-                value={formatDate(String(app.payment_date))}
-              />
+              <div className="grid grid-cols-3 gap-2 py-1 items-center">
+                <span className="text-muted-foreground text-sm">{t("paymentDate")}</span>
+                <div className="col-span-2">
+                  <span className="text-sm">{formatDate(String(app.payment_date))}</span>
+                </div>
+              </div>
             )}
-          </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* ── Customer Data (from custom_fields) ────────────────── */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">{tDetail("customerData")}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {renderCustomerData()}
         </CardContent>
       </Card>
 
-      {/* ── Section 5: Notes ──────────────────────────────────── */}
+      {/* ── Generated Documents ────────────────────────────────── */}
+      <Card id="documents" className="border-2 border-blue-200 dark:border-blue-800">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">{tGenDocs("title")}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <GeneratedDocumentsTab applicationId={applicationId} />
+        </CardContent>
+      </Card>
+
+      {/* ── Automation ─────────────────────────────────────────── */}
+      <Card id="automation" className="border-2 border-purple-200 dark:border-purple-800">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2">
+            <Bot className="h-4 w-4" />
+            Automation
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <AutomationTab applicationId={applicationId} country={app.country ?? ""} />
+        </CardContent>
+      </Card>
+
+      {/* ── Notes ──────────────────────────────────────────────── */}
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-base">{tDetail("notesSection")}</CardTitle>
@@ -987,17 +1007,6 @@ export function ApplicationDetailPage({
           </div>
         </div>
       )}
-
-      {/* ── SMS Modal ─────────────────────────────────────────── */}
-      <SmsModal
-        application={{
-          id: applicationId,
-          full_name: app.full_name as string | null,
-          phone: app.phone as string | null,
-        }}
-        open={smsOpen}
-        onOpenChange={setSmsOpen}
-      />
 
       {/* ── Delete Confirmation ───────────────────────────────── */}
       <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
