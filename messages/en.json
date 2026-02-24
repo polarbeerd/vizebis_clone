@@ -1307,7 +1307,8 @@
     "required": "This field is required",
     "exactChars": "Must be exactly {count} characters",
     "invalidEmail": "Please enter a valid email address",
-    "completePayment": "Complete Payment"
+    "completePayment": "Complete Payment",
+    "completePaymentDesc": "Already applied? Enter your passport number to pay."
   },
   "documentChecklists": {
     "title": "Document Checklists",
@@ -1977,6 +1978,16 @@
     "groupPaymentTitle": "Group Payment",
     "memberName": "Member",
     "childExempt": "Under 12 — Exempt",
-    "membersCount": "{count} members"
+    "membersCount": "{count} members",
+    "checkoutTitle": "Review Your Application",
+    "editApplication": "Edit",
+    "phone": "Phone",
+    "passportNo": "Passport No.",
+    "idNumber": "ID Number",
+    "dateOfBirth": "Date of Birth",
+    "payLaterInstructions": "You can complete payment anytime by visiting our portal and entering your passport number.",
+    "goToPaymentPortal": "Complete Payment Later",
+    "applicationReceived": "Application Received",
+    "weWillReachOut": "Our team will also reach out to assist you."
   }
 }

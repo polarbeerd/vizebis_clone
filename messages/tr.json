@@ -1307,7 +1307,8 @@
     "required": "Bu alan zorunludur",
     "exactChars": "Tam olarak {count} karakter olmalidir",
     "invalidEmail": "Lütfen geçerli bir e-posta adresi girin",
-    "completePayment": "Ödemeyi Tamamla"
+    "completePayment": "Ödemeyi Tamamla",
+    "completePaymentDesc": "Zaten başvurdunuz mu? Pasaport numaranızla ödemenizi yapın."
   },
   "documentChecklists": {
     "title": "Belge Kontrol Listeleri",
@@ -1977,6 +1978,16 @@
     "groupPaymentTitle": "Grup Ödemesi",
     "memberName": "Üye",
     "childExempt": "12 yaş altı — Muaf",
-    "membersCount": "{count} üye"
+    "membersCount": "{count} üye",
+    "checkoutTitle": "Başvurunuzu İnceleyin",
+    "editApplication": "Düzenle",
+    "phone": "Telefon",
+    "passportNo": "Pasaport No.",
+    "idNumber": "TC Kimlik No.",
+    "dateOfBirth": "Doğum Tarihi",
+    "payLaterInstructions": "Portalımızı ziyaret edip pasaport numaranızı girerek ödemenizi istediğiniz zaman tamamlayabilirsiniz.",
+    "goToPaymentPortal": "Ödemeyi Daha Sonra Tamamla",
+    "applicationReceived": "Başvurunuz Alındı",
+    "weWillReachOut": "Ekibimiz sizinle iletişime geçecektir."
   }
 }

@@ -371,14 +371,12 @@ export async function getPortalContent(
 export async function getFormFields(): Promise<FormField[]> {
   const supabase = createServiceClient();
 
-  // JOIN portal_field_assignments + portal_field_definitions (global assignments)
+  // Fetch ALL field assignments (all countries/visa types) and deduplicate by field_key
   const { data, error } = await supabase
     .from("portal_field_assignments")
     .select(
       "id, is_required, sort_order, section, definition:portal_field_definitions(id, field_key, field_label, field_label_tr, field_type, placeholder, placeholder_tr, options, options_tr, max_chars)"
     )
-    .is("country", null)
-    .is("visa_type", null)
     .order("sort_order", { ascending: true });
 
   if (error) {
@@ -386,37 +384,44 @@ export async function getFormFields(): Promise<FormField[]> {
     return [];
   }
 
-  return (data ?? []).map((row: Record<string, unknown>) => {
-    const def = row.definition as Record<string, unknown> | null;
-    return {
-      id: def?.id as number ?? 0,
-      field_key: def?.field_key as string ?? "",
-      field_label: def?.field_label as string ?? "",
-      field_label_tr: (def?.field_label_tr as string) ?? "",
-      field_type: def?.field_type as string ?? "text",
-      placeholder: (def?.placeholder as string) ?? "",
-      placeholder_tr: (def?.placeholder_tr as string) ?? "",
-      options: (def?.options as string) ?? "",
-      options_tr: (def?.options_tr as string) ?? "",
-      is_required: row.is_required as boolean,
-      is_standard: false,
-      max_chars: (def?.max_chars as number) ?? null,
-      sort_order: row.sort_order as number,
-      section: (row.section as string) ?? "other",
-    };
-  });
+  // Deduplicate by field_key — keep the first occurrence (lowest sort_order)
+  const seen = new Set<string>();
+  return (data ?? [])
+    .map((row: Record<string, unknown>) => {
+      const def = row.definition as Record<string, unknown> | null;
+      return {
+        id: def?.id as number ?? 0,
+        field_key: def?.field_key as string ?? "",
+        field_label: def?.field_label as string ?? "",
+        field_label_tr: (def?.field_label_tr as string) ?? "",
+        field_type: def?.field_type as string ?? "text",
+        placeholder: (def?.placeholder as string) ?? "",
+        placeholder_tr: (def?.placeholder_tr as string) ?? "",
+        options: (def?.options as string) ?? "",
+        options_tr: (def?.options_tr as string) ?? "",
+        is_required: row.is_required as boolean,
+        is_standard: false,
+        max_chars: (def?.max_chars as number) ?? null,
+        sort_order: row.sort_order as number,
+        section: (row.section as string) ?? "other",
+      };
+    })
+    .filter((field) => {
+      if (seen.has(field.field_key)) return false;
+      seen.add(field.field_key);
+      return true;
+    });
 }
 
 export async function getSmartFieldAssignments(): Promise<SmartFieldAssignment[]> {
   const supabase = createServiceClient();
 
+  // Fetch ALL smart field assignments (all countries/visa types) and deduplicate by template_key
   const { data, error } = await supabase
     .from("portal_smart_field_assignments")
     .select(
       "template_key, is_required, sort_order, section, template:portal_smart_field_templates(label, label_tr, description, description_tr)"
     )
-    .is("country", null)
-    .is("visa_type", null)
     .order("sort_order", { ascending: true });
 
   if (error) {
@@ -424,19 +429,27 @@ export async function getSmartFieldAssignments(): Promise<SmartFieldAssignment[]
     return [];
   }
 
-  return (data ?? []).map((row: Record<string, unknown>) => {
-    const tmpl = row.template as Record<string, unknown> | null;
-    return {
-      template_key: row.template_key as string,
-      is_required: row.is_required as boolean,
-      sort_order: row.sort_order as number,
-      section: (row.section as string) ?? "other",
-      label: (tmpl?.label as string) ?? "",
-      label_tr: (tmpl?.label_tr as string) ?? "",
-      description: (tmpl?.description as string) ?? "",
-      description_tr: (tmpl?.description_tr as string) ?? "",
-    };
-  });
+  // Deduplicate by template_key — keep the first occurrence (lowest sort_order)
+  const seen = new Set<string>();
+  return (data ?? [])
+    .map((row: Record<string, unknown>) => {
+      const tmpl = row.template as Record<string, unknown> | null;
+      return {
+        template_key: row.template_key as string,
+        is_required: row.is_required as boolean,
+        sort_order: row.sort_order as number,
+        section: (row.section as string) ?? "other",
+        label: (tmpl?.label as string) ?? "",
+        label_tr: (tmpl?.label_tr as string) ?? "",
+        description: (tmpl?.description as string) ?? "",
+        description_tr: (tmpl?.description_tr as string) ?? "",
+      };
+    })
+    .filter((sa) => {
+      if (seen.has(sa.template_key)) return false;
+      seen.add(sa.template_key);
+      return true;
+    });
 }
 
 async function getCountryFees(
@@ -724,10 +737,13 @@ export interface PaymentApplication {
   currency: string;
   payment_status: string;
   group_id: number | null;
+  phone: string | null;
+  passport_no: string | null;
+  id_number: string | null;
 }
 
 const PAYMENT_SELECT =
-  "id, tracking_code, full_name, date_of_birth, country, visa_type, service_fee, consulate_fee, currency, payment_status, group_id";
+  "id, tracking_code, full_name, date_of_birth, country, visa_type, service_fee, consulate_fee, currency, payment_status, group_id, phone, passport_no, id_number";
 
 async function expandToGroup(
   app: PaymentApplication
