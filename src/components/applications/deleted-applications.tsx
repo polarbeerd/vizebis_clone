@@ -95,7 +95,7 @@ export function DeletedApplications({
     setRestoringId(id);
     const { error } = await supabase
       .from("applications")
-      .update({ is_deleted: false, deleted_at: null })
+      .update({ is_deleted: false })
       .eq("id", id);
 
     if (error) {

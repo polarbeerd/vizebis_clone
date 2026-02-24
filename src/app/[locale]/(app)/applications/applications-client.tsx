@@ -140,7 +140,7 @@ export function ApplicationsClient({ data }: ApplicationsClientProps) {
 
     const { error } = await supabase
       .from("applications")
-      .update({ is_deleted: true, deleted_at: new Date().toISOString() })
+      .update({ is_deleted: true })
       .eq("id", deleteTarget.id);
 
     if (error) {

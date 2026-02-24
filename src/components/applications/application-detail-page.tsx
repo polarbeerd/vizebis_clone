@@ -442,7 +442,7 @@ export function ApplicationDetailPage({
     setDeleting(true);
     const { error } = await supabase
       .from("applications")
-      .update({ is_deleted: true, deleted_at: new Date().toISOString() })
+      .update({ is_deleted: true })
       .eq("id", applicationId);
 
     if (error) {
