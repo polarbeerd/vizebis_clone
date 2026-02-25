@@ -58,7 +58,7 @@ export function TravelDates({
   }, [hasErrors]);
 
   return (
-    <div className="space-y-3 rounded-xl border border-slate-200/60 bg-slate-50/50 p-4 dark:border-slate-700/60 dark:bg-slate-800/30">
+    <div className="space-y-3">
       <div className="grid gap-4 sm:grid-cols-2">
         {/* Departure date */}
         <div>

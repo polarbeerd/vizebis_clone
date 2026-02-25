@@ -20,8 +20,6 @@ interface SmartFieldRendererProps {
  */
 export function SmartFieldRenderer({
   templateKey,
-  label,
-  description,
   isRequired,
   value,
   onChange,
@@ -35,23 +33,12 @@ export function SmartFieldRenderer({
   }
 
   return (
-    <div className="space-y-2">
-      <div>
-        <h4 className="text-sm font-medium">
-          {label}
-          {isRequired && <span className="ml-1 text-destructive">*</span>}
-        </h4>
-        {description && (
-          <p className="text-xs text-muted-foreground">{description}</p>
-        )}
-      </div>
-      <Component
-        value={value}
-        onChange={onChange}
-        isRequired={isRequired}
-        submitted={submitted}
-        errors={errors}
-      />
-    </div>
+    <Component
+      value={value}
+      onChange={onChange}
+      isRequired={isRequired}
+      submitted={submitted}
+      errors={errors}
+    />
   );
 }

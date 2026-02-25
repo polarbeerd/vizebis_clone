@@ -49,7 +49,7 @@ export function PassportCountry({
   }, [hasErrors]);
 
   return (
-    <div className="space-y-3 rounded-xl border border-slate-200/60 bg-slate-50/50 p-4 dark:border-slate-700/60 dark:bg-slate-800/30">
+    <div className="space-y-3">
       <CountryDefaultSelector
         selection={data.country}
         customValue={data.custom_country}

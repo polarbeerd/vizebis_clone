@@ -440,7 +440,7 @@ export function EmploymentStatus({
   }
 
   return (
-    <div className="space-y-4 rounded-xl border border-slate-200/60 bg-slate-50/50 p-4 dark:border-slate-700/60 dark:bg-slate-800/30">
+    <div className="space-y-4">
       {/* Q1: Are you employed? */}
       <div>
         <Label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">

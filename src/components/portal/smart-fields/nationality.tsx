@@ -64,7 +64,7 @@ export function Nationality({
   ];
 
   return (
-    <div className="space-y-3 rounded-xl border border-slate-200/60 bg-slate-50/50 p-4 dark:border-slate-700/60 dark:bg-slate-800/30">
+    <div className="space-y-3">
       <div>
         <Label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">
           {t("question")}
