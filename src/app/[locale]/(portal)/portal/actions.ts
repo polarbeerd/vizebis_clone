@@ -1,6 +1,7 @@
 "use server";
 
 import { createServiceClient } from "@/lib/supabase/service";
+import { getAuthenticatedUser } from "@/lib/auth";
 import { generateDocumentsForApplication } from "@/lib/generate-documents";
 import { normalizeText, normalizeObject } from "@/lib/utils";
 
@@ -352,21 +353,44 @@ export async function getPortalContent(
 ): Promise<PortalContentItem[]> {
   const supabase = createServiceClient();
 
-  // Fetch content that matches this country OR is global
-  const { data, error } = await supabase
-    .from("portal_content")
-    .select("id, title, content, content_type, video_url")
-    .eq("is_published", true)
-    .in("content_type", ["video", "key_point"])
-    .or(`country.is.null,country.eq.${country}`)
-    .order("sort_order", { ascending: true });
+  // Fetch global content (country IS NULL) and country-specific content separately
+  // to avoid string interpolation in .or() which is vulnerable to filter injection
+  const [globalResult, countryResult] = await Promise.all([
+    supabase
+      .from("portal_content")
+      .select("id, title, content, content_type, video_url")
+      .eq("is_published", true)
+      .in("content_type", ["video", "key_point"])
+      .is("country", null)
+      .order("sort_order", { ascending: true }),
+    supabase
+      .from("portal_content")
+      .select("id, title, content, content_type, video_url")
+      .eq("is_published", true)
+      .in("content_type", ["video", "key_point"])
+      .eq("country", country)
+      .order("sort_order", { ascending: true }),
+  ]);
 
-  if (error) {
-    console.error("Error fetching portal content:", error);
-    return [];
+  if (globalResult.error) {
+    console.error("Error fetching global portal content:", globalResult.error);
+  }
+  if (countryResult.error) {
+    console.error("Error fetching country portal content:", countryResult.error);
   }
 
-  return (data ?? []) as PortalContentItem[];
+  // Merge and deduplicate by id, preserving sort order
+  const seen = new Set<number>();
+  const merged: PortalContentItem[] = [];
+  for (const item of [...(globalResult.data ?? []), ...(countryResult.data ?? [])]) {
+    const id = (item as Record<string, unknown>).id as number;
+    if (!seen.has(id)) {
+      seen.add(id);
+      merged.push(item as PortalContentItem);
+    }
+  }
+
+  return merged;
 }
 
 export async function getFormFields(): Promise<FormField[]> {
@@ -776,8 +800,19 @@ export async function lookupApplicationByIdOrPassport(
     return { data: null, error: "INVALID_IDENTIFIER" };
   }
 
-  const supabase = createServiceClient();
   const trimmed = identifier.trim();
+
+  // Basic input validation — prevent obviously malicious inputs
+  if (trimmed.length < 5 || trimmed.length > 20) {
+    return { data: null, error: "INVALID_IDENTIFIER" };
+  }
+
+  // Only allow alphanumeric characters (ID numbers and passport numbers)
+  if (!/^[A-Z0-9]+$/i.test(trimmed)) {
+    return { data: null, error: "INVALID_IDENTIFIER" };
+  }
+
+  const supabase = createServiceClient();
 
   // Try id_number first (TC Kimlik — easier for Turkish customers to remember)
   const { data: byId } = await supabase
@@ -792,7 +827,7 @@ export async function lookupApplicationByIdOrPassport(
 
   if (byId) {
     const apps = await expandToGroup(byId as PaymentApplication);
-    return { data: apps, error: null };
+    return { data: maskSensitiveFields(apps, trimmed), error: null };
   }
 
   // Fall back to passport_no
@@ -813,7 +848,7 @@ export async function lookupApplicationByIdOrPassport(
 
   if (byPassport) {
     const apps = await expandToGroup(byPassport as PaymentApplication);
-    return { data: apps, error: null };
+    return { data: maskSensitiveFields(apps, trimmed), error: null };
   }
 
   // No unpaid found — check already-paid (id_number first, then passport_no)
@@ -829,7 +864,7 @@ export async function lookupApplicationByIdOrPassport(
 
   if (paidById) {
     const apps = await expandToGroup(paidById as PaymentApplication);
-    return { data: apps, error: null };
+    return { data: maskSensitiveFields(apps, trimmed), error: null };
   }
 
   const { data: paidByPassport } = await supabase
@@ -844,10 +879,40 @@ export async function lookupApplicationByIdOrPassport(
 
   if (paidByPassport) {
     const apps = await expandToGroup(paidByPassport as PaymentApplication);
-    return { data: apps, error: null };
+    return { data: maskSensitiveFields(apps, trimmed), error: null };
   }
 
   return { data: null, error: "NOT_FOUND" };
+}
+
+/**
+ * Mask sensitive PII fields so that the payment lookup doesn't expose
+ * full personal data to someone who only knows one identifier.
+ * The identifier the user already knows is shown in full; other fields are masked.
+ */
+function maskSensitiveFields(
+  apps: PaymentApplication[],
+  knownIdentifier: string
+): PaymentApplication[] {
+  return apps.map((app) => ({
+    ...app,
+    // Mask phone: show only last 4 digits
+    phone: app.phone ? "***" + app.phone.slice(-4) : null,
+    // Only show full passport if it matches the lookup identifier
+    passport_no:
+      app.passport_no?.toUpperCase() === knownIdentifier.toUpperCase()
+        ? app.passport_no
+        : app.passport_no
+          ? app.passport_no.slice(0, 2) + "***" + app.passport_no.slice(-2)
+          : null,
+    // Only show full id_number if it matches the lookup identifier
+    id_number:
+      app.id_number === knownIdentifier
+        ? app.id_number
+        : app.id_number
+          ? app.id_number.slice(0, 3) + "****" + app.id_number.slice(-2)
+          : null,
+  }));
 }
 
 export async function getApplicationForPayment(
@@ -1217,6 +1282,9 @@ export interface ApplicationNote {
 export async function getApplicationNotes(
   applicationId: number
 ): Promise<ApplicationNote[]> {
+  const user = await getAuthenticatedUser();
+  if (!user) return [];
+
   const supabase = createServiceClient();
 
   const { data, error } = await supabase
@@ -1251,15 +1319,19 @@ export async function addApplicationNote(data: {
   category: string;
   authorId: string;
 }): Promise<{ note: ApplicationNote | null; error: string | null }> {
+  const user = await getAuthenticatedUser();
+  if (!user) return { note: null, error: "UNAUTHORIZED" };
+
   const supabase = createServiceClient();
 
+  // Use authenticated user's ID instead of client-supplied authorId to prevent impersonation
   const { data: note, error } = await supabase
     .from("application_notes")
     .insert({
       application_id: data.applicationId,
       content: data.content,
       category: data.category,
-      author_id: data.authorId,
+      author_id: user.id,
     })
     .select("id, content, category, is_pinned, author_id, created_at")
     .single();
@@ -1279,6 +1351,9 @@ export async function toggleNotePin(
   noteId: number,
   isPinned: boolean
 ): Promise<{ error: string | null }> {
+  const user = await getAuthenticatedUser();
+  if (!user) return { error: "UNAUTHORIZED" };
+
   const supabase = createServiceClient();
 
   const { error } = await supabase

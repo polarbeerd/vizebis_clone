@@ -1,6 +1,7 @@
 import { createServiceClient } from "@/lib/supabase/service";
 
 const PDF_SERVICE_URL = process.env.PDF_SERVICE_URL || "http://localhost:8000";
+const PDF_SERVICE_API_KEY = process.env.PDF_SERVICE_API_KEY || "";
 
 export async function generateDocumentsForApplication(
   applicationId: number,
@@ -142,7 +143,10 @@ async function generateBookingPdf(
     // Call Python service
     const response = await fetch(`${PDF_SERVICE_URL}/generate-booking`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        ...(PDF_SERVICE_API_KEY ? { "x-api-key": PDF_SERVICE_API_KEY } : {}),
+      },
       body: JSON.stringify({
         template_url: urlData.publicUrl,
         guest_name: guestName,
@@ -341,7 +345,10 @@ async function generateLetterOfIntent(
     try {
       const pdfResponse = await fetch(`${PDF_SERVICE_URL}/html-to-pdf`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(PDF_SERVICE_API_KEY ? { "x-api-key": PDF_SERVICE_API_KEY } : {}),
+        },
         body: JSON.stringify({ html: htmlContent }),
       });
 

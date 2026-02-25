@@ -1,8 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { generateDocumentsForApplication } from "@/lib/generate-documents";
+import { getAuthenticatedUser } from "@/lib/auth";
 
 export async function POST(req: NextRequest) {
   try {
+    const user = await getAuthenticatedUser();
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const { applicationId } = await req.json();
     if (!applicationId || typeof applicationId !== "number") {
       return NextResponse.json({ error: "Invalid applicationId" }, { status: 400 });

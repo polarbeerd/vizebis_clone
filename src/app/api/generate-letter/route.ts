@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getAuthenticatedUser } from "@/lib/auth";
 
 export async function POST(req: NextRequest) {
+  const user = await getAuthenticatedUser();
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const { systemPrompt, examples, applicationData } = await req.json();
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {

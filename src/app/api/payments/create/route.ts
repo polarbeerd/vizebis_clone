@@ -18,11 +18,27 @@ function isChildExempt(dob: string | null): boolean {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { applicationIds, locale } = body;
+    const { applicationIds, locale, trackingCode } = body;
 
     if (!applicationIds || !Array.isArray(applicationIds) || applicationIds.length === 0) {
       return NextResponse.json(
         { error: "Missing application IDs" },
+        { status: 400 }
+      );
+    }
+
+    // Require tracking code for validation
+    if (!trackingCode || typeof trackingCode !== "string") {
+      return NextResponse.json(
+        { error: "Missing tracking code" },
+        { status: 400 }
+      );
+    }
+
+    // Validate all IDs are numbers
+    if (!applicationIds.every((id: unknown) => typeof id === "number" && Number.isInteger(id))) {
+      return NextResponse.json(
+        { error: "Invalid application IDs" },
         { status: 400 }
       );
     }
@@ -33,7 +49,7 @@ export async function POST(request: NextRequest) {
     const { data: apps, error: dbError } = await supabase
       .from("applications")
       .select(
-        "id, tracking_code, full_name, date_of_birth, country, visa_type, service_fee, consulate_fee, currency, payment_status"
+        "id, tracking_code, full_name, date_of_birth, country, visa_type, service_fee, consulate_fee, currency, payment_status, group_id"
       )
       .in("id", applicationIds)
       .eq("is_deleted", false);
@@ -43,6 +59,29 @@ export async function POST(request: NextRequest) {
         { error: "Applications not found" },
         { status: 404 }
       );
+    }
+
+    // Verify the tracking code belongs to one of the requested applications
+    // or to their group — prevents creating payments for arbitrary application IDs
+    const trackingCodeMatch = apps.some((a) => a.tracking_code === trackingCode);
+    if (!trackingCodeMatch) {
+      // Also check if tracking code belongs to the group
+      const groupId = apps[0]?.group_id;
+      let groupMatch = false;
+      if (groupId) {
+        const { data: group } = await supabase
+          .from("application_groups")
+          .select("tracking_code")
+          .eq("id", groupId)
+          .single();
+        groupMatch = group?.tracking_code === trackingCode;
+      }
+      if (!groupMatch) {
+        return NextResponse.json(
+          { error: "Tracking code does not match applications" },
+          { status: 403 }
+        );
+      }
     }
 
     // Verify none are already paid

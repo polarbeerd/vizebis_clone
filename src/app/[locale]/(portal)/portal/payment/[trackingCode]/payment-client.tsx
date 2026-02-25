@@ -112,6 +112,7 @@ export function PaymentClient({ applications, error }: PaymentClientProps) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           applicationIds: applications.map((a) => a.id),
+          trackingCode: firstApp.tracking_code,
           locale,
         }),
       });

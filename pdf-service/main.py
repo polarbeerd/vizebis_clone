@@ -1,5 +1,5 @@
 import os
-from fastapi import FastAPI
+from fastapi import FastAPI, Header, HTTPException
 from pydantic import BaseModel
 import httpx
 import base64
@@ -8,6 +8,16 @@ from edit_booking import edit_booking_pdf, booking_from_dates
 
 app = FastAPI(title="Booking PDF Service")
 PORT = int(os.environ.get("PORT", 8000))
+
+# Shared secret for authenticating requests from the Next.js app
+PDF_SERVICE_API_KEY = os.environ.get("PDF_SERVICE_API_KEY", "")
+
+
+def verify_api_key(x_api_key: str = Header(default="")):
+    """Verify the request has a valid API key. Skip if no key is configured (local dev)."""
+    if PDF_SERVICE_API_KEY and x_api_key != PDF_SERVICE_API_KEY:
+        raise HTTPException(status_code=401, detail="Invalid API key")
+
 
 class BookingRequest(BaseModel):
     template_url: str
@@ -26,8 +36,14 @@ class HtmlToPdfRequest(BaseModel):
     html: str
 
 @app.post("/generate-booking")
-async def generate_booking(req: BookingRequest):
+async def generate_booking(req: BookingRequest, x_api_key: str = Header(default="")):
+    verify_api_key(x_api_key)
     try:
+        # Validate template_url — only allow HTTPS URLs from trusted Supabase storage
+        supabase_url = os.environ.get("SUPABASE_URL", "")
+        if supabase_url and not req.template_url.startswith(supabase_url):
+            raise ValueError(f"Untrusted template URL origin: {req.template_url}")
+
         async with httpx.AsyncClient(timeout=30.0) as client:
             resp = await client.get(req.template_url)
             resp.raise_for_status()
@@ -56,10 +72,22 @@ async def generate_booking(req: BookingRequest):
         return {"status": "error", "error": str(e)}
 
 @app.post("/html-to-pdf")
-async def html_to_pdf(req: HtmlToPdfRequest):
+async def html_to_pdf(req: HtmlToPdfRequest, x_api_key: str = Header(default="")):
+    verify_api_key(x_api_key)
     try:
         from weasyprint import HTML
-        pdf_bytes = HTML(string=req.html).write_pdf()
+        from weasyprint.urls import default_url_fetcher
+
+        def safe_url_fetcher(url, timeout=10, ssl_context=None):
+            """Only allow data: URIs and HTTPS URLs. Block file://, http:// to internal services."""
+            if url.startswith("data:"):
+                return default_url_fetcher(url, timeout=timeout, ssl_context=ssl_context)
+            if url.startswith("https://"):
+                return default_url_fetcher(url, timeout=timeout, ssl_context=ssl_context)
+            # Block everything else (file://, http://169.254.x.x, etc.)
+            raise ValueError(f"Blocked URL fetch: {url}")
+
+        pdf_bytes = HTML(string=req.html, url_fetcher=safe_url_fetcher).write_pdf()
         return {"status": "success", "pdf_base64": base64.b64encode(pdf_bytes).decode()}
     except Exception as e:
         import traceback
