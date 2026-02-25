@@ -52,11 +52,12 @@ export function FingerprintVisa({
   onChange,
   isRequired,
   submitted,
+  touched,
   errors,
 }: SmartFieldProps) {
   const t = useTranslations("smartFields.fingerprintVisa");
   const data = parseData(value);
-  const showErrors = !!submitted;
+  const showErrors = !!submitted || !!touched;
 
   function update(partial: Partial<FingerprintVisaData>) {
     onChange({ ...value, ...partial });

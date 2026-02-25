@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useCallback, useMemo, useRef } from "react";
+import React, { useState, useCallback, useMemo, useRef, useEffect } from "react";
 import { normalizeText } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTranslations, useLocale } from "next-intl";
@@ -187,6 +187,77 @@ function SectionCard({
 }
 
 // ──────────────────────────────────────────────────────────────
+// Section progress bar (sticky)
+// ──────────────────────────────────────────────────────────────
+type SectionMeta = {
+  sectionKey: string;
+  label: string;
+  isComplete: boolean;
+};
+
+function SectionProgressBar({
+  sections,
+  currentIndex,
+  onClickSection,
+  t,
+}: {
+  sections: SectionMeta[];
+  currentIndex: number;
+  onClickSection: (index: number) => void;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  t: (key: string, values?: any) => string;
+}) {
+  const progress =
+    sections.length > 0
+      ? ((currentIndex + 1) / sections.length) * 100
+      : 0;
+
+  return (
+    <div className="sticky top-0 z-30 -mx-1 mb-4 rounded-xl border border-slate-200/60 bg-white/90 px-4 py-2.5 backdrop-blur-md sm:-mx-0 dark:border-slate-700/60 dark:bg-slate-900/90">
+      <div className="flex items-center justify-between gap-3">
+        <span className="shrink-0 text-xs font-medium text-slate-500 dark:text-slate-400">
+          {t("sectionProgress", {
+            current: currentIndex + 1,
+            total: sections.length,
+          })}
+        </span>
+        {/* Desktop section chips */}
+        <div className="hidden flex-wrap items-center gap-1.5 sm:flex">
+          {sections.map((sec, i) => (
+            <button
+              key={sec.sectionKey}
+              type="button"
+              onClick={() => onClickSection(i)}
+              className={`flex cursor-pointer items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium transition-colors ${
+                i === currentIndex
+                  ? "bg-[#FEBEBF]/30 text-slate-800 dark:text-slate-100"
+                  : sec.isComplete
+                    ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-950/30 dark:text-emerald-400"
+                    : "bg-slate-100 text-slate-400 hover:bg-slate-200/70 dark:bg-slate-800 dark:text-slate-500 dark:hover:bg-slate-700/60"
+              }`}
+            >
+              {sec.isComplete && (
+                <CheckCircle2 className="h-3 w-3" />
+              )}
+              {sec.label}
+            </button>
+          ))}
+        </div>
+      </div>
+      {/* Thin progress bar */}
+      <div className="mt-2 h-1 w-full overflow-hidden rounded-full bg-slate-200/80 dark:bg-slate-700/60">
+        <motion.div
+          className="h-full rounded-full bg-[#FEBEBF]"
+          initial={false}
+          animate={{ width: `${progress}%` }}
+          transition={{ duration: 0.4, ease: "easeOut" }}
+        />
+      </div>
+    </div>
+  );
+}
+
+// ──────────────────────────────────────────────────────────────
 // Component
 // ──────────────────────────────────────────────────────────────
 interface ApplyClientProps {
@@ -249,6 +320,8 @@ export function ApplyClient({
   const [editingMember, setEditingMember] = useState<GroupMember | null>(null);
   const [creatingFolder, setCreatingFolder] = useState(false);
   const [submittingGroup, setSubmittingGroup] = useState(false);
+  const [currentSectionIndex, setCurrentSectionIndex] = useState(0);
+  const [smartTouched, setSmartTouched] = useState<Record<string, boolean>>({});
   const formRef = useRef<HTMLFormElement>(null);
 
   // ── Dynamic stepper config ──
@@ -275,6 +348,7 @@ export function ApplyClient({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     resolver: zodResolver(dynamicSchema) as any,
     defaultValues,
+    mode: "onTouched",
   });
 
   // ── Country selection handler ──
@@ -762,13 +836,12 @@ export function ApplyClient({
     );
   };
 
-  // ── Build sectioned form ──
-  const renderSectionedForm = () => {
-    // Build unified list sorted by sort_order
-    type UnifiedItem =
-      | { kind: "regular"; field: FormField }
-      | { kind: "smart"; sa: SmartFieldAssignment };
+  // ── Build sections data (used by progress bar + render) ──
+  type UnifiedItem =
+    | { kind: "regular"; field: FormField }
+    | { kind: "smart"; sa: SmartFieldAssignment };
 
+  const formSections = useMemo(() => {
     const unified: UnifiedItem[] = [
       ...formFields.map((field) => ({ kind: "regular" as const, field })),
       ...smartAssignments.map((sa) => ({ kind: "smart" as const, sa })),
@@ -778,13 +851,6 @@ export function ApplyClient({
       return aOrder - bOrder;
     });
 
-    // Group items into sections (read section from DB field data)
-    const sections: Array<{
-      sectionKey: string;
-      items: UnifiedItem[];
-    }> = [];
-
-    // Group by section from DB — order sections by first item's sort_order
     const sectionMap = new Map<string, UnifiedItem[]>();
     for (const item of unified) {
       const sec = item.kind === "regular" ? item.field.section : item.sa.section;
@@ -793,53 +859,128 @@ export function ApplyClient({
       sectionMap.get(key)!.push(item);
     }
 
-    // Convert to array, ordered by the minimum sort_order in each section
     const sectionEntries = Array.from(sectionMap.entries()).sort((a, b) => {
       const aMin = Math.min(...a[1].map((i) => i.kind === "regular" ? i.field.sort_order : i.sa.sort_order));
       const bMin = Math.min(...b[1].map((i) => i.kind === "regular" ? i.field.sort_order : i.sa.sort_order));
       return aMin - bMin;
     });
 
-    for (const [sectionKey, items] of sectionEntries) {
-      const i18nKey = SECTION_I18N_MAP[sectionKey] ?? "sectionOther";
-      sections.push({ sectionKey: i18nKey, items });
-    }
+    return sectionEntries.map(([sectionKey, items]) => ({
+      sectionKey: SECTION_I18N_MAP[sectionKey] ?? "sectionOther",
+      items,
+    }));
+  }, [formFields, smartAssignments]);
 
+  // ── IntersectionObserver to track current section in view ──
+  useEffect(() => {
+    if (step !== 4 || formSections.length === 0) return;
+    const els = formSections
+      .map((sec) => document.getElementById(`section-${sec.sectionKey}`))
+      .filter(Boolean) as HTMLElement[];
+    if (els.length === 0) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            const idx = els.indexOf(entry.target as HTMLElement);
+            if (idx !== -1) setCurrentSectionIndex(idx);
+          }
+        }
+      },
+      { rootMargin: "-20% 0px -60% 0px" }
+    );
+    els.forEach((el) => observer.observe(el));
+    return () => observer.disconnect();
+  }, [step, formSections]);
+
+  // ── Section completion checker ──
+  const watchedValues = form.watch();
+  const sectionMetas: SectionMeta[] = useMemo(() => {
+    return formSections.map((sec) => {
+      const allComplete = sec.items.every((item) => {
+        if (item.kind === "regular") {
+          if (!item.field.is_required) return true;
+          const val = watchedValues[item.field.field_key];
+          return !!val && val.trim().length > 0;
+        }
+        // smart field
+        const sfData = smartFieldData[item.sa.template_key];
+        return !!sfData && sfData._valid === true;
+      });
+      return {
+        sectionKey: sec.sectionKey,
+        label: t(sec.sectionKey),
+        isComplete: allComplete,
+      };
+    });
+  }, [formSections, watchedValues, smartFieldData, t]);
+
+  const handleScrollToSection = useCallback((index: number) => {
+    const sec = formSections[index];
+    if (!sec) return;
+    const el = document.getElementById(`section-${sec.sectionKey}`);
+    if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [formSections]);
+
+  // ── Render sectioned form ──
+  const renderSectionedForm = () => {
     return (
       <div className="space-y-4">
-        {sections.map((sec) => {
+        {formSections.length > 1 && (
+          <SectionProgressBar
+            sections={sectionMetas}
+            currentIndex={currentSectionIndex}
+            onClickSection={handleScrollToSection}
+            t={t}
+          />
+        )}
+        {formSections.map((sec) => {
           const descKey = `${sec.sectionKey}Desc`;
           return (
-            <SectionCard
-              key={sec.sectionKey}
-              title={t(sec.sectionKey)}
-              description={t(descKey)}
-            >
-              <div className="grid gap-4 sm:grid-cols-2">
-                {sec.items.map((item) =>
-                  item.kind === "regular" ? (
-                    renderField(item.field)
-                  ) : (
-                    <div key={item.sa.template_key} className="col-span-full">
-                      <SmartFieldRenderer
-                        templateKey={item.sa.template_key}
-                        label={smartLabel(item.sa)}
-                        description={smartDescription(item.sa)}
-                        isRequired={item.sa.is_required}
-                        value={smartFieldData[item.sa.template_key] ?? {}}
-                        onChange={(val) =>
-                          setSmartFieldData((prev) => ({
-                            ...prev,
-                            [item.sa.template_key]: val,
-                          }))
-                        }
-                        submitted={smartSubmitted}
-                      />
-                    </div>
-                  )
-                )}
-              </div>
-            </SectionCard>
+            <div key={sec.sectionKey} id={`section-${sec.sectionKey}`}>
+              <SectionCard
+                title={t(sec.sectionKey)}
+                description={t(descKey)}
+              >
+                <div className="grid gap-4 sm:grid-cols-2">
+                  {sec.items.map((item) =>
+                    item.kind === "regular" ? (
+                      renderField(item.field)
+                    ) : (
+                      <div
+                        key={item.sa.template_key}
+                        className="col-span-full"
+                        onBlur={(e) => {
+                          if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+                            setSmartTouched((prev) => ({
+                              ...prev,
+                              [item.sa.template_key]: true,
+                            }));
+                          }
+                        }}
+                      >
+                        <SmartFieldRenderer
+                          templateKey={item.sa.template_key}
+                          label={smartLabel(item.sa)}
+                          description={smartDescription(item.sa)}
+                          isRequired={item.sa.is_required}
+                          value={smartFieldData[item.sa.template_key] ?? {}}
+                          onChange={(val) =>
+                            setSmartFieldData((prev) => ({
+                              ...prev,
+                              [item.sa.template_key]: val,
+                            }))
+                          }
+                          submitted={smartSubmitted}
+                          touched={smartTouched[item.sa.template_key] ?? false}
+                        />
+                      </div>
+                    )
+                  )}
+                </div>
+              </SectionCard>
+            </div>
           );
         })}
       </div>

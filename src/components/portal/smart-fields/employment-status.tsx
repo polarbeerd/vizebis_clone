@@ -145,12 +145,13 @@ export function EmploymentStatus({
   onChange,
   isRequired,
   submitted,
+  touched,
   errors,
 }: SmartFieldProps) {
   const t = useTranslations("smartFields.employmentStatus");
   const tShared = useTranslations("smartFields.shared");
   const data = parseData(value);
-  const showErrors = !!submitted;
+  const showErrors = !!submitted || !!touched;
 
   // Overflow toggles for each AnimatePresence section
   const employedYesOverflow = useAnimOverflow();

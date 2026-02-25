@@ -22,6 +22,8 @@ export interface SmartFieldProps {
   isRequired: boolean;
   /** Whether the parent form has been submitted (triggers error display) */
   submitted?: boolean;
+  /** Whether the user has blurred away from this smart field (triggers error display) */
+  touched?: boolean;
   /** Validation errors to display (set externally by parent form) */
   errors?: string[];
 }

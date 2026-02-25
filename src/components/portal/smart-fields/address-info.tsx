@@ -32,12 +32,13 @@ export function AddressInfo({
   onChange,
   isRequired,
   submitted,
+  touched,
   errors,
 }: SmartFieldProps) {
   const t = useTranslations("smartFields.addressInfo");
   const tShared = useTranslations("smartFields.shared");
   const data = parseData(value);
-  const showErrors = !!submitted;
+  const showErrors = !!submitted || !!touched;
 
   function update(partial: Partial<AddressInfoData>) {
     onChange({ ...value, ...partial });

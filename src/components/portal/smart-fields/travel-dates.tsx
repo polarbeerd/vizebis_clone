@@ -28,11 +28,12 @@ export function TravelDates({
   onChange,
   isRequired,
   submitted,
+  touched,
   errors,
 }: SmartFieldProps) {
   const t = useTranslations("smartFields.travelDates");
   const data = parseData(value);
-  const showErrors = !!submitted;
+  const showErrors = !!submitted || !!touched;
   const today = getTodayDate();
 
   function update(partial: Partial<TravelDatesData>) {

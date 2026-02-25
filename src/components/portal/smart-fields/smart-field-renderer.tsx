@@ -11,6 +11,7 @@ interface SmartFieldRendererProps {
   value: Record<string, unknown>;
   onChange: (value: Record<string, unknown>) => void;
   submitted?: boolean;
+  touched?: boolean;
   errors?: string[];
 }
 
@@ -24,6 +25,7 @@ export function SmartFieldRenderer({
   value,
   onChange,
   submitted,
+  touched,
   errors,
 }: SmartFieldRendererProps) {
   const Component = SMART_FIELD_REGISTRY[templateKey];
@@ -38,6 +40,7 @@ export function SmartFieldRenderer({
       onChange={onChange}
       isRequired={isRequired}
       submitted={submitted}
+      touched={touched}
       errors={errors}
     />
   );

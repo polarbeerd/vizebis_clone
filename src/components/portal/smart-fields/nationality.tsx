@@ -27,11 +27,12 @@ export function Nationality({
   onChange,
   isRequired,
   submitted,
+  touched,
   errors,
 }: SmartFieldProps) {
   const t = useTranslations("smartFields.nationality");
   const data = parseData(value);
-  const showErrors = !!submitted;
+  const showErrors = !!submitted || !!touched;
 
   function update(partial: Partial<NationalityData>) {
     onChange({ ...value, ...partial });

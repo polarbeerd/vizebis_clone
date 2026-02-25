@@ -23,12 +23,13 @@ export function PassportCountry({
   onChange,
   isRequired,
   submitted,
+  touched,
   errors,
 }: SmartFieldProps) {
   const t = useTranslations("smartFields.passportCountry");
   const tShared = useTranslations("smartFields.shared");
   const data = parseData(value);
-  const showErrors = !!submitted;
+  const showErrors = !!submitted || !!touched;
 
   function update(partial: Partial<PassportCountryData>) {
     onChange({ ...value, ...partial });

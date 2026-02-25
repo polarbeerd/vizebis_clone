@@ -32,14 +32,20 @@ export function SegmentedControl({
 }: SegmentedControlProps) {
   // Use grid layout for 4+ options on mobile to avoid overflow
   const useGrid = fullWidth && options.length >= 4;
+  // Stack vertically on mobile when labels are long or there are 3+ options
+  const shouldStackMobile =
+    options.length >= 3 ||
+    options.some((opt) => opt.label.length > 15);
 
   return (
     <div
       className={`rounded-xl border border-slate-200/60 bg-slate-100/80 p-1 backdrop-blur-sm dark:border-slate-700/60 dark:bg-slate-800/80 ${
         useGrid
           ? "grid grid-cols-2 sm:flex sm:items-center"
-          : `inline-flex items-center ${fullWidth ? "w-full" : ""}`
-      } ${className}`}
+          : shouldStackMobile
+            ? "flex flex-col gap-0.5 sm:inline-flex sm:flex-row sm:items-center"
+            : `inline-flex items-center ${fullWidth ? "w-full" : ""}`
+      } ${fullWidth && shouldStackMobile ? "w-full sm:w-auto" : ""} ${className}`}
     >
       {options.map((opt) => {
         const isActive = value === opt.value;
@@ -48,12 +54,16 @@ export function SegmentedControl({
             key={opt.value}
             type="button"
             onClick={() => onChange(opt.value)}
-            className={`relative z-10 flex items-center justify-center gap-1.5 rounded-lg font-medium transition-colors duration-150 ${
+            className={`relative z-10 flex cursor-pointer items-center justify-center gap-1.5 rounded-lg font-medium transition-colors duration-150 ${
               size === "sm"
                 ? "px-3 py-1.5 text-xs"
                 : "px-4 py-2 text-sm"
             } ${fullWidth || useGrid ? "flex-1" : ""} ${
               useGrid ? "min-w-0" : ""
+            } ${shouldStackMobile ? "w-full sm:w-auto" : ""} ${
+              !isActive
+                ? "hover:bg-slate-200/60 dark:hover:bg-slate-700/40"
+                : ""
             }`}
           >
             {isActive && (
@@ -65,10 +75,14 @@ export function SegmentedControl({
             )}
             {opt.icon && <span className="relative">{opt.icon}</span>}
             <span
-              className={`relative truncate ${
+              className={`relative ${
+                shouldStackMobile
+                  ? "whitespace-normal text-center leading-tight sm:truncate sm:text-left"
+                  : "truncate"
+              } ${
                 isActive
-                  ? "text-slate-700"
-                  : "text-slate-600 dark:text-slate-400"
+                  ? "text-slate-800 dark:text-slate-100"
+                  : "text-slate-500 dark:text-slate-400"
               }`}
             >
               {opt.label}

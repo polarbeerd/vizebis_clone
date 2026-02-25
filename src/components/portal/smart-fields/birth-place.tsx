@@ -28,12 +28,13 @@ export function BirthPlace({
   onChange,
   isRequired,
   submitted,
+  touched,
   errors,
 }: SmartFieldProps) {
   const t = useTranslations("smartFields.birthPlace");
   const tShared = useTranslations("smartFields.shared");
   const data = parseData(value);
-  const showErrors = !!submitted;
+  const showErrors = !!submitted || !!touched;
 
   function update(partial: Partial<BirthPlaceData>) {
     onChange({ ...value, ...partial });
