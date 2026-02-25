@@ -1565,8 +1565,7 @@
     "memberDeleted": "Uye silindi",
     "groupSubmitted": "Grup basvurusu gonderildi!",
     "groupCreateError": "Grup olusturulamadi",
-    "stepChoice": "Basvuru Turu",
-    "sectionProgress": "Bolum {current} / {total}"
+    "stepChoice": "Basvuru Turu"
   },
   "portalFormFields": {
     "title": "Portal Form Alanlari",

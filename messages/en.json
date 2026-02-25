@@ -1565,8 +1565,7 @@
     "memberDeleted": "Member removed",
     "groupSubmitted": "Group application submitted!",
     "groupCreateError": "Failed to create group",
-    "stepChoice": "Apply Type",
-    "sectionProgress": "Section {current} of {total}"
+    "stepChoice": "Apply Type"
   },
   "portalFormFields": {
     "title": "Portal Form Fields",

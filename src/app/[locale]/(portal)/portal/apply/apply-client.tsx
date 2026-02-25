@@ -199,13 +199,10 @@ function SectionProgressBar({
   sections,
   currentIndex,
   onClickSection,
-  t,
 }: {
   sections: SectionMeta[];
   currentIndex: number;
   onClickSection: (index: number) => void;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  t: (key: string, values?: any) => string;
 }) {
   const progress =
     sections.length > 0
@@ -214,13 +211,7 @@ function SectionProgressBar({
 
   return (
     <div className="sticky top-0 z-30 -mx-1 mb-4 rounded-xl border border-slate-200/60 bg-white/90 px-4 py-2.5 backdrop-blur-md sm:-mx-0 dark:border-slate-700/60 dark:bg-slate-900/90">
-      <div className="flex items-center justify-between gap-3">
-        <span className="shrink-0 text-xs font-medium text-slate-500 dark:text-slate-400">
-          {t("sectionProgress", {
-            current: currentIndex + 1,
-            total: sections.length,
-          })}
-        </span>
+      <div className="flex items-center justify-end gap-3">
         {/* Desktop section chips */}
         <div className="hidden flex-wrap items-center gap-1.5 sm:flex">
           {sections.map((sec, i) => (
@@ -932,7 +923,6 @@ export function ApplyClient({
             sections={sectionMetas}
             currentIndex={currentSectionIndex}
             onClickSection={handleScrollToSection}
-            t={t}
           />
         )}
         {formSections.map((sec) => {
