@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useCallback, useMemo, useRef } from "react";
+import { normalizeText } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTranslations, useLocale } from "next-intl";
 import { useForm } from "react-hook-form";
@@ -663,7 +664,13 @@ export function ApplyClient({
             </p>
           )}
           <Textarea
-            {...form.register(field.field_key)}
+            {...form.register(field.field_key, {
+              onChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+                const pos = e.target.selectionStart;
+                e.target.value = normalizeText(e.target.value);
+                e.target.setSelectionRange(pos, pos);
+              },
+            })}
             className="min-h-[100px] rounded-xl border-slate-200/80 focus:ring-2 focus:ring-brand-300/30 focus:border-brand-300 dark:border-slate-700/80"
             placeholder={placeholder || ""}
             maxLength={charLimit}
@@ -723,7 +730,13 @@ export function ApplyClient({
         </Label>
         <Input
           type={inputType}
-          {...form.register(field.field_key)}
+          {...form.register(field.field_key, {
+            onChange: inputType === "text" ? (e: React.ChangeEvent<HTMLInputElement>) => {
+              const pos = e.target.selectionStart;
+              e.target.value = normalizeText(e.target.value);
+              e.target.setSelectionRange(pos, pos);
+            } : undefined,
+          })}
           className="h-11 rounded-xl border-slate-200/80 focus:ring-2 focus:ring-brand-300/30 focus:border-brand-300 dark:border-slate-700/80"
           placeholder={placeholder || ""}
           maxLength={field.max_chars ?? undefined}

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { login, register } from "./actions";
+import { login } from "./actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,26 +10,21 @@ import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
 
 export default function LoginPage() {
   const t = useTranslations("auth");
-  const [mode, setMode] = useState<"login" | "register">("login");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [email, setEmail] = useState("");
 
   async function handleSubmit(formData: FormData) {
     setError(null);
     setLoading(true);
-    setEmail(formData.get("email") as string ?? "");
 
     try {
-      const action = mode === "login" ? login : register;
-      const result = await action(formData);
+      const result = await login(formData);
       if (result?.error) {
         setError(result.error);
       }
@@ -49,23 +44,11 @@ export default function LoginPage() {
           </div>
           <CardTitle className="text-2xl font-bold">Unusual Consulting</CardTitle>
           <CardDescription>
-            {mode === "login" ? t("loginDescription") : t("registerDescription")}
+            {t("loginDescription")}
           </CardDescription>
         </CardHeader>
         <CardContent>
           <form action={handleSubmit} className="space-y-4">
-            {mode === "register" && (
-              <div className="space-y-2">
-                <Label htmlFor="fullName">{t("fullName")}</Label>
-                <Input
-                  id="fullName"
-                  name="fullName"
-                  type="text"
-                  required
-                  placeholder={t("fullName")}
-                />
-              </div>
-            )}
             <div className="space-y-2">
               <Label htmlFor="email">{t("email")}</Label>
               <Input
@@ -74,8 +57,6 @@ export default function LoginPage() {
                 type="email"
                 required
                 placeholder={t("email")}
-                defaultValue={email}
-                key={email}
               />
             </div>
             <div className="space-y-2">
@@ -97,25 +78,10 @@ export default function LoginPage() {
             )}
 
             <Button type="submit" className="w-full" disabled={loading}>
-              {loading
-                ? "..."
-                : mode === "login"
-                  ? t("login")
-                  : t("register")}
+              {loading ? "..." : t("login")}
             </Button>
           </form>
         </CardContent>
-        <CardFooter className="justify-center">
-          <Button
-            variant="link"
-            onClick={() => {
-              setMode(mode === "login" ? "register" : "login");
-              setError(null);
-            }}
-          >
-            {mode === "login" ? t("noAccount") : t("hasAccount")}
-          </Button>
-        </CardFooter>
       </Card>
     </div>
   );

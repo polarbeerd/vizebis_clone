@@ -2,6 +2,7 @@
 
 import { createServiceClient } from "@/lib/supabase/service";
 import { generateDocumentsForApplication } from "@/lib/generate-documents";
+import { normalizeText, normalizeObject } from "@/lib/utils";
 
 // Fields visible to the customer (NO fees, payments, admin notes)
 const CUSTOMER_VISIBLE_SELECT = `
@@ -486,11 +487,11 @@ export async function createPortalApplication(data: {
 }> {
   const supabase = createServiceClient();
 
-  // Extract standard column values from custom fields
-  // Portal form fields use keys like "name", "surname", "phone" etc.
-  // Map them to the actual applications table columns
-  const cf = data.customFields;
-  const allFields = { ...data.standardFields, ...cf };
+  // Normalize Turkish characters → English + uppercase
+  const cf = normalizeObject(data.customFields);
+  const normalizedStandard = normalizeObject(data.standardFields);
+  const normalizedSmart = data.smartFieldData ? normalizeObject(data.smartFieldData) : undefined;
+  const allFields = { ...normalizedStandard, ...cf };
 
   const fullName = [allFields.name, allFields.surname]
     .filter(Boolean)
@@ -517,9 +518,9 @@ export async function createPortalApplication(data: {
     .insert({
       ...standardInsert,
       custom_fields: {
-        ...(Object.keys(data.customFields).length > 0 ? data.customFields : {}),
-        ...(data.smartFieldData && Object.keys(data.smartFieldData).length > 0
-          ? { _smart: data.smartFieldData }
+        ...(Object.keys(cf).length > 0 ? cf : {}),
+        ...(normalizedSmart && Object.keys(normalizedSmart).length > 0
+          ? { _smart: normalizedSmart }
           : {}),
       },
       country: data.country,
@@ -985,8 +986,11 @@ export async function addGroupMember(data: {
 }> {
   const supabase = createServiceClient();
 
-  const cf = data.customFields;
-  const allFields = { ...data.standardFields, ...cf };
+  // Normalize Turkish characters → English + uppercase
+  const cf = normalizeObject(data.customFields);
+  const normalizedStandard = normalizeObject(data.standardFields);
+  const normalizedSmart = data.smartFieldData ? normalizeObject(data.smartFieldData) : undefined;
+  const allFields = { ...normalizedStandard, ...cf };
 
   const fullName = [allFields.name, allFields.surname]
     .filter(Boolean)
@@ -1012,11 +1016,11 @@ export async function addGroupMember(data: {
     .insert({
       ...standardInsert,
       custom_fields: {
-        ...(Object.keys(data.customFields).length > 0 ? data.customFields : {}),
-        ...(data.smartFieldData && Object.keys(data.smartFieldData).length > 0
-          ? { _smart: data.smartFieldData }
+        ...(Object.keys(cf).length > 0 ? cf : {}),
+        ...(normalizedSmart && Object.keys(normalizedSmart).length > 0
+          ? { _smart: normalizedSmart }
           : {}),
-        application_city: data.application_city,
+        application_city: normalizeText(data.application_city),
       },
       country: data.country,
       visa_type: data.visa_type,
@@ -1052,8 +1056,11 @@ export async function updateGroupMember(data: {
 }): Promise<{ error: string | null }> {
   const supabase = createServiceClient();
 
-  const cf = data.customFields;
-  const allFields = { ...data.standardFields, ...cf };
+  // Normalize Turkish characters → English + uppercase
+  const cf = normalizeObject(data.customFields);
+  const normalizedStandard = normalizeObject(data.standardFields);
+  const normalizedSmart = data.smartFieldData ? normalizeObject(data.smartFieldData) : undefined;
+  const allFields = { ...normalizedStandard, ...cf };
 
   const fullName = [allFields.name, allFields.surname]
     .filter(Boolean)
@@ -1076,11 +1083,11 @@ export async function updateGroupMember(data: {
     .update({
       ...standardUpdate,
       custom_fields: {
-        ...(Object.keys(data.customFields).length > 0 ? data.customFields : {}),
-        ...(data.smartFieldData && Object.keys(data.smartFieldData).length > 0
-          ? { _smart: data.smartFieldData }
+        ...(Object.keys(cf).length > 0 ? cf : {}),
+        ...(normalizedSmart && Object.keys(normalizedSmart).length > 0
+          ? { _smart: normalizedSmart }
           : {}),
-        application_city: data.application_city,
+        application_city: normalizeText(data.application_city),
       },
       visa_type: data.visa_type,
     })

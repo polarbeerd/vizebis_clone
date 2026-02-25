@@ -3,6 +3,7 @@
 import * as React from "react";
 import { useTranslations } from "next-intl";
 import { AnimatePresence, motion } from "framer-motion";
+import { normalizeText } from "@/lib/utils";
 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -97,7 +98,7 @@ export function Nationality({
               </Label>
               <Input
                 value={data.custom_nationality}
-                onChange={(e) => update({ custom_nationality: e.target.value })}
+                onChange={(e) => update({ custom_nationality: normalizeText(e.target.value) })}
                 placeholder={t("customPlaceholder")}
                 className="h-11 rounded-xl"
                 aria-invalid={showErrors && customEmpty ? true : undefined}

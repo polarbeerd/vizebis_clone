@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { useTranslations } from "next-intl";
+import { normalizeText } from "@/lib/utils";
 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -69,7 +70,7 @@ export function AddressInfo({
         </Label>
         <Input
           value={data.address}
-          onChange={(e) => update({ address: e.target.value })}
+          onChange={(e) => update({ address: normalizeText(e.target.value) })}
           placeholder={t("addressPlaceholder")}
           className="h-11 rounded-xl"
           aria-invalid={showErrors && addressEmpty ? true : undefined}
@@ -88,7 +89,7 @@ export function AddressInfo({
           </Label>
           <Input
             value={data.postal_code}
-            onChange={(e) => update({ postal_code: e.target.value })}
+            onChange={(e) => update({ postal_code: normalizeText(e.target.value) })}
             placeholder={t("postalCodePlaceholder")}
             className="h-11 rounded-xl"
             aria-invalid={showErrors && postalEmpty ? true : undefined}
@@ -105,7 +106,7 @@ export function AddressInfo({
           </Label>
           <Input
             value={data.city}
-            onChange={(e) => update({ city: e.target.value })}
+            onChange={(e) => update({ city: normalizeText(e.target.value) })}
             placeholder={t("cityPlaceholder")}
             className="h-11 rounded-xl"
             aria-invalid={showErrors && cityEmpty ? true : undefined}

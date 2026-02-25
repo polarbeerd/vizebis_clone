@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { normalizeText } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SegmentedControl } from "@/components/portal/segmented-control";
@@ -75,7 +76,7 @@ export function CountryDefaultSelector({
             <div className="mt-2">
               <Input
                 value={customValue}
-                onChange={(e) => onCustomChange(e.target.value)}
+                onChange={(e) => onCustomChange(normalizeText(e.target.value))}
                 placeholder={customPlaceholder}
                 className="h-11 rounded-xl"
                 aria-invalid={showErrors && customEmpty ? true : undefined}

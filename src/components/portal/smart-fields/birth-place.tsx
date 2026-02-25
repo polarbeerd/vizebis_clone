@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { useTranslations } from "next-intl";
+import { normalizeText } from "@/lib/utils";
 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -63,7 +64,7 @@ export function BirthPlace({
         </Label>
         <Input
           value={data.birth_city}
-          onChange={(e) => update({ birth_city: e.target.value })}
+          onChange={(e) => update({ birth_city: normalizeText(e.target.value) })}
           placeholder={t("cityPlaceholder")}
           className="h-11 rounded-xl"
           aria-invalid={showErrors && cityEmpty ? true : undefined}

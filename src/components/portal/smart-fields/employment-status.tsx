@@ -3,6 +3,7 @@
 import * as React from "react";
 import { useTranslations } from "next-intl";
 import { motion, AnimatePresence } from "framer-motion";
+import { normalizeText } from "@/lib/utils";
 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -330,7 +331,7 @@ export function EmploymentStatus({
           </Label>
           <Input
             value={nameVal}
-            onChange={(e) => update({ [`${prefix}_name`]: e.target.value } as Partial<EmploymentStatusData>)}
+            onChange={(e) => update({ [`${prefix}_name`]: normalizeText(e.target.value) } as Partial<EmploymentStatusData>)}
             placeholder={t(`${prefix}NamePlaceholder`)}
             className="h-10 rounded-lg"
             aria-invalid={showErrors && nameEmpty ? true : undefined}
@@ -348,7 +349,7 @@ export function EmploymentStatus({
           </Label>
           <Input
             value={addressVal}
-            onChange={(e) => update({ [`${prefix}_address`]: e.target.value } as Partial<EmploymentStatusData>)}
+            onChange={(e) => update({ [`${prefix}_address`]: normalizeText(e.target.value) } as Partial<EmploymentStatusData>)}
             placeholder={t(`${prefix}AddressPlaceholder`)}
             className="h-10 rounded-lg"
             aria-invalid={showErrors && addressEmpty ? true : undefined}
@@ -367,7 +368,7 @@ export function EmploymentStatus({
             </Label>
             <Input
               value={postalVal}
-              onChange={(e) => update({ [`${prefix}_postal_code`]: e.target.value } as Partial<EmploymentStatusData>)}
+              onChange={(e) => update({ [`${prefix}_postal_code`]: normalizeText(e.target.value) } as Partial<EmploymentStatusData>)}
               placeholder={t(`${prefix}PostalCodePlaceholder`)}
               className="h-10 rounded-lg"
               aria-invalid={showErrors && postalEmpty ? true : undefined}
@@ -383,7 +384,7 @@ export function EmploymentStatus({
             </Label>
             <Input
               value={cityVal}
-              onChange={(e) => update({ [`${prefix}_city`]: e.target.value } as Partial<EmploymentStatusData>)}
+              onChange={(e) => update({ [`${prefix}_city`]: normalizeText(e.target.value) } as Partial<EmploymentStatusData>)}
               placeholder={t(`${prefix}CityPlaceholder`)}
               className="h-10 rounded-lg"
               aria-invalid={showErrors && cityEmpty ? true : undefined}
@@ -515,7 +516,7 @@ export function EmploymentStatus({
                     </Label>
                     <Input
                       value={data.occupation_other}
-                      onChange={(e) => update({ occupation_other: e.target.value })}
+                      onChange={(e) => update({ occupation_other: normalizeText(e.target.value) })}
                       placeholder={t("occupationOtherPlaceholder")}
                       className="h-11 rounded-xl"
                       aria-invalid={showErrors && occupationOtherEmpty ? true : undefined}
@@ -535,7 +536,7 @@ export function EmploymentStatus({
               </Label>
               <Input
                 value={data.title_description}
-                onChange={(e) => update({ title_description: e.target.value })}
+                onChange={(e) => update({ title_description: normalizeText(e.target.value) })}
                 placeholder={t("titleDescriptionPlaceholder")}
                 className="h-11 rounded-xl"
               />
