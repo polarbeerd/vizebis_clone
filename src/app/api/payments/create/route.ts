@@ -138,9 +138,11 @@ export async function POST(request: NextRequest) {
       checkoutUrl: payment.getCheckoutUrl(),
     });
   } catch (error) {
-    console.error("Payment creation error:", error);
+    const errMsg = error instanceof Error ? error.message : String(error);
+    const errStack = error instanceof Error ? error.stack : "";
+    console.error("Payment creation error:", errMsg, errStack);
     return NextResponse.json(
-      { error: "Failed to create payment" },
+      { error: "Failed to create payment", details: errMsg },
       { status: 500 }
     );
   }
