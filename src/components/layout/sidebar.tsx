@@ -8,7 +8,6 @@ import { cn } from "@/lib/utils";
 import {
   LayoutDashboard,
   FileText,
-  Building2,
   CalendarClock,
   Calendar,
   Wallet,
@@ -42,7 +41,6 @@ export function useNavGroups(): NavGroup[] {
         { label: t("applications"), href: "/applications", icon: FileText },
         { label: t("appointments"), href: "/appointments", icon: CalendarClock },
         { label: t("calendar"), href: "/calendar", icon: Calendar },
-        { label: t("companies"), href: "/companies", icon: Building2 },
       ],
     },
     {

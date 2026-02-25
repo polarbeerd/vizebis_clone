@@ -99,10 +99,10 @@ const SECTION_I18N_MAP: Record<string, string> = {
 
 // Textarea helper text map
 const TEXTAREA_HINT_MAP: Record<string, string> = {
-  daily_life: "textareaHintDaily",
-  off_day: "textareaHintOffDay",
-  hobbies: "textareaHintHobbies",
-  travel_info: "textareaHintTravel",
+  trip_plans: "textareaHintTripPlans",
+  ties_to_home: "textareaHintTiesToHome",
+  previous_travels: "textareaHintPreviousTravels",
+  personal_about: "textareaHintPersonalAbout",
 };
 
 // ──────────────────────────────────────────────────────────────
@@ -662,6 +662,14 @@ export function ApplyClient({
             <p className="mb-2 text-xs text-slate-400 dark:text-slate-500">
               {t(hintKey)}
             </p>
+          )}
+          {field.field_key === "ties_to_home" && (
+            <div className="mb-2 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50/80 px-3 py-2 dark:border-amber-800 dark:bg-amber-950/30">
+              <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-500" />
+              <p className="text-xs font-medium text-amber-700 dark:text-amber-300">
+                {t("tiesToHomeWarning")}
+              </p>
+            </div>
           )}
           <Textarea
             {...form.register(field.field_key, {

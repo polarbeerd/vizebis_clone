@@ -4,7 +4,6 @@ import * as React from "react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import {
-  Building2,
   MessageSquare,
   Bell,
   Bot,
@@ -17,7 +16,6 @@ import {
   Edit,
   Trash2,
   Check,
-  Upload,
 } from "lucide-react";
 
 import { createClient } from "@/lib/supabase/client";
@@ -282,9 +280,6 @@ export function SettingsClient({ settingsMap, users: initialUsers }: SettingsCli
   const [reportDateType, setReportDateType] = React.useState<string>(
     (reportDefaults.rapor_tarih_tipi as string) ?? "appointment"
   );
-
-  // ── Company Info (display only) ─────────────────────────────────
-  const companyDefaults = settingsMap["company_info"] ?? {};
 
   // ── Invite code ─────────────────────────────────────────────────
   const inviteDefaults = settingsMap["invite_settings"] ?? {};
@@ -590,12 +585,8 @@ export function SettingsClient({ settingsMap, users: initialUsers }: SettingsCli
         <h1 className="text-2xl font-bold tracking-tight">{t("title")}</h1>
       </div>
 
-      <Tabs defaultValue="company" className="w-full">
+      <Tabs defaultValue="sms" className="w-full">
         <TabsList className="w-full flex-wrap h-auto gap-1">
-          <TabsTrigger value="company" className="gap-1.5">
-            <Building2 className="size-4" />
-            <span className="hidden sm:inline">{t("tabCompany")}</span>
-          </TabsTrigger>
           <TabsTrigger value="sms" className="gap-1.5">
             <MessageSquare className="size-4" />
             <span className="hidden sm:inline">{t("tabSms")}</span>
@@ -621,76 +612,6 @@ export function SettingsClient({ settingsMap, users: initialUsers }: SettingsCli
             <span className="hidden sm:inline">{t("tabReports")}</span>
           </TabsTrigger>
         </TabsList>
-
-        {/* ═══════════════════════════════════════════════════════════
-            Tab 1: Company Info
-        ═══════════════════════════════════════════════════════════ */}
-        <TabsContent value="company">
-          <Card>
-            <CardHeader>
-              <CardTitle>{t("tabCompany")}</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <Label>{t("companyName")}</Label>
-                  <Input
-                    value={(companyDefaults.company_name as string) ?? ""}
-                    disabled
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>{t("subdomain")}</Label>
-                  <Input
-                    value={(companyDefaults.subdomain as string) ?? ""}
-                    disabled
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>{t("licenseNumber")}</Label>
-                  <Input
-                    value={(companyDefaults.license_number as string) ?? ""}
-                    disabled
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>{t("membershipExpiry")}</Label>
-                  <Input
-                    value={
-                      companyDefaults.membership_expiry
-                        ? formatDate(companyDefaults.membership_expiry as string)
-                        : ""
-                    }
-                    disabled
-                  />
-                </div>
-              </div>
-
-              <Separator />
-
-              {/* Logo placeholder */}
-              <div className="space-y-2">
-                <Label>{t("logo")}</Label>
-                <div className="flex h-32 w-48 items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/25 bg-muted/50">
-                  <div className="flex flex-col items-center gap-1 text-muted-foreground">
-                    <Upload className="size-6" />
-                    <span className="text-xs">{t("logoUpload")}</span>
-                  </div>
-                </div>
-              </div>
-
-              <Separator />
-
-              {/* Contracts placeholder */}
-              <div className="space-y-2">
-                <Label>{t("contracts")}</Label>
-                <div className="rounded-lg border p-4 text-sm text-muted-foreground">
-                  {t("noContracts")}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
 
         {/* ═══════════════════════════════════════════════════════════
             Tab 2: SMS Settings
