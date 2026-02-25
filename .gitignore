@@ -52,5 +52,8 @@ test_*.pdf
 # source font files (only bundled fonts in pdf-service/fonts/ are needed)
 /segoe/
 
+# supabase
+supabase/.temp/
+
 # claude
 .claude/
