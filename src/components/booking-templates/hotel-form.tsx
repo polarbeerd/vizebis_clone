@@ -35,7 +35,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Collapsible,
   CollapsibleContent,
@@ -298,7 +297,7 @@ export function HotelForm({
             onSubmit={form.handleSubmit(onSubmit)}
             className="flex flex-col flex-1 overflow-hidden"
           >
-            <ScrollArea className="flex-1">
+            <div className="flex-1 overflow-y-auto">
               <div className="space-y-4 px-6 py-4">
                 {/* Hotel Name */}
                 <FormField
@@ -453,35 +452,6 @@ export function HotelForm({
                     )}
                   />
 
-                  {/* Type */}
-                  <FormField
-                    control={form.control}
-                    name="type"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>{t("type")}</FormLabel>
-                        <Select
-                          onValueChange={field.onChange}
-                          value={field.value}
-                        >
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="individual">
-                              {t("individual")}
-                            </SelectItem>
-                            <SelectItem value="group">
-                              {t("group")}
-                            </SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
                 </div>
 
                 {/* Active toggle */}
@@ -566,7 +536,7 @@ export function HotelForm({
                   </CollapsibleContent>
                 </Collapsible>
               </div>
-            </ScrollArea>
+            </div>
 
             {/* Footer */}
             <div className="flex items-center justify-end gap-2 border-t px-6 py-4">

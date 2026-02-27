@@ -58,6 +58,32 @@ export function normalizeObject<T>(obj: T): T {
   return obj;
 }
 
+/**
+ * Extract 2-letter ISO country code from a flag emoji.
+ * Flag emojis are composed of Regional Indicator Symbols (U+1F1E6..U+1F1FF).
+ * Returns null if the string is not a valid flag emoji.
+ */
+export function flagEmojiToCountryCode(emoji: string | null | undefined): string | null {
+  if (!emoji) return null;
+  const codePoints = [...emoji].map((c) => c.codePointAt(0) ?? 0);
+  if (codePoints.length !== 2) return null;
+  if (codePoints[0] < 0x1f1e6 || codePoints[0] > 0x1f1ff) return null;
+  if (codePoints[1] < 0x1f1e6 || codePoints[1] > 0x1f1ff) return null;
+  const a = String.fromCharCode(codePoints[0] - 0x1f1e6 + 65);
+  const b = String.fromCharCode(codePoints[1] - 0x1f1e6 + 65);
+  return `${a}${b}`;
+}
+
+/**
+ * Get a flag image URL from flagcdn.com for cross-platform flag rendering.
+ * Falls back to null if the emoji can't be parsed.
+ */
+export function getFlagImageUrl(emoji: string | null | undefined, size: number = 40): string | null {
+  const code = flagEmojiToCountryCode(emoji);
+  if (!code) return null;
+  return `https://flagcdn.com/${size}x${Math.round(size * 0.75)}/${code.toLowerCase()}.png`;
+}
+
 export function formatDateTime(date: string | Date, locale: string = "tr-TR"): string {
   return new Intl.DateTimeFormat(locale, {
     year: "numeric",

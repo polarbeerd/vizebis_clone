@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useCallback, useMemo, useRef, useEffect } from "react";
-import { normalizeText } from "@/lib/utils";
+import { normalizeText, getFlagImageUrl } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTranslations, useLocale } from "next-intl";
 import { useForm } from "react-hook-form";
@@ -1135,8 +1135,17 @@ export function ApplyClient({
                       : "border-slate-200/60 bg-white/70 backdrop-blur-md hover:border-brand-300 dark:border-slate-700/60 dark:bg-slate-900/70 dark:hover:border-brand-700"
                   }`}
                 >
-                  <span className="mb-2 text-3xl">
-                    {country.flag_emoji || "\u{1F3F3}\u{FE0F}"}
+                  <span className="mb-2 flex h-8 w-10 items-center justify-center">
+                    {getFlagImageUrl(country.flag_emoji) ? (
+                      <img
+                        src={getFlagImageUrl(country.flag_emoji, 80)!}
+                        alt=""
+                        className="h-7 w-auto rounded-sm object-contain"
+                        loading="eager"
+                      />
+                    ) : (
+                      <span className="text-3xl">{country.flag_emoji || "\u{1F3F3}\u{FE0F}"}</span>
+                    )}
                   </span>
                   <span
                     className={`text-sm font-medium transition-colors ${
@@ -1222,7 +1231,11 @@ export function ApplyClient({
                   animate={{ opacity: 1, y: 0 }}
                   className="mb-4 flex items-center justify-center gap-2 sm:mb-5"
                 >
-                  <span className="text-3xl">{c.flag_emoji || "\u{1F3F3}\u{FE0F}"}</span>
+                  {getFlagImageUrl(c.flag_emoji) ? (
+                    <img src={getFlagImageUrl(c.flag_emoji, 80)!} alt="" className="inline-block h-7 w-auto rounded-sm" />
+                  ) : (
+                    <span className="text-3xl">{c.flag_emoji || "\u{1F3F3}\u{FE0F}"}</span>
+                  )}
                   <span className="text-lg font-semibold text-slate-800 dark:text-slate-200">
                     {countryDisplayName(c)}
                   </span>
@@ -1378,7 +1391,11 @@ export function ApplyClient({
                   animate={{ opacity: 1, y: 0 }}
                   className="mb-4 flex items-center justify-center gap-2 sm:mb-5"
                 >
-                  <span className="text-3xl">{c.flag_emoji || "\u{1F3F3}\u{FE0F}"}</span>
+                  {getFlagImageUrl(c.flag_emoji) ? (
+                    <img src={getFlagImageUrl(c.flag_emoji, 80)!} alt="" className="inline-block h-7 w-auto rounded-sm" />
+                  ) : (
+                    <span className="text-3xl">{c.flag_emoji || "\u{1F3F3}\u{FE0F}"}</span>
+                  )}
                   <span className="text-lg font-semibold text-slate-800 dark:text-slate-200">
                     {countryDisplayName(c)}
                   </span>
