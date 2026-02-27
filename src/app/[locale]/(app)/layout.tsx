@@ -26,9 +26,9 @@ export default async function AppLayout({
     <AdminLocaleProvider>
       <div className="flex h-screen overflow-hidden">
         <Sidebar />
-        <div className="flex min-h-0 flex-1 flex-col">
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col">
           <Header userName={userName} />
-          <main className="min-h-0 flex-1 overflow-y-auto bg-muted/40 p-3 sm:p-6">
+          <main className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden bg-muted/40 p-3 sm:p-6">
             {children}
           </main>
         </div>

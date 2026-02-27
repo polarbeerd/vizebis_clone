@@ -795,30 +795,30 @@ export function ApplicationsClient({ data }: ApplicationsClientProps) {
       <div>
         <h1 className="text-2xl font-bold tracking-tight">{t("title")}</h1>
       </div>
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 shrink-0">
         <Button
           variant="outline"
           size="sm"
           onClick={() => setDeletedOpen(true)}
         >
-          <Trash2 className="mr-1 size-4" />
-          {t("deletedApplications")}
+          <Trash2 className="size-4 sm:mr-1" />
+          <span className="hidden sm:inline">{t("deletedApplications")}</span>
         </Button>
         <Button
           variant="default"
           size="sm"
           onClick={handleNewApplication}
         >
-          <Plus className="mr-1 size-4" />
-          {t("addNew")}
+          <Plus className="size-4 sm:mr-1" />
+          <span className="hidden sm:inline">{t("addNew")}</span>
         </Button>
       </div>
     </div>
   );
 
   const dateQuickFilters = (
-    <div className="flex flex-wrap items-center gap-2">
-      <Calendar className="size-4 text-muted-foreground" />
+    <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+      <Calendar className="size-4 text-muted-foreground hidden sm:block" />
       {(
         [
           ["all", t("allDates")],
@@ -839,12 +839,12 @@ export function ApplicationsClient({ data }: ApplicationsClientProps) {
         </Button>
       ))}
       {dateFilter === "custom" && (
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 w-full sm:w-auto">
           <Input
             type="date"
             value={customStart}
             onChange={(e) => setCustomStart(e.target.value)}
-            className="h-8 w-[140px]"
+            className="h-8 flex-1 sm:flex-none sm:w-[140px]"
             placeholder={t("startDate")}
           />
           <span className="text-muted-foreground">-</span>
@@ -852,7 +852,7 @@ export function ApplicationsClient({ data }: ApplicationsClientProps) {
             type="date"
             value={customEnd}
             onChange={(e) => setCustomEnd(e.target.value)}
-            className="h-8 w-[140px]"
+            className="h-8 flex-1 sm:flex-none sm:w-[140px]"
             placeholder={t("endDate")}
           />
         </div>
