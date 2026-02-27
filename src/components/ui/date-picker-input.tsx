@@ -53,8 +53,6 @@ export interface DatePickerInputProps {
   onChange: (value: string) => void;
   /** Minimum selectable date in "yyyy-MM-dd" — dates before are grayed out */
   minDate?: string;
-  /** Placeholder text when empty — falls back to "DD / MM / YYYY" */
-  placeholder?: string;
   /** Extra class names on the outer wrapper */
   className?: string;
   /** aria-invalid for error styling */
@@ -67,7 +65,6 @@ export function DatePickerInput({
   value,
   onChange,
   minDate,
-  placeholder,
   className,
   "aria-invalid": ariaInvalid,
   disabled,
@@ -196,8 +193,6 @@ export function DatePickerInput({
     return (date: Date) => isBefore(date, startOfDay(min));
   }, [minDate]);
 
-  const isEmpty = !dayStr && !monthStr && !yearStr;
-
   return (
     <div
       className={cn(
@@ -210,55 +205,48 @@ export function DatePickerInput({
       )}
     >
       {/* Segmented input area */}
-      <div className="flex flex-1 items-center px-3">
-        {isEmpty && !document?.activeElement?.closest("[data-date-picker-input]") && (
-          <span className="pointer-events-none absolute text-muted-foreground text-sm select-none">
-            {placeholder ?? "DD / MM / YYYY"}
-          </span>
-        )}
-        <div className="flex items-center gap-0" data-date-picker-input>
-          <input
-            ref={dayRef}
-            type="text"
-            inputMode="numeric"
-            value={dayStr}
-            onChange={handleDayChange}
-            onKeyDown={handleDayKeyDown}
-            onFocus={(e) => e.target.select()}
-            placeholder="DD"
-            disabled={disabled}
-            className="w-7 bg-transparent text-center text-sm outline-none placeholder:text-muted-foreground"
-            aria-label="Day"
-          />
-          <span className="text-muted-foreground text-sm select-none">/</span>
-          <input
-            ref={monthRef}
-            type="text"
-            inputMode="numeric"
-            value={monthStr}
-            onChange={handleMonthChange}
-            onKeyDown={handleMonthKeyDown}
-            onFocus={(e) => e.target.select()}
-            placeholder="MM"
-            disabled={disabled}
-            className="w-8 bg-transparent text-center text-sm outline-none placeholder:text-muted-foreground"
-            aria-label="Month"
-          />
-          <span className="text-muted-foreground text-sm select-none">/</span>
-          <input
-            ref={yearRef}
-            type="text"
-            inputMode="numeric"
-            value={yearStr}
-            onChange={handleYearChange}
-            onKeyDown={handleYearKeyDown}
-            onFocus={(e) => e.target.select()}
-            placeholder="YYYY"
-            disabled={disabled}
-            className="w-11 bg-transparent text-center text-sm outline-none placeholder:text-muted-foreground"
-            aria-label="Year"
-          />
-        </div>
+      <div className="flex flex-1 items-center gap-0 px-3">
+        <input
+          ref={dayRef}
+          type="text"
+          inputMode="numeric"
+          value={dayStr}
+          onChange={handleDayChange}
+          onKeyDown={handleDayKeyDown}
+          onFocus={(e) => e.target.select()}
+          placeholder="DD"
+          disabled={disabled}
+          className="w-7 bg-transparent text-center text-sm outline-none placeholder:text-muted-foreground"
+          aria-label="Day"
+        />
+        <span className="text-muted-foreground text-sm select-none">/</span>
+        <input
+          ref={monthRef}
+          type="text"
+          inputMode="numeric"
+          value={monthStr}
+          onChange={handleMonthChange}
+          onKeyDown={handleMonthKeyDown}
+          onFocus={(e) => e.target.select()}
+          placeholder="MM"
+          disabled={disabled}
+          className="w-8 bg-transparent text-center text-sm outline-none placeholder:text-muted-foreground"
+          aria-label="Month"
+        />
+        <span className="text-muted-foreground text-sm select-none">/</span>
+        <input
+          ref={yearRef}
+          type="text"
+          inputMode="numeric"
+          value={yearStr}
+          onChange={handleYearChange}
+          onKeyDown={handleYearKeyDown}
+          onFocus={(e) => e.target.select()}
+          placeholder="YYYY"
+          disabled={disabled}
+          className="w-11 bg-transparent text-center text-sm outline-none placeholder:text-muted-foreground"
+          aria-label="Year"
+        />
       </div>
 
       {/* Calendar trigger */}

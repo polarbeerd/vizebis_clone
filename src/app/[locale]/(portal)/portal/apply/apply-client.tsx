@@ -37,6 +37,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { PhoneInput } from "@/components/portal/phone-input";
+import { DatePickerInput } from "@/components/ui/date-picker-input";
 import { SegmentedControl } from "@/components/portal/segmented-control";
 import { useRouter, Link } from "@/i18n/navigation";
 import { toast } from "sonner";
@@ -786,14 +787,40 @@ export function ApplyClient({
       );
     }
 
+    // Date fields get the custom DatePickerInput
+    if (field.field_type === "date") {
+      const dateValue = form.watch(field.field_key) || "";
+      return (
+        <div key={field.field_key} data-field-key={field.field_key}>
+          <Label className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">
+            {label}
+            {field.is_required && <span className="text-red-500 ml-0.5">*</span>}
+          </Label>
+          <DatePickerInput
+            value={dateValue}
+            onChange={(v) =>
+              form.setValue(field.field_key, v, {
+                shouldValidate: true,
+                shouldDirty: true,
+                shouldTouch: true,
+              })
+            }
+            className="border-slate-200/80 dark:border-slate-700/80"
+            aria-invalid={error ? true : undefined}
+          />
+          {error && (
+            <p className="mt-1 text-xs text-red-500">{tPortal("required")}</p>
+          )}
+        </div>
+      );
+    }
+
     const inputType =
       field.field_type === "email"
         ? "email"
-        : field.field_type === "date"
-          ? "date"
-          : field.field_type === "number"
-            ? "number"
-            : "text";
+        : field.field_type === "number"
+          ? "number"
+          : "text";
 
     return (
       <div key={field.field_key} data-field-key={field.field_key}>
