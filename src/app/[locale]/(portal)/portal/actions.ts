@@ -1368,3 +1368,46 @@ export async function toggleNotePin(
 
   return { error: null };
 }
+
+export async function updateApplicationNote(
+  noteId: number,
+  content: string
+): Promise<{ error: string | null }> {
+  const user = await getAuthenticatedUser();
+  if (!user) return { error: "UNAUTHORIZED" };
+
+  const supabase = createServiceClient();
+
+  const { error } = await supabase
+    .from("application_notes")
+    .update({ content })
+    .eq("id", noteId);
+
+  if (error) {
+    console.error("Error updating note:", error);
+    return { error: "UPDATE_FAILED" };
+  }
+
+  return { error: null };
+}
+
+export async function deleteApplicationNote(
+  noteId: number
+): Promise<{ error: string | null }> {
+  const user = await getAuthenticatedUser();
+  if (!user) return { error: "UNAUTHORIZED" };
+
+  const supabase = createServiceClient();
+
+  const { error } = await supabase
+    .from("application_notes")
+    .delete()
+    .eq("id", noteId);
+
+  if (error) {
+    console.error("Error deleting note:", error);
+    return { error: "DELETE_FAILED" };
+  }
+
+  return { error: null };
+}

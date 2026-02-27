@@ -218,7 +218,7 @@
     "groupBadge": "Grup",
     "groupMembers": "Grup Uyeleri",
     "addNote": "Not Ekle",
-    "notePlaceholder": "Bir not yazin...",
+    "notePlaceholder": "Bu başvuru hakkında not yazın...",
     "noteCategory": "Kategori",
     "noteCategoryInternal": "Dahili",
     "noteCategoryFollowup": "Musteri Takibi",
@@ -226,7 +226,11 @@
     "pinNote": "Sabitle",
     "unpinNote": "Sabitlemeyi Kaldir",
     "noteAdded": "Not eklendi",
-    "noNotes": "Henuz not yok"
+    "noNotes": "Henuz not yok",
+    "noteSaved": "Not kaydedildi",
+    "noteDeleted": "Not silindi",
+    "deleteNoteConfirm": "Bu notu sil?",
+    "noteSaving": "Kaydediliyor..."
   },
   "visaStatus": {
     "pending": "Beklemede",
@@ -1372,7 +1376,7 @@
     "editDescription": "Ulke bilgilerini guncelleyin.",
     "countryName": "Ulke Adi",
     "flagEmoji": "Bayrak Emojisi",
-    "flagEmojiHint": "Bayrak emojisi yapistin (orn. \ud83c\udde9\ud83c\uddea)",
+    "flagEmojiHint": "Bayrak emojisi yapistin (orn. 🇩🇪)",
     "isActive": "Aktif",
     "sortOrder": "Siralama",
     "searchPlaceholder": "Ulke ara...",

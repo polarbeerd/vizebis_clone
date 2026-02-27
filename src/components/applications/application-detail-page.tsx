@@ -521,14 +521,14 @@ export function ApplicationDetailPage({
     }
 
     return (
-      <div className="space-y-5">
+      <div className="space-y-3">
         {sectionEntries.map(([sectionKey, sectionItems]) => {
           const i18nKey = SECTION_I18N_MAP[sectionKey] ?? "sectionOther";
           const sectionLabel = tApply(i18nKey as Parameters<typeof tApply>[0]);
 
           return (
             <div key={sectionKey}>
-              <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+              <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">
                 {sectionLabel}
               </h4>
               <div className="space-y-0">
@@ -634,7 +634,7 @@ export function ApplicationDetailPage({
 
   // ── Render ──────────────────────────────────────────────────────
   return (
-    <div className="space-y-6 pb-24">
+    <div className="space-y-4 pb-24">
       {/* ── Top Bar ───────────────────────────────────────────── */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
@@ -785,7 +785,7 @@ export function ApplicationDetailPage({
       </div>
 
       {/* ── Process Tracking + Finance (side-by-side, compact) ── */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         {/* Process Tracking */}
         <Card>
           <CardHeader className="pb-1">
@@ -940,6 +940,16 @@ export function ApplicationDetailPage({
         </Card>
       </div>
 
+      {/* ── Notes ──────────────────────────────────────────────── */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">{tDetail("notesSection")}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <NotesTab applicationId={applicationId} />
+        </CardContent>
+      </Card>
+
       {/* ── Customer Data (from custom_fields) ────────────────── */}
       <Card>
         <CardHeader className="pb-3">
@@ -970,16 +980,6 @@ export function ApplicationDetailPage({
         </CardHeader>
         <CardContent>
           <AutomationTab applicationId={applicationId} country={app.country ?? ""} />
-        </CardContent>
-      </Card>
-
-      {/* ── Notes ──────────────────────────────────────────────── */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base">{tDetail("notesSection")}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <NotesTab applicationId={applicationId} />
         </CardContent>
       </Card>
 

@@ -3,8 +3,8 @@
 import * as React from "react";
 import { useTranslations } from "next-intl";
 
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { DatePickerInput } from "@/components/ui/date-picker-input";
 import type { SmartFieldProps } from "./registry";
 
 interface TravelDatesData {
@@ -67,12 +67,10 @@ export function TravelDates({
             {t("departureDate")}
             {isRequired && <span className="ml-1 text-red-500">*</span>}
           </Label>
-          <Input
-            type="date"
+          <DatePickerInput
             value={data.departure_date}
-            onChange={(e) => update({ departure_date: e.target.value })}
-            min={today}
-            className="h-11 rounded-xl"
+            onChange={(v) => update({ departure_date: v })}
+            minDate={today}
             aria-invalid={
               showErrors && (departureEmpty || departurePast) ? true : undefined
             }
@@ -95,12 +93,10 @@ export function TravelDates({
             {t("returnDate")}
             {isRequired && <span className="ml-1 text-red-500">*</span>}
           </Label>
-          <Input
-            type="date"
+          <DatePickerInput
             value={data.return_date}
-            onChange={(e) => update({ return_date: e.target.value })}
-            min={data.departure_date || today}
-            className="h-11 rounded-xl"
+            onChange={(v) => update({ return_date: v })}
+            minDate={data.departure_date || today}
             aria-invalid={
               showErrors && (returnEmpty || returnBeforeDeparture) ? true : undefined
             }

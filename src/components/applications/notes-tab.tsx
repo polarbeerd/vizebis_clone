@@ -1,31 +1,18 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useTranslations } from "next-intl";
-import {
-  Pin,
-  PinOff,
-  Send,
-  Loader2,
-  MessageSquare,
-} from "lucide-react";
+import { Loader2, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import {
   getApplicationNotes,
   addApplicationNote,
-  toggleNotePin,
+  updateApplicationNote,
+  deleteApplicationNote,
 } from "@/app/[locale]/(portal)/portal/actions";
-import type { ApplicationNote } from "@/app/[locale]/(portal)/portal/actions";
 
 interface NotesTabProps {
   applicationId: number | null;
@@ -34,18 +21,27 @@ interface NotesTabProps {
 export function NotesTab({ applicationId }: NotesTabProps) {
   const t = useTranslations("applications");
 
-  const [notes, setNotes] = useState<ApplicationNote[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [sending, setSending] = useState(false);
+  const [noteId, setNoteId] = useState<number | null>(null);
   const [content, setContent] = useState("");
-  const [category, setCategory] = useState("internal");
+  const [savedContent, setSavedContent] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const fetchNotes = useCallback(async () => {
+  const fetchNote = useCallback(async () => {
     if (!applicationId) return;
     setLoading(true);
     try {
-      const data = await getApplicationNotes(applicationId);
-      setNotes(data);
+      const notes = await getApplicationNotes(applicationId);
+      if (notes.length > 0) {
+        setNoteId(notes[0].id);
+        setContent(notes[0].content);
+        setSavedContent(notes[0].content);
+      } else {
+        setNoteId(null);
+        setContent("");
+        setSavedContent("");
+      }
     } catch {
       // silent
     } finally {
@@ -54,81 +50,90 @@ export function NotesTab({ applicationId }: NotesTabProps) {
   }, [applicationId]);
 
   useEffect(() => {
-    fetchNotes();
-  }, [fetchNotes]);
+    fetchNote();
+  }, [fetchNote]);
 
-  const handleSend = async () => {
-    if (!applicationId || !content.trim()) return;
-    setSending(true);
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    };
+  }, []);
+
+  const saveNote = useCallback(
+    async (text: string) => {
+      if (!applicationId || text.trim() === savedContent.trim()) return;
+      if (!text.trim()) return; // Don't save empty — use delete instead
+
+      setSaving(true);
+      try {
+        if (noteId) {
+          // Update existing note
+          const result = await updateApplicationNote(noteId, text.trim());
+          if (result.error) {
+            toast.error(t("saveError"));
+            return;
+          }
+        } else {
+          // Create new note
+          const supabase = createClient();
+          const {
+            data: { user },
+          } = await supabase.auth.getUser();
+          if (!user) return;
+
+          const result = await addApplicationNote({
+            applicationId,
+            content: text.trim(),
+            category: "internal",
+            authorId: user.id,
+          });
+          if (result.error) {
+            toast.error(t("saveError"));
+            return;
+          }
+          if (result.note) {
+            setNoteId(result.note.id);
+          }
+        }
+        setSavedContent(text.trim());
+        toast.success(t("noteSaved"));
+      } catch {
+        toast.error(t("saveError"));
+      } finally {
+        setSaving(false);
+      }
+    },
+    [applicationId, noteId, savedContent, t]
+  );
+
+  const handleBlur = () => {
+    // Debounced save on blur
+    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    saveTimeoutRef.current = setTimeout(() => {
+      saveNote(content);
+    }, 300);
+  };
+
+  const handleDelete = async () => {
+    if (!noteId) return;
+
+    setSaving(true);
     try {
-      // Get current user
-      const supabase = createClient();
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const result = await addApplicationNote({
-        applicationId,
-        content: content.trim(),
-        category,
-        authorId: user.id,
-      });
-
+      const result = await deleteApplicationNote(noteId);
       if (result.error) {
-        toast.error(t("addNote"));
+        toast.error(t("deleteError"));
         return;
       }
-
-      toast.success(t("noteAdded"));
+      setNoteId(null);
       setContent("");
-      await fetchNotes();
+      setSavedContent("");
+      toast.success(t("noteDeleted"));
     } catch {
-      toast.error(t("addNote"));
+      toast.error(t("deleteError"));
     } finally {
-      setSending(false);
+      setSaving(false);
     }
-  };
-
-  const handleTogglePin = async (note: ApplicationNote) => {
-    const result = await toggleNotePin(note.id, !note.is_pinned);
-    if (result.error) return;
-    setNotes((prev) =>
-      prev.map((n) =>
-        n.id === note.id ? { ...n, is_pinned: !n.is_pinned } : n
-      )
-    );
-  };
-
-  const categoryBadge = (cat: string) => {
-    const colors: Record<string, string> = {
-      internal: "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400",
-      client_followup: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
-      consulate: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
-    };
-    const labels: Record<string, string> = {
-      internal: t("noteCategoryInternal"),
-      client_followup: t("noteCategoryFollowup"),
-      consulate: t("noteCategoryConsulate"),
-    };
-    return (
-      <span
-        className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-medium ${colors[cat] ?? colors.internal}`}
-      >
-        {labels[cat] ?? cat}
-      </span>
-    );
-  };
-
-  const timeAgo = (dateStr: string) => {
-    const diff = Date.now() - new Date(dateStr).getTime();
-    const mins = Math.floor(diff / 60000);
-    if (mins < 1) return "now";
-    if (mins < 60) return `${mins}m`;
-    const hours = Math.floor(mins / 60);
-    if (hours < 24) return `${hours}h`;
-    const days = Math.floor(hours / 24);
-    return `${days}d`;
   };
 
   if (!applicationId) {
@@ -139,95 +144,44 @@ export function NotesTab({ applicationId }: NotesTabProps) {
     );
   }
 
-  return (
-    <div className="flex flex-col gap-4">
-      {/* Notes list */}
-      <div className="max-h-[300px] overflow-y-auto space-y-2">
-        {loading && (
-          <div className="flex justify-center py-4">
-            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-          </div>
-        )}
-
-        {!loading && notes.length === 0 && (
-          <div className="flex flex-col items-center gap-2 py-8 text-muted-foreground">
-            <MessageSquare className="h-8 w-8 opacity-40" />
-            <p className="text-sm">{t("noNotes")}</p>
-          </div>
-        )}
-
-        {notes.map((note) => (
-          <div
-            key={note.id}
-            className={`rounded-lg border p-3 text-sm ${
-              note.is_pinned
-                ? "border-amber-200 bg-amber-50/50 dark:border-amber-800/50 dark:bg-amber-950/20"
-                : "border-border"
-            }`}
-          >
-            <div className="flex items-start justify-between gap-2">
-              <p className="flex-1 text-foreground whitespace-pre-wrap">
-                {note.content}
-              </p>
-              <button
-                onClick={() => handleTogglePin(note)}
-                className="shrink-0 rounded p-1 text-muted-foreground hover:text-foreground transition-colors"
-                title={note.is_pinned ? t("unpinNote") : t("pinNote")}
-              >
-                {note.is_pinned ? (
-                  <PinOff className="h-3.5 w-3.5" />
-                ) : (
-                  <Pin className="h-3.5 w-3.5" />
-                )}
-              </button>
-            </div>
-            <div className="mt-1.5 flex items-center gap-2 text-xs text-muted-foreground">
-              {note.author_name && (
-                <span className="font-medium">{note.author_name}</span>
-              )}
-              {categoryBadge(note.category)}
-              <span>{timeAgo(note.created_at)}</span>
-            </div>
-          </div>
-        ))}
+  if (loading) {
+    return (
+      <div className="flex justify-center py-4">
+        <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
       </div>
+    );
+  }
 
-      {/* Quick-add */}
-      <div className="flex items-center gap-2 border-t pt-3">
-        <Input
-          value={content}
-          onChange={(e) => setContent(e.target.value)}
-          placeholder={t("notePlaceholder")}
-          className="flex-1 h-9"
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && !e.shiftKey) {
-              e.preventDefault();
-              handleSend();
-            }
-          }}
-        />
-        <Select value={category} onValueChange={setCategory}>
-          <SelectTrigger className="h-9 w-[130px]">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="internal">{t("noteCategoryInternal")}</SelectItem>
-            <SelectItem value="client_followup">{t("noteCategoryFollowup")}</SelectItem>
-            <SelectItem value="consulate">{t("noteCategoryConsulate")}</SelectItem>
-          </SelectContent>
-        </Select>
-        <Button
-          size="sm"
-          onClick={handleSend}
-          disabled={!content.trim() || sending}
-          className="h-9"
-        >
-          {sending ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <Send className="h-4 w-4" />
+  return (
+    <div className="flex flex-col gap-2">
+      <Textarea
+        value={content}
+        onChange={(e) => setContent(e.target.value)}
+        onBlur={handleBlur}
+        placeholder={t("notePlaceholder")}
+        className="min-h-[100px] resize-y text-sm"
+        rows={4}
+      />
+      <div className="flex items-center justify-between">
+        <div className="text-xs text-muted-foreground">
+          {saving && (
+            <span className="flex items-center gap-1">
+              <Loader2 className="h-3 w-3 animate-spin" />
+              {t("noteSaving")}
+            </span>
           )}
-        </Button>
+        </div>
+        {noteId && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleDelete}
+            disabled={saving}
+            className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950 h-7 px-2"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </Button>
+        )}
       </div>
     </div>
   );

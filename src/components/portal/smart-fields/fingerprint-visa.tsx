@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { DatePickerInput } from "@/components/ui/date-picker-input";
 import { SegmentedControl } from "@/components/portal/segmented-control";
 import type { SmartFieldProps } from "./registry";
 
@@ -175,11 +176,9 @@ export function FingerprintVisa({
                       {t("visaDateLabel")}
                       <span className="ml-1 text-red-500">*</span>
                     </Label>
-                    <Input
-                      type="date"
+                    <DatePickerInput
                       value={data.visa_date}
-                      onChange={(e) => update({ visa_date: e.target.value })}
-                      className="h-11 rounded-xl"
+                      onChange={(v) => update({ visa_date: v })}
                       aria-invalid={showErrors && visaDateEmpty ? true : undefined}
                     />
                     {showErrors && visaDateEmpty && (

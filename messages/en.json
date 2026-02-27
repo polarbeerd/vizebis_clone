@@ -218,7 +218,7 @@
     "groupBadge": "Group",
     "groupMembers": "Group Members",
     "addNote": "Add Note",
-    "notePlaceholder": "Write a note...",
+    "notePlaceholder": "Write notes about this application...",
     "noteCategory": "Category",
     "noteCategoryInternal": "Internal",
     "noteCategoryFollowup": "Client Follow-up",
@@ -226,7 +226,11 @@
     "pinNote": "Pin",
     "unpinNote": "Unpin",
     "noteAdded": "Note added",
-    "noNotes": "No notes yet"
+    "noNotes": "No notes yet",
+    "noteSaved": "Note saved",
+    "noteDeleted": "Note deleted",
+    "deleteNoteConfirm": "Delete this note?",
+    "noteSaving": "Saving..."
   },
   "visaStatus": {
     "pending": "Pending",
@@ -1372,7 +1376,7 @@
     "editDescription": "Update the country details.",
     "countryName": "Country Name",
     "flagEmoji": "Flag Emoji",
-    "flagEmojiHint": "Paste a flag emoji (e.g. \ud83c\udde9\ud83c\uddea)",
+    "flagEmojiHint": "Paste a flag emoji (e.g. 🇩🇪)",
     "isActive": "Active",
     "sortOrder": "Sort Order",
     "searchPlaceholder": "Search countries...",
