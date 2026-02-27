@@ -1482,7 +1482,7 @@
     "uploadTitle": "Gerekli Belgeleri Yukleyin",
     "uploadSubtitle": "Asagidaki belgelerin her birini yukleyin. Telefon kameranizi kullanabilir veya dosya secebilirsiniz.",
     "required": "Zorunlu",
-    "optional": "Istege Bagli",
+    "optional": "opsiyonel",
     "uploaded": "Yuklendi",
     "tapToUpload": "Yuklemek veya fotograf cekmek icin dokunun",
     "dragOrClick": "Surukle birak veya secmek icin tiklayin",

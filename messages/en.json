@@ -1482,7 +1482,7 @@
     "uploadTitle": "Upload Required Documents",
     "uploadSubtitle": "Upload each required document below. You can use your phone camera or select files.",
     "required": "Required",
-    "optional": "Optional",
+    "optional": "optional",
     "uploaded": "Uploaded",
     "tapToUpload": "Tap to upload or take a photo",
     "dragOrClick": "Drag & drop or click to select",

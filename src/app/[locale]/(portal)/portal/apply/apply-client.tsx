@@ -689,7 +689,7 @@ export function ApplyClient({
         <div key={field.field_key} data-field-key={field.field_key}>
           <Label className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">
             {label}
-            {field.is_required && <span className="text-red-500 ml-0.5">*</span>}
+            {field.is_required ? <span className="text-red-500 ml-0.5">*</span> : <span className="ml-1.5 text-xs font-normal text-slate-400 dark:text-slate-500">({t("optional")})</span>}
           </Label>
           <Select
             value={form.watch(field.field_key) || ""}
@@ -722,7 +722,7 @@ export function ApplyClient({
         <div key={field.field_key} data-field-key={field.field_key} className="col-span-full">
           <Label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">
             {label}
-            {field.is_required && <span className="text-red-500 ml-0.5">*</span>}
+            {field.is_required ? <span className="text-red-500 ml-0.5">*</span> : <span className="ml-1.5 text-xs font-normal text-slate-400 dark:text-slate-500">({t("optional")})</span>}
           </Label>
           {hintKey && (
             <p className="mb-2 text-xs text-slate-400 dark:text-slate-500">
@@ -766,7 +766,7 @@ export function ApplyClient({
         <div key={field.field_key} data-field-key={field.field_key}>
           <Label className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">
             {label}
-            {field.is_required && <span className="text-red-500 ml-0.5">*</span>}
+            {field.is_required ? <span className="text-red-500 ml-0.5">*</span> : <span className="ml-1.5 text-xs font-normal text-slate-400 dark:text-slate-500">({t("optional")})</span>}
           </Label>
           <PhoneInput
             value={form.watch(field.field_key) || ""}
@@ -794,7 +794,7 @@ export function ApplyClient({
         <div key={field.field_key} data-field-key={field.field_key}>
           <Label className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">
             {label}
-            {field.is_required && <span className="text-red-500 ml-0.5">*</span>}
+            {field.is_required ? <span className="text-red-500 ml-0.5">*</span> : <span className="ml-1.5 text-xs font-normal text-slate-400 dark:text-slate-500">({t("optional")})</span>}
           </Label>
           <DatePickerInput
             value={dateValue}
@@ -826,7 +826,7 @@ export function ApplyClient({
       <div key={field.field_key} data-field-key={field.field_key}>
         <Label className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">
           {label}
-          {field.is_required && <span className="text-red-500 ml-0.5">*</span>}
+          {field.is_required ? <span className="text-red-500 ml-0.5">*</span> : <span className="ml-1.5 text-xs font-normal text-slate-400 dark:text-slate-500">({t("optional")})</span>}
         </Label>
         <Input
           type={inputType}
