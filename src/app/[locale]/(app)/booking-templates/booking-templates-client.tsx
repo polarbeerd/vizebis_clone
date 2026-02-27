@@ -233,18 +233,7 @@ export function BookingTemplatesClient({ data }: BookingTemplatesClientProps) {
                     className={!hotel.is_active ? "opacity-60" : ""}
                   >
                     <CardHeader>
-                      <div className="flex items-start justify-between gap-2">
-                        <CardTitle className="text-base">{hotel.name}</CardTitle>
-                        <Badge
-                          variant={
-                            hotel.type === "individual" ? "default" : "secondary"
-                          }
-                        >
-                          {hotel.type === "individual"
-                            ? t("individual")
-                            : t("group")}
-                        </Badge>
-                      </div>
+                      <CardTitle className="text-base">{hotel.name}</CardTitle>
                     </CardHeader>
 
                     <CardContent className="space-y-2">

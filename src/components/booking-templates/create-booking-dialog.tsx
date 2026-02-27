@@ -5,7 +5,8 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useTranslations } from "next-intl";
-import { FileDown, Loader2 } from "lucide-react";
+import { FileDown, Loader2, CalendarIcon } from "lucide-react";
+import { format, parse } from "date-fns";
 import { toast } from "sonner";
 
 import {
@@ -27,7 +28,6 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Select,
   SelectContent,
@@ -35,6 +35,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { cn } from "@/lib/utils";
 
 import type { HotelRow } from "@/app/[locale]/(app)/booking-templates/page";
 
@@ -230,7 +237,7 @@ export function CreateBookingDialog({
             onSubmit={form.handleSubmit(onSubmit)}
             className="flex flex-col flex-1 overflow-hidden"
           >
-            <ScrollArea className="flex-1">
+            <div className="flex-1 overflow-y-auto">
               <div className="space-y-4 px-6 py-4">
                 {/* Hotel selection */}
                 <FormField
@@ -315,9 +322,33 @@ export function CreateBookingDialog({
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>{t("checkinDate")} *</FormLabel>
-                        <FormControl>
-                          <Input type="date" {...field} />
-                        </FormControl>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <FormControl>
+                              <Button
+                                variant="outline"
+                                className={cn(
+                                  "w-full justify-start text-left font-normal",
+                                  !field.value && "text-muted-foreground"
+                                )}
+                              >
+                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                {field.value
+                                  ? format(parse(field.value, "yyyy-MM-dd", new Date()), "dd/MM/yyyy")
+                                  : "dd/mm/yyyy"}
+                              </Button>
+                            </FormControl>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                              mode="single"
+                              selected={field.value ? parse(field.value, "yyyy-MM-dd", new Date()) : undefined}
+                              onSelect={(date) =>
+                                field.onChange(date ? format(date, "yyyy-MM-dd") : "")
+                              }
+                            />
+                          </PopoverContent>
+                        </Popover>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -330,9 +361,33 @@ export function CreateBookingDialog({
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>{t("checkoutDate")} *</FormLabel>
-                        <FormControl>
-                          <Input type="date" {...field} />
-                        </FormControl>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <FormControl>
+                              <Button
+                                variant="outline"
+                                className={cn(
+                                  "w-full justify-start text-left font-normal",
+                                  !field.value && "text-muted-foreground"
+                                )}
+                              >
+                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                {field.value
+                                  ? format(parse(field.value, "yyyy-MM-dd", new Date()), "dd/MM/yyyy")
+                                  : "dd/mm/yyyy"}
+                              </Button>
+                            </FormControl>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                              mode="single"
+                              selected={field.value ? parse(field.value, "yyyy-MM-dd", new Date()) : undefined}
+                              onSelect={(date) =>
+                                field.onChange(date ? format(date, "yyyy-MM-dd") : "")
+                              }
+                            />
+                          </PopoverContent>
+                        </Popover>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -453,7 +508,7 @@ export function CreateBookingDialog({
                   </div>
                 </div>
               </div>
-            </ScrollArea>
+            </div>
 
             {/* Footer */}
             <div className="flex items-center justify-end gap-2 border-t px-6 py-4">
