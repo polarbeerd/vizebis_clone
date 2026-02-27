@@ -105,7 +105,7 @@ export function CalendarClient({ appointments }: CalendarClientProps) {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-4 lg:gap-6">
         {/* Calendar Grid */}
         <div className="rounded-lg border bg-card">
           {/* Month Navigation */}
@@ -127,7 +127,7 @@ export function CalendarClient({ appointments }: CalendarClientProps) {
             {dayNames.map((dayName) => (
               <div
                 key={dayName}
-                className="px-2 py-2 text-center text-xs font-medium text-muted-foreground uppercase"
+                className="px-1 sm:px-2 py-2 text-center text-[10px] sm:text-xs font-medium text-muted-foreground uppercase truncate"
               >
                 {dayName}
               </div>
@@ -150,7 +150,7 @@ export function CalendarClient({ appointments }: CalendarClientProps) {
                   key={idx}
                   onClick={() => handleDayClick(day)}
                   className={cn(
-                    "relative flex flex-col items-center gap-1 border-b border-r p-2 min-h-[80px] text-sm transition-colors hover:bg-accent/50",
+                    "relative flex flex-col items-center gap-1 border-b border-r p-1 sm:p-2 min-h-[60px] sm:min-h-[80px] text-sm transition-colors hover:bg-accent/50",
                     !inCurrentMonth && "text-muted-foreground/40 bg-muted/20",
                     isSelected && "bg-accent ring-2 ring-primary ring-inset",
                     todayFlag && !isSelected && "bg-primary/5"

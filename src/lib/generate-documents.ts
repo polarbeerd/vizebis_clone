@@ -313,17 +313,26 @@ async function generateLetterOfIntent(
       throw new Error("GEMINI_API_KEY not configured");
     }
 
-    const geminiResponse = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: { temperature: 0.7, maxOutputTokens: 2048 },
-        }),
-      }
-    );
+    const geminiController = new AbortController();
+    const geminiTimeout = setTimeout(() => geminiController.abort(), 60_000);
+
+    let geminiResponse: Response;
+    try {
+      geminiResponse = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: prompt }] }],
+            generationConfig: { temperature: 0.7, maxOutputTokens: 2048 },
+          }),
+          signal: geminiController.signal,
+        }
+      );
+    } finally {
+      clearTimeout(geminiTimeout);
+    }
 
     if (!geminiResponse.ok) {
       const errorBody = await geminiResponse.text();
@@ -343,14 +352,23 @@ async function generateLetterOfIntent(
     // Convert HTML to PDF via Python service
     let storagePath: string | null = null;
     try {
-      const pdfResponse = await fetch(`${PDF_SERVICE_URL}/html-to-pdf`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(PDF_SERVICE_API_KEY ? { "x-api-key": PDF_SERVICE_API_KEY } : {}),
-        },
-        body: JSON.stringify({ html: htmlContent }),
-      });
+      const pdfController = new AbortController();
+      const pdfTimeout = setTimeout(() => pdfController.abort(), 30_000);
+
+      let pdfResponse: Response;
+      try {
+        pdfResponse = await fetch(`${PDF_SERVICE_URL}/html-to-pdf`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...(PDF_SERVICE_API_KEY ? { "x-api-key": PDF_SERVICE_API_KEY } : {}),
+          },
+          body: JSON.stringify({ html: htmlContent }),
+          signal: pdfController.signal,
+        });
+      } finally {
+        clearTimeout(pdfTimeout);
+      }
 
       if (pdfResponse.ok) {
         const pdfResult = await pdfResponse.json();

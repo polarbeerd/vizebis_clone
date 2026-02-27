@@ -96,8 +96,8 @@ export function DataTable<TData, TValue>({
       >
         {toolbarExtra}
       </DataTableToolbar>
-      <div className="rounded-md border">
-        <Table>
+      <div className="rounded-md border overflow-x-auto">
+        <Table className="min-w-[640px]">
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>

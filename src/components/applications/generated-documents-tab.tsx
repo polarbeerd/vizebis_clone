@@ -138,21 +138,44 @@ export function GeneratedDocumentsTab({ applicationId }: GeneratedDocumentsTabPr
     });
   }
 
+  // Poll with exponential backoff until status changes from "generating"
+  function pollUntilDone(maxAttempts = 12) {
+    let attempt = 0;
+    const delays = [2000, 3000, 4000, 5000, 5000, 5000, 5000, 5000, 5000, 5000, 5000, 5000];
+    function tick() {
+      if (attempt >= maxAttempts) {
+        setGenerating(null);
+        return;
+      }
+      const delay = delays[attempt] ?? 5000;
+      attempt++;
+      setTimeout(async () => {
+        await fetchDocs();
+        // Check if still generating — if so, keep polling
+        setDocs((prev) => {
+          const stillGenerating = prev.some((d) => d.status === "generating");
+          if (stillGenerating && attempt < maxAttempts) {
+            tick();
+          } else {
+            setGenerating(null);
+          }
+          return prev;
+        });
+      }, delay);
+    }
+    tick();
+  }
+
   // Generate booking PDF manually
   async function handleGenerateBooking(hotelId: string) {
     if (!applicationId || !hotelId) return;
     setGenerating("booking");
     try {
-      // Trigger server-side generation
       await triggerGeneration();
       toast.success(t("generating"));
-      // Poll for status update
-      setTimeout(() => fetchDocs(), 2000);
-      setTimeout(() => fetchDocs(), 5000);
-      setTimeout(() => fetchDocs(), 10000);
+      pollUntilDone();
     } catch {
       toast.error(t("error"));
-    } finally {
       setGenerating(null);
     }
   }
@@ -164,12 +187,9 @@ export function GeneratedDocumentsTab({ applicationId }: GeneratedDocumentsTabPr
     try {
       await triggerGeneration();
       toast.success(t("generating"));
-      setTimeout(() => fetchDocs(), 2000);
-      setTimeout(() => fetchDocs(), 5000);
-      setTimeout(() => fetchDocs(), 10000);
+      pollUntilDone();
     } catch {
       toast.error(t("error"));
-    } finally {
       setGenerating(null);
     }
   }
@@ -294,9 +314,9 @@ export function GeneratedDocumentsTab({ applicationId }: GeneratedDocumentsTabPr
             ) : (
               <div className="space-y-3">
                 <p className="text-sm text-muted-foreground">{t("noDocuments")}</p>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
                   <Select value={selectedHotel} onValueChange={setSelectedHotel}>
-                    <SelectTrigger className="w-[200px]">
+                    <SelectTrigger className="w-full sm:w-[200px]">
                       <SelectValue placeholder={t("selectHotel")} />
                     </SelectTrigger>
                     <SelectContent>

@@ -53,7 +53,7 @@ export function DataTableToolbar<TData>({
       {children}
       <div className="flex flex-wrap items-center gap-2">
         {searchKey && (
-          <div className="relative flex-1 min-w-[200px] max-w-sm">
+          <div className="relative flex-1 min-w-0 w-full sm:min-w-[200px] sm:max-w-sm">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
             <Input
               placeholder={searchPlaceholder || t("search")}
@@ -192,7 +192,7 @@ export function DataTableToolbar<TData>({
           </Button>
         )}
 
-        <div className="ml-auto flex items-center gap-2">
+        <div className="ml-auto flex items-center gap-2 shrink-0">
           {onExportCsv && (
             <Button variant="outline" size="sm" className="h-9" onClick={onExportCsv}>
               <Download className="mr-2 size-3.5" />

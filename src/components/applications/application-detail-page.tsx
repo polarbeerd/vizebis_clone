@@ -174,9 +174,9 @@ function FieldRow({
   onUpdate: (key: string, value: unknown) => void;
 }) {
   return (
-    <div className="grid grid-cols-3 gap-2 py-1.5 items-center">
-      <span className="text-muted-foreground text-sm">{label}</span>
-      <div className="col-span-2">
+    <div className="grid grid-cols-2 sm:grid-cols-3 gap-1 sm:gap-2 py-1.5 items-center">
+      <span className="text-muted-foreground text-xs sm:text-sm">{label}</span>
+      <div className="sm:col-span-2">
         <FieldValue
           fieldKey={fieldKey}
           type={type}
@@ -192,10 +192,10 @@ function FieldRow({
 
 function ReadOnlyRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (
-    <div className="grid grid-cols-3 gap-2 py-1.5 items-center">
-      <span className="text-muted-foreground text-sm">{label}</span>
-      <div className="col-span-2">
-        <span className="text-sm">{value || <span className="text-muted-foreground">-</span>}</span>
+    <div className="grid grid-cols-2 sm:grid-cols-3 gap-1 sm:gap-2 py-1.5 items-center">
+      <span className="text-muted-foreground text-xs sm:text-sm">{label}</span>
+      <div className="sm:col-span-2">
+        <span className="text-sm break-words">{value || <span className="text-muted-foreground">-</span>}</span>
       </div>
     </div>
   );
@@ -552,10 +552,10 @@ export function ApplicationDetailPage({
 
     if (editMode) {
       return (
-        <div key={key} className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-1">
-          <div className="grid grid-cols-3 gap-2 py-1.5 items-center">
-            <span className="text-muted-foreground text-sm">{label}</span>
-            <div className="col-span-2">
+        <div key={key} className="grid grid-cols-1 md:grid-cols-2 gap-x-4 md:gap-x-8 gap-y-1">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-1 sm:gap-2 py-1.5 items-center">
+            <span className="text-muted-foreground text-xs sm:text-sm">{label}</span>
+            <div className="sm:col-span-2">
               <Input
                 className="h-8 text-sm"
                 value={portalEdits[key] ?? String(cf[key] ?? "")}
@@ -573,7 +573,7 @@ export function ApplicationDetailPage({
     }
 
     return (
-      <div key={key} className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-1">
+      <div key={key} className="grid grid-cols-1 md:grid-cols-2 gap-x-4 md:gap-x-8 gap-y-1">
         <ReadOnlyRow label={label} value={String(cf[key] ?? "")} />
       </div>
     );
@@ -590,7 +590,7 @@ export function ApplicationDetailPage({
     const subKeys = Object.keys(subData).filter((k) => k !== "_valid");
 
     return (
-      <div key={templateKey} className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-1">
+      <div key={templateKey} className="grid grid-cols-1 md:grid-cols-2 gap-x-4 md:gap-x-8 gap-y-1">
         {subKeys.map((subKey) => {
           const editKey = `_smart.${templateKey}.${subKey}`;
           const subField = tmpl?.sub_fields?.find((sf) => sf.key === subKey);
@@ -602,9 +602,9 @@ export function ApplicationDetailPage({
 
           if (editMode) {
             return (
-              <div key={subKey} className="grid grid-cols-3 gap-2 py-1.5 items-center">
-                <span className="text-muted-foreground text-sm">{subLabel}</span>
-                <div className="col-span-2">
+              <div key={subKey} className="grid grid-cols-2 sm:grid-cols-3 gap-1 sm:gap-2 py-1.5 items-center">
+                <span className="text-muted-foreground text-xs sm:text-sm">{subLabel}</span>
+                <div className="sm:col-span-2">
                   <Input
                     className="h-8 text-sm"
                     value={portalEdits[editKey] ?? String(subData[subKey] ?? "")}
@@ -793,9 +793,9 @@ export function ApplicationDetailPage({
           </CardHeader>
           <CardContent className="space-y-0">
             {/* Visa Status */}
-            <div className="grid grid-cols-3 gap-2 py-1 items-center">
-              <span className="text-muted-foreground text-sm">{t("visaStatus")}</span>
-              <div className="col-span-2">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-1 sm:gap-2 py-1 items-center">
+              <span className="text-muted-foreground text-xs sm:text-sm">{t("visaStatus")}</span>
+              <div className="sm:col-span-2">
                 {editMode ? (
                   <Select
                     value={String(editData.visa_status ?? app.visa_status ?? "beklemede")}
@@ -828,15 +828,15 @@ export function ApplicationDetailPage({
                 )}
               </div>
             </div>
-            <div className="grid grid-cols-3 gap-2 py-1 items-center">
-              <span className="text-muted-foreground text-sm">{t("appointmentDate")}</span>
-              <div className="col-span-2">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-1 sm:gap-2 py-1 items-center">
+              <span className="text-muted-foreground text-xs sm:text-sm">{t("appointmentDate")}</span>
+              <div className="sm:col-span-2">
                 <FieldValue fieldKey="appointment_date" type="date" editMode={editMode} editData={editData} app={app} onUpdate={updateField} />
               </div>
             </div>
-            <div className="grid grid-cols-3 gap-2 py-1 items-center">
-              <span className="text-muted-foreground text-sm">{t("appointmentTime")}</span>
-              <div className="col-span-2">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-1 sm:gap-2 py-1 items-center">
+              <span className="text-muted-foreground text-xs sm:text-sm">{t("appointmentTime")}</span>
+              <div className="sm:col-span-2">
                 <FieldValue fieldKey="appointment_time" type="time" editMode={editMode} editData={editData} app={app} onUpdate={updateField} />
               </div>
             </div>
@@ -849,22 +849,22 @@ export function ApplicationDetailPage({
             <CardTitle className="text-base">{tDetail("financeSection")}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-0">
-            <div className="grid grid-cols-3 gap-2 py-1 items-center">
-              <span className="text-muted-foreground text-sm">{t("serviceFee")}</span>
-              <div className="col-span-2">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-1 sm:gap-2 py-1 items-center">
+              <span className="text-muted-foreground text-xs sm:text-sm">{t("serviceFee")}</span>
+              <div className="sm:col-span-2">
                 <FieldValue fieldKey="service_fee" type="number" editMode={editMode} editData={editData} app={app} onUpdate={updateField} />
               </div>
             </div>
-            <div className="grid grid-cols-3 gap-2 py-1 items-center">
-              <span className="text-muted-foreground text-sm">{t("consulateFee")}</span>
-              <div className="col-span-2">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-1 sm:gap-2 py-1 items-center">
+              <span className="text-muted-foreground text-xs sm:text-sm">{t("consulateFee")}</span>
+              <div className="sm:col-span-2">
                 <FieldValue fieldKey="consulate_fee" type="number" editMode={editMode} editData={editData} app={app} onUpdate={updateField} />
               </div>
             </div>
             {/* Currency */}
-            <div className="grid grid-cols-3 gap-2 py-1 items-center">
-              <span className="text-muted-foreground text-sm">{t("currency")}</span>
-              <div className="col-span-2">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-1 sm:gap-2 py-1 items-center">
+              <span className="text-muted-foreground text-xs sm:text-sm">{t("currency")}</span>
+              <div className="sm:col-span-2">
                 {editMode ? (
                   <Select
                     value={String(editData.currency ?? "TL")}
@@ -885,9 +885,9 @@ export function ApplicationDetailPage({
               </div>
             </div>
             {/* Payment Status */}
-            <div className="grid grid-cols-3 gap-2 py-1 items-center">
-              <span className="text-muted-foreground text-sm">{t("paymentStatus")}</span>
-              <div className="col-span-2">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-1 sm:gap-2 py-1 items-center">
+              <span className="text-muted-foreground text-xs sm:text-sm">{t("paymentStatus")}</span>
+              <div className="sm:col-span-2">
                 {editMode ? (
                   <Select
                     value={String(editData.payment_status ?? "odenmedi")}
@@ -915,9 +915,9 @@ export function ApplicationDetailPage({
             </div>
             {/* Payment Method — read-only context when paid */}
             {app.payment_method && (
-              <div className="grid grid-cols-3 gap-2 py-1 items-center">
-                <span className="text-muted-foreground text-sm">{t("paymentMethod")}</span>
-                <div className="col-span-2">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-1 sm:gap-2 py-1 items-center">
+                <span className="text-muted-foreground text-xs sm:text-sm">{t("paymentMethod")}</span>
+                <div className="sm:col-span-2">
                   <span className="text-sm">
                     {tPaymentMethod(
                       (paymentMethodKeyMap[app.payment_method] ??
@@ -929,9 +929,9 @@ export function ApplicationDetailPage({
             )}
             {/* Payment Date — read-only context when paid */}
             {app.payment_date && (
-              <div className="grid grid-cols-3 gap-2 py-1 items-center">
-                <span className="text-muted-foreground text-sm">{t("paymentDate")}</span>
-                <div className="col-span-2">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-1 sm:gap-2 py-1 items-center">
+                <span className="text-muted-foreground text-xs sm:text-sm">{t("paymentDate")}</span>
+                <div className="sm:col-span-2">
                   <span className="text-sm">{formatDate(String(app.payment_date))}</span>
                 </div>
               </div>
@@ -985,8 +985,8 @@ export function ApplicationDetailPage({
 
       {/* ── Floating Save Bar ─────────────────────────────────── */}
       {editMode && (
-        <div className="fixed bottom-0 left-0 right-0 z-50 bg-background/95 backdrop-blur border-t p-4">
-          <div className="max-w-5xl mx-auto flex items-center justify-between">
+        <div className="fixed bottom-0 left-0 right-0 z-50 bg-background/95 backdrop-blur border-t p-3 sm:p-4">
+          <div className="max-w-5xl mx-auto flex items-center justify-between gap-2">
             <span className="text-sm text-muted-foreground">
               {tDetail("editMode")}
             </span>
