@@ -30,12 +30,6 @@ export default async function ApplicationDetailRoute({ params }: Props) {
     return null;
   }
 
-  // Fetch active profiles for assignee dropdown
-  const { data: profiles } = await supabase
-    .from("profiles")
-    .select("id, full_name")
-    .eq("is_active", true);
-
   // Fetch field definitions for custom_fields label lookup
   const { data: fieldDefs } = await supabase
     .from("portal_field_definitions")
@@ -81,7 +75,6 @@ export default async function ApplicationDetailRoute({ params }: Props) {
       smartTemplates={smartTemplates ?? []}
       fieldAssignments={fieldAssignments}
       smartAssignments={smartAssignments}
-      profiles={(profiles ?? []) as { id: string; full_name: string }[]}
     />
   );
 }

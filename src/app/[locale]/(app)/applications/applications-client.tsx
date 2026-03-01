@@ -51,7 +51,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { formatCurrency } from "@/lib/utils";
-import type { ApplicationRow, Profile } from "./page";
+import type { ApplicationRow } from "./page";
 
 import { ApplicationForm } from "@/components/applications/application-form";
 import type { ApplicationForForm } from "@/components/applications/application-form";
@@ -80,31 +80,11 @@ const paymentStatusKeyMap: Record<string, string> = {
   odendi: "paid",
 };
 
-// ── Assignee color palette ──────────────────────────────────────
-const ASSIGNEE_COLORS = [
-  "bg-blue-500",
-  "bg-orange-500",
-  "bg-emerald-500",
-  "bg-purple-500",
-  "bg-rose-500",
-  "bg-cyan-500",
-  "bg-amber-500",
-  "bg-indigo-500",
+// ── Hardcoded assignees ─────────────────────────────────────────
+const ASSIGNEES = [
+  { value: "deniz", label: "Deniz", initials: "D", color: "bg-blue-500" },
+  { value: "sarpkan", label: "Sarpkan", initials: "S", color: "bg-orange-500" },
 ];
-
-function getAssigneeColor(userId: string): string {
-  let hash = 0;
-  for (let i = 0; i < userId.length; i++) {
-    hash = ((hash << 5) - hash + userId.charCodeAt(i)) | 0;
-  }
-  return ASSIGNEE_COLORS[Math.abs(hash) % ASSIGNEE_COLORS.length];
-}
-
-function getInitials(name: string): string {
-  const parts = name.trim().split(/\s+/);
-  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
-  return name.slice(0, 2).toUpperCase();
-}
 
 // ── Date filter type ────────────────────────────────────────────
 type DateFilterType =
@@ -116,15 +96,13 @@ type DateFilterType =
   | "custom";
 
 // ── Assignee filter type ────────────────────────────────────────
-type AssigneeFilterType = "all" | "mine" | "unassigned";
+type AssigneeFilterType = "all" | "unassigned" | "deniz" | "sarpkan";
 
 interface ApplicationsClientProps {
   data: ApplicationRow[];
-  profiles: Profile[];
-  currentUserId: string | null;
 }
 
-export function ApplicationsClient({ data, profiles, currentUserId }: ApplicationsClientProps) {
+export function ApplicationsClient({ data }: ApplicationsClientProps) {
   const t = useTranslations("applications");
   const tVisa = useTranslations("visaStatus");
   const tInvoice = useTranslations("invoiceStatus");
@@ -204,10 +182,10 @@ export function ApplicationsClient({ data, profiles, currentUserId }: Applicatio
     let result = data;
 
     // Assignee filter
-    if (assigneeFilter === "mine" && currentUserId) {
-      result = result.filter((row) => row.assigned_user_id === currentUserId);
-    } else if (assigneeFilter === "unassigned") {
-      result = result.filter((row) => row.assigned_user_id === null);
+    if (assigneeFilter === "unassigned") {
+      result = result.filter((row) => row.assignee === null);
+    } else if (assigneeFilter !== "all") {
+      result = result.filter((row) => row.assignee === assigneeFilter);
     }
 
     // Date filter
@@ -249,7 +227,7 @@ export function ApplicationsClient({ data, profiles, currentUserId }: Applicatio
       const d = parseISO(row.appointment_date);
       return isWithinInterval(d, { start, end });
     });
-  }, [data, dateFilter, customStart, customEnd, assigneeFilter, currentUserId]);
+  }, [data, dateFilter, customStart, customEnd, assigneeFilter]);
 
   // ── Visa status badge styling ─────────────────────────────────
   function visaStatusBadge(status: string | null) {
@@ -333,9 +311,9 @@ export function ApplicationsClient({ data, profiles, currentUserId }: Applicatio
         size: 50,
         header: () => <User className="size-3.5 text-muted-foreground mx-auto" />,
         cell: ({ row }) => {
-          const assignedId = row.original.assigned_user_id;
-          const profile = assignedId
-            ? profiles.find((p) => p.id === assignedId)
+          const currentAssignee = row.original.assignee;
+          const matched = currentAssignee
+            ? ASSIGNEES.find((a) => a.value === currentAssignee)
             : null;
 
           return (
@@ -345,12 +323,12 @@ export function ApplicationsClient({ data, profiles, currentUserId }: Applicatio
                   className="cursor-pointer transition-all hover:scale-110 active:scale-95 mx-auto block"
                   onClick={(e) => e.stopPropagation()}
                 >
-                  {profile ? (
+                  {matched ? (
                     <div
-                      className={`size-7 rounded-full ${getAssigneeColor(assignedId!)} flex items-center justify-center text-white text-[10px] font-bold`}
-                      title={profile.full_name}
+                      className={`size-7 rounded-full ${matched.color} flex items-center justify-center text-white text-[11px] font-bold`}
+                      title={matched.label}
                     >
-                      {getInitials(profile.full_name)}
+                      {matched.initials}
                     </div>
                   ) : (
                     <div
@@ -363,45 +341,45 @@ export function ApplicationsClient({ data, profiles, currentUserId }: Applicatio
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start" className="w-40">
-                {profiles.map((p) => {
-                  const isCurrent = p.id === assignedId;
+                {ASSIGNEES.map((a) => {
+                  const isCurrent = a.value === currentAssignee;
                   return (
                     <DropdownMenuItem
-                      key={p.id}
+                      key={a.value}
                       disabled={isCurrent}
                       className={isCurrent ? "font-bold opacity-60" : ""}
                       onClick={async (e) => {
                         e.stopPropagation();
                         const { error } = await supabase
                           .from("applications")
-                          .update({ assigned_user_id: p.id })
+                          .update({ assignee: a.value })
                           .eq("id", row.original.id);
                         if (error) {
                           toast.error(error.message);
                         } else {
-                          toast.success(`${row.original.full_name}: ${p.full_name}`);
+                          toast.success(`${row.original.full_name}: ${a.label}`);
                           router.refresh();
                         }
                       }}
                     >
                       <div className="flex items-center gap-2">
-                        <div className={`size-5 rounded-full ${getAssigneeColor(p.id)} flex items-center justify-center text-white text-[8px] font-bold`}>
-                          {getInitials(p.full_name)}
+                        <div className={`size-5 rounded-full ${a.color} flex items-center justify-center text-white text-[8px] font-bold`}>
+                          {a.initials}
                         </div>
-                        {p.full_name}
+                        {a.label}
                       </div>
                     </DropdownMenuItem>
                   );
                 })}
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
-                  disabled={!assignedId}
-                  className={!assignedId ? "font-bold opacity-60" : ""}
+                  disabled={!currentAssignee}
+                  className={!currentAssignee ? "font-bold opacity-60" : ""}
                   onClick={async (e) => {
                     e.stopPropagation();
                     const { error } = await supabase
                       .from("applications")
-                      .update({ assigned_user_id: null })
+                      .update({ assignee: null })
                       .eq("id", row.original.id);
                     if (error) {
                       toast.error(error.message);
@@ -797,7 +775,7 @@ export function ApplicationsClient({ data, profiles, currentUserId }: Applicatio
       },
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [t, tVisa, tInvoice, tPayment, tCommon, tPortal, tAppDocs, profiles]
+    [t, tVisa, tInvoice, tPayment, tCommon, tPortal, tAppDocs]
   );
 
   // ── Filterable columns config ─────────────────────────────────
@@ -970,7 +948,7 @@ export function ApplicationsClient({ data, profiles, currentUserId }: Applicatio
       {(
         [
           ["all", t("allApplications")],
-          ["mine", t("myApplications")],
+          ...ASSIGNEES.map((a) => [a.value, a.label] as [AssigneeFilterType, string]),
           ["unassigned", t("unassigned")],
         ] as [AssigneeFilterType, string][]
       ).map(([value, label]) => (

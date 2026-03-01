@@ -96,36 +96,11 @@ interface SmartTemplate {
   sub_fields: Array<{ key: string; label: string; label_tr: string }>;
 }
 
-// ── Assignee color palette ──────────────────────────────────────
-const ASSIGNEE_COLORS = [
-  "bg-blue-500",
-  "bg-orange-500",
-  "bg-emerald-500",
-  "bg-purple-500",
-  "bg-rose-500",
-  "bg-cyan-500",
-  "bg-amber-500",
-  "bg-indigo-500",
+// ── Hardcoded assignees ─────────────────────────────────────────
+const ASSIGNEES = [
+  { value: "deniz", label: "Deniz", initials: "D", color: "bg-blue-500" },
+  { value: "sarpkan", label: "Sarpkan", initials: "S", color: "bg-orange-500" },
 ];
-
-function getAssigneeColor(userId: string): string {
-  let hash = 0;
-  for (let i = 0; i < userId.length; i++) {
-    hash = ((hash << 5) - hash + userId.charCodeAt(i)) | 0;
-  }
-  return ASSIGNEE_COLORS[Math.abs(hash) % ASSIGNEE_COLORS.length];
-}
-
-function getInitials(name: string): string {
-  const parts = name.trim().split(/\s+/);
-  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
-  return name.slice(0, 2).toUpperCase();
-}
-
-interface ProfileItem {
-  id: string;
-  full_name: string;
-}
 
 interface ApplicationDetailPageProps {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -138,7 +113,6 @@ interface ApplicationDetailPageProps {
   fieldAssignments: Record<string, any>[];
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   smartAssignments: Record<string, any>[];
-  profiles: ProfileItem[];
 }
 
 // ── Stable field components (outside parent to avoid re-mount on every render) ──
@@ -262,7 +236,6 @@ export function ApplicationDetailPage({
   smartTemplates: rawSmartTemplates,
   fieldAssignments: rawFieldAssignments,
   smartAssignments: rawSmartAssignments,
-  profiles,
 }: ApplicationDetailPageProps) {
   const t = useTranslations("applications");
   const tDetail = useTranslations("applicationDetail");
@@ -454,17 +427,17 @@ export function ApplicationDetailPage({
   }
 
   // ── Assignee quick-change ───────────────────────────────────────
-  async function handleAssigneeChange(userId: string | null) {
+  async function handleAssigneeChange(value: string | null) {
     const { error } = await supabase
       .from("applications")
-      .update({ assigned_user_id: userId })
+      .update({ assignee: value })
       .eq("id", applicationId);
 
     if (error) {
       toast.error(error.message);
     } else {
-      const label = userId
-        ? profiles.find((p) => p.id === userId)?.full_name ?? ""
+      const label = value
+        ? ASSIGNEES.find((a) => a.value === value)?.label ?? ""
         : t("unassigned");
       toast.success(`${app.full_name}: ${label}`);
       router.refresh();
@@ -788,19 +761,19 @@ export function ApplicationDetailPage({
                 <DropdownMenuTrigger asChild>
                   <button className="cursor-pointer rounded-md px-0.5 -mx-0.5 transition-all hover:bg-muted/60 hover:scale-105 active:scale-95 inline-flex items-center gap-1.5">
                     {(() => {
-                      const assignedId = app.assigned_user_id as string | null;
-                      const profile = assignedId
-                        ? profiles.find((p) => p.id === assignedId)
+                      const currentAssignee = app.assignee as string | null;
+                      const matched = currentAssignee
+                        ? ASSIGNEES.find((a) => a.value === currentAssignee)
                         : null;
-                      if (profile) {
+                      if (matched) {
                         return (
                           <>
                             <div
-                              className={`size-6 rounded-full ${getAssigneeColor(assignedId!)} flex items-center justify-center text-white text-[9px] font-bold`}
+                              className={`size-6 rounded-full ${matched.color} flex items-center justify-center text-white text-[9px] font-bold`}
                             >
-                              {getInitials(profile.full_name)}
+                              {matched.initials}
                             </div>
-                            <span className="text-xs font-medium">{profile.full_name}</span>
+                            <span className="text-xs font-medium">{matched.label}</span>
                           </>
                         );
                       }
@@ -817,28 +790,28 @@ export function ApplicationDetailPage({
                   </button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="start" className="w-40">
-                  {profiles.map((p) => {
-                    const isCurrent = p.id === (app.assigned_user_id as string | null);
+                  {ASSIGNEES.map((a) => {
+                    const isCurrent = a.value === (app.assignee as string | null);
                     return (
                       <DropdownMenuItem
-                        key={p.id}
+                        key={a.value}
                         disabled={isCurrent}
                         className={isCurrent ? "font-bold opacity-60" : ""}
-                        onClick={() => handleAssigneeChange(p.id)}
+                        onClick={() => handleAssigneeChange(a.value)}
                       >
                         <div className="flex items-center gap-2">
-                          <div className={`size-5 rounded-full ${getAssigneeColor(p.id)} flex items-center justify-center text-white text-[8px] font-bold`}>
-                            {getInitials(p.full_name)}
+                          <div className={`size-5 rounded-full ${a.color} flex items-center justify-center text-white text-[8px] font-bold`}>
+                            {a.initials}
                           </div>
-                          {p.full_name}
+                          {a.label}
                         </div>
                       </DropdownMenuItem>
                     );
                   })}
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
-                    disabled={!app.assigned_user_id}
-                    className={!app.assigned_user_id ? "font-bold opacity-60" : ""}
+                    disabled={!app.assignee}
+                    className={!app.assignee ? "font-bold opacity-60" : ""}
                     onClick={() => handleAssigneeChange(null)}
                   >
                     {t("unassigned")}
