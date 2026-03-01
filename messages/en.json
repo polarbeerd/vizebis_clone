@@ -1524,7 +1524,7 @@
     "sectionApplicationDetails": "Application Details",
     "sectionApplicationDetailsDesc": "Select your application city and visa type",
     "sectionPersonalDetails": "Personal Details",
-    "sectionPersonalDetailsDesc": "Your name, contact information, and gender",
+    "sectionPersonalDetailsDesc": "Your name, contact information, birth details, nationality, and civil status",
     "sectionBirthInfo": "Birth Information",
     "sectionBirthInfoDesc": "Where and when you were born",
     "sectionNationalityCivil": "Nationality & Civil Status",

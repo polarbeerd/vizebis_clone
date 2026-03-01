@@ -88,10 +88,8 @@ const STEPS_WITHOUT_GUIDE = ALL_STEPS.filter((s) => s.id !== "guide");
 // ──────────────────────────────────────────────────────────────
 const SECTION_I18N_MAP: Record<string, string> = {
   personal_details: "sectionPersonalDetails",
-  birth_info: "sectionBirthInfo",
-  nationality_civil: "sectionNationalityCivil",
-  address: "sectionAddress",
   passport: "sectionPassport",
+  address: "sectionAddress",
   fingerprint: "sectionFingerprint",
   travel: "sectionTravel",
   employment: "sectionEmployment",

@@ -218,7 +218,7 @@ function ReadOnlyRow({ label, value, copyValue }: { label: string; value: React.
               navigator.clipboard.writeText(copyValue);
               toast("Copied!", { duration: 1000 });
             }}
-            className="opacity-0 group-hover/row:opacity-100 transition-opacity p-0.5 hover:bg-muted rounded shrink-0"
+            className="p-0.5 hover:bg-muted rounded shrink-0"
           >
             <Copy className="size-3 text-muted-foreground" />
           </button>
@@ -231,10 +231,8 @@ function ReadOnlyRow({ label, value, copyValue }: { label: string; value: React.
 // ── Section DB key → i18n key mapping (matches portal) ───────────
 const SECTION_I18N_MAP: Record<string, string> = {
   personal_details: "sectionPersonalDetails",
-  birth_info: "sectionBirthInfo",
-  nationality_civil: "sectionNationalityCivil",
-  address: "sectionAddress",
   passport: "sectionPassport",
+  address: "sectionAddress",
   fingerprint: "sectionFingerprint",
   travel: "sectionTravel",
   employment: "sectionEmployment",

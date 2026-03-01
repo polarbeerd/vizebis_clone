@@ -43,8 +43,6 @@ import type { FieldDefinition } from "./field-definition-form";
 
 const SECTION_OPTIONS = [
   "personal_details",
-  "birth_info",
-  "nationality_civil",
   "address",
   "passport",
   "fingerprint",

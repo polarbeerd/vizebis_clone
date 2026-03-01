@@ -1524,7 +1524,7 @@
     "sectionApplicationDetails": "Basvuru Detaylari",
     "sectionApplicationDetailsDesc": "Basvuru sehrinizi ve vize turunuzu secin",
     "sectionPersonalDetails": "Kisisel Bilgiler",
-    "sectionPersonalDetailsDesc": "Adiniz, iletisim bilgileriniz ve cinsiyetiniz",
+    "sectionPersonalDetailsDesc": "Adiniz, iletisim bilgileriniz, dogum bilgileri, uyruk ve medeni durumunuz",
     "sectionBirthInfo": "Dogum Bilgileri",
     "sectionBirthInfoDesc": "Nerede ve ne zaman dogdunuz",
     "sectionNationalityCivil": "Uyruk ve Medeni Durum",
