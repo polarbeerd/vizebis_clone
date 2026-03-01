@@ -47,6 +47,19 @@ export default async function ApplicationDetailRoute({ params }: Props) {
   let fieldAssignments: Record<string, unknown>[] = [];
   let smartAssignments: Record<string, unknown>[] = [];
 
+  // Always fetch global (shared) field assignments (country=null, visa_type=null)
+  // These cover regular fields like name, surname, email, phone, etc.
+  const { data: globalFieldAssignments } = await supabase
+    .from("portal_field_assignments")
+    .select(
+      "sort_order, section, definition:portal_field_definitions(field_key)"
+    )
+    .is("country", null)
+    .is("visa_type", null)
+    .order("sort_order", { ascending: true });
+
+  fieldAssignments = globalFieldAssignments ?? [];
+
   if (country && visaType) {
     const [faRes, saRes] = await Promise.all([
       supabase
@@ -64,7 +77,8 @@ export default async function ApplicationDetailRoute({ params }: Props) {
         .eq("visa_type", visaType)
         .order("sort_order", { ascending: true }),
     ]);
-    fieldAssignments = faRes.data ?? [];
+    // Merge: global first, then country-specific (overrides if same field)
+    fieldAssignments = [...fieldAssignments, ...(faRes.data ?? [])];
     smartAssignments = saRes.data ?? [];
   }
 
