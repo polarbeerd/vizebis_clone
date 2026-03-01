@@ -87,6 +87,7 @@ interface FieldDef {
   field_key: string;
   field_label: string;
   field_label_tr: string | null;
+  field_type: string | null;
 }
 
 interface SmartTemplate {
@@ -101,6 +102,13 @@ const ASSIGNEES = [
   { value: "deniz", label: "Deniz", initials: "D", color: "bg-blue-500" },
   { value: "sarpkan", label: "Sarpkan", initials: "S", color: "bg-orange-500" },
 ];
+
+// ── Date formatting helper ─────────────────────────────────────
+function formatDateString(value: string): string {
+  const match = value.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (match) return `${match[3]}/${match[2]}/${match[1]}`;
+  return value;
+}
 
 interface ApplicationDetailPageProps {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -197,12 +205,24 @@ function FieldRow({
   );
 }
 
-function ReadOnlyRow({ label, value }: { label: string; value: React.ReactNode }) {
+function ReadOnlyRow({ label, value, copyValue }: { label: string; value: React.ReactNode; copyValue?: string }) {
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 gap-1 sm:gap-2 py-1.5 items-center">
-      <span className="text-muted-foreground text-xs sm:text-sm">{label}</span>
-      <div className="sm:col-span-2">
-        <span className="text-sm break-words">{value || <span className="text-muted-foreground">-</span>}</span>
+    <div className="grid grid-cols-[140px_1fr] sm:grid-cols-[200px_1fr] gap-1 py-0.5 items-center group/row">
+      <span className="text-muted-foreground text-xs truncate" title={label}>{label}</span>
+      <div className="flex items-center gap-1 min-w-0">
+        <span className="text-sm break-words min-w-0">{value || <span className="text-muted-foreground">-</span>}</span>
+        {copyValue && (
+          <button
+            type="button"
+            onClick={() => {
+              navigator.clipboard.writeText(copyValue);
+              toast("Copied!", { duration: 1000 });
+            }}
+            className="opacity-0 group-hover/row:opacity-100 transition-opacity p-0.5 hover:bg-muted rounded shrink-0"
+          >
+            <Copy className="size-3 text-muted-foreground" />
+          </button>
+        )}
       </div>
     </div>
   );
@@ -258,6 +278,7 @@ export function ApplicationDetailPage({
         field_key: d.field_key as string,
         field_label: d.field_label as string,
         field_label_tr: (d.field_label_tr as string) ?? null,
+        field_type: (d.field_type as string) ?? null,
       })),
     [rawFieldDefs]
   );
@@ -546,7 +567,7 @@ export function ApplicationDetailPage({
     }
 
     return (
-      <div className="space-y-3">
+      <div className="space-y-2">
         {sectionEntries.map(([sectionKey, sectionItems]) => {
           const i18nKey = SECTION_I18N_MAP[sectionKey] ?? "sectionOther";
           const sectionLabel = tApply(i18nKey as Parameters<typeof tApply>[0]);
@@ -574,33 +595,32 @@ export function ApplicationDetailPage({
   // ── Render a single regular field from custom_fields ────────────
   function renderRegularField(key: string, cf: Record<string, unknown>) {
     const label = getFieldLabel(key);
+    const def = fieldDefs.find((d) => d.field_key === key);
+    const isDate = def?.field_type === "date";
+    const rawValue = String(cf[key] ?? "");
+    const displayLabel = isDate ? `${label} (dd/mm/yyyy)` : label;
+    const displayValue = isDate && rawValue ? formatDateString(rawValue) : rawValue;
 
     if (editMode) {
       return (
-        <div key={key} className="grid grid-cols-1 md:grid-cols-2 gap-x-4 md:gap-x-8 gap-y-1">
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-1 sm:gap-2 py-1.5 items-center">
-            <span className="text-muted-foreground text-xs sm:text-sm">{label}</span>
-            <div className="sm:col-span-2">
-              <Input
-                className="h-8 text-sm"
-                value={portalEdits[key] ?? String(cf[key] ?? "")}
-                onChange={(e) =>
-                  setPortalEdits((prev) => ({
-                    ...prev,
-                    [key]: e.target.value,
-                  }))
-                }
-              />
-            </div>
-          </div>
+        <div key={key} className="grid grid-cols-[140px_1fr] sm:grid-cols-[200px_1fr] gap-1 py-0.5 items-center">
+          <span className="text-muted-foreground text-xs truncate" title={displayLabel}>{displayLabel}</span>
+          <Input
+            className="h-7 text-sm"
+            value={portalEdits[key] ?? rawValue}
+            onChange={(e) =>
+              setPortalEdits((prev) => ({
+                ...prev,
+                [key]: e.target.value,
+              }))
+            }
+          />
         </div>
       );
     }
 
     return (
-      <div key={key} className="grid grid-cols-1 md:grid-cols-2 gap-x-4 md:gap-x-8 gap-y-1">
-        <ReadOnlyRow label={label} value={String(cf[key] ?? "")} />
-      </div>
+      <ReadOnlyRow key={key} label={displayLabel} value={displayValue} copyValue={displayValue || undefined} />
     );
   }
 
@@ -615,7 +635,7 @@ export function ApplicationDetailPage({
     const subKeys = Object.keys(subData).filter((k) => k !== "_valid");
 
     return (
-      <div key={templateKey} className="grid grid-cols-1 md:grid-cols-2 gap-x-4 md:gap-x-8 gap-y-1">
+      <React.Fragment key={templateKey}>
         {subKeys.map((subKey) => {
           const editKey = `_smart.${templateKey}.${subKey}`;
           const subField = tmpl?.sub_fields?.find((sf) => sf.key === subKey);
@@ -625,22 +645,25 @@ export function ApplicationDetailPage({
               : subField.label
             : subKey.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 
+          const isDate = subKey.toLowerCase().includes("date");
+          const rawValue = String(subData[subKey] ?? "");
+          const displayLabel = isDate ? `${subLabel} (dd/mm/yyyy)` : subLabel;
+          const displayValue = isDate && rawValue ? formatDateString(rawValue) : rawValue;
+
           if (editMode) {
             return (
-              <div key={subKey} className="grid grid-cols-2 sm:grid-cols-3 gap-1 sm:gap-2 py-1.5 items-center">
-                <span className="text-muted-foreground text-xs sm:text-sm">{subLabel}</span>
-                <div className="sm:col-span-2">
-                  <Input
-                    className="h-8 text-sm"
-                    value={portalEdits[editKey] ?? String(subData[subKey] ?? "")}
-                    onChange={(e) =>
-                      setPortalEdits((prev) => ({
-                        ...prev,
-                        [editKey]: e.target.value,
-                      }))
-                    }
-                  />
-                </div>
+              <div key={subKey} className="grid grid-cols-[140px_1fr] sm:grid-cols-[200px_1fr] gap-1 py-0.5 items-center">
+                <span className="text-muted-foreground text-xs truncate" title={displayLabel}>{displayLabel}</span>
+                <Input
+                  className="h-7 text-sm"
+                  value={portalEdits[editKey] ?? rawValue}
+                  onChange={(e) =>
+                    setPortalEdits((prev) => ({
+                      ...prev,
+                      [editKey]: e.target.value,
+                    }))
+                  }
+                />
               </div>
             );
           }
@@ -648,12 +671,13 @@ export function ApplicationDetailPage({
           return (
             <ReadOnlyRow
               key={subKey}
-              label={subLabel}
-              value={String(subData[subKey] ?? "")}
+              label={displayLabel}
+              value={displayValue}
+              copyValue={displayValue || undefined}
             />
           );
         })}
-      </div>
+      </React.Fragment>
     );
   }
 

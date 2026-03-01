@@ -90,8 +90,24 @@ export function GeneratedDocumentsTab({ applicationId }: GeneratedDocumentsTabPr
     fetchHotels();
   }, [fetchDocs, fetchHotels]);
 
-  const bookingDoc = docs.find(d => d.type === "booking_pdf");
-  const letterDoc = docs.find(d => d.type === "letter_of_intent");
+  // Find latest doc per type; treat "generating" records older than 5 min as errors
+  const bookingDoc = React.useMemo(() => {
+    const doc = docs.find(d => d.type === "booking_pdf");
+    if (doc?.status === "generating") {
+      const age = Date.now() - new Date(doc.created_at).getTime();
+      if (age > 5 * 60 * 1000) return { ...doc, status: "error", error_message: "Generation timed out" };
+    }
+    return doc ?? null;
+  }, [docs]);
+
+  const letterDoc = React.useMemo(() => {
+    const doc = docs.find(d => d.type === "letter_of_intent");
+    if (doc?.status === "generating") {
+      const age = Date.now() - new Date(doc.created_at).getTime();
+      if (age > 5 * 60 * 1000) return { ...doc, status: "error", error_message: "Generation timed out" };
+    }
+    return doc ?? null;
+  }, [docs]);
 
   // Status badge helper
   function StatusBadge({ status }: { status: string }) {

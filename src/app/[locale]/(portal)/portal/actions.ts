@@ -2,7 +2,6 @@
 
 import { createServiceClient } from "@/lib/supabase/service";
 import { getAuthenticatedUser } from "@/lib/auth";
-import { generateDocumentsForApplication } from "@/lib/generate-documents";
 import { normalizeText, normalizeObject } from "@/lib/utils";
 
 // Fields visible to the customer (NO fees, payments, admin notes)
@@ -567,11 +566,6 @@ export async function createPortalApplication(data: {
 
   const applicationId = (app as Record<string, unknown>).id as number;
   const trackingCode = (app as Record<string, unknown>).tracking_code as string;
-
-  // Fire and forget — auto-generate booking PDF and letter of intent
-  generateDocumentsForApplication(applicationId).catch((err) => {
-    console.error("Auto-generation failed for application", applicationId, err);
-  });
 
   return { trackingCode, applicationId, error: null };
 }
@@ -1250,14 +1244,6 @@ export async function submitGroup(
   const sharedHotelId = groupHotels?.length
     ? (groupHotels[Math.floor(Math.random() * groupHotels.length)].id as string)
     : undefined;
-
-  if (members?.length) {
-    for (const member of members) {
-      generateDocumentsForApplication(member.id as number, sharedHotelId).catch((err) => {
-        console.error("Auto-generation failed for member", member.id, err);
-      });
-    }
-  }
 
   return {
     trackingCode: (group as Record<string, unknown>).tracking_code as string,

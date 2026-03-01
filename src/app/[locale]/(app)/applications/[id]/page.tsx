@@ -33,7 +33,7 @@ export default async function ApplicationDetailRoute({ params }: Props) {
   // Fetch field definitions for custom_fields label lookup
   const { data: fieldDefs } = await supabase
     .from("portal_field_definitions")
-    .select("field_key, field_label, field_label_tr");
+    .select("field_key, field_label, field_label_tr, field_type");
 
   // Fetch smart field templates
   const { data: smartTemplates } = await supabase
