@@ -21,6 +21,12 @@ export interface ApplicationRow {
   group_id: number | null;
   doc_total: number;
   doc_completed: number;
+  assigned_user_id: string | null;
+}
+
+export interface Profile {
+  id: string;
+  full_name: string;
 }
 
 export default async function ApplicationsPage() {
@@ -46,11 +52,22 @@ export default async function ApplicationsPage() {
       notes,
       tracking_code,
       source,
-      group_id
+      group_id,
+      assigned_user_id
     `
     )
     .eq("is_deleted", false)
     .order("id", { ascending: false });
+
+  // Fetch active profiles for assignee dropdown
+  const { data: profiles } = await supabase
+    .from("profiles")
+    .select("id, full_name")
+    .eq("is_active", true);
+
+  // Get current user
+  const { data: { user } } = await supabase.auth.getUser();
+  const currentUserId = user?.id ?? null;
 
   // Fetch document progress counts per application
   const { data: docCounts } = await supabase
@@ -90,11 +107,18 @@ export default async function ApplicationsPage() {
     group_id: app.group_id as number | null,
     doc_total: docMap.get(app.id as number)?.total ?? 0,
     doc_completed: docMap.get(app.id as number)?.completed ?? 0,
+    assigned_user_id: app.assigned_user_id as string | null,
   }));
 
   if (error) {
     console.error("Error fetching applications:", error);
   }
 
-  return <ApplicationsClient data={rows} />;
+  return (
+    <ApplicationsClient
+      data={rows}
+      profiles={(profiles ?? []) as Profile[]}
+      currentUserId={currentUserId}
+    />
+  );
 }

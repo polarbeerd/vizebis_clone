@@ -12,6 +12,7 @@ import {
   Copy,
   Plus,
   Trash2,
+  User,
 } from "lucide-react";
 import { Link } from "@/i18n/navigation";
 import {
@@ -50,7 +51,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { formatCurrency } from "@/lib/utils";
-import type { ApplicationRow } from "./page";
+import type { ApplicationRow, Profile } from "./page";
 
 import { ApplicationForm } from "@/components/applications/application-form";
 import type { ApplicationForForm } from "@/components/applications/application-form";
@@ -79,6 +80,32 @@ const paymentStatusKeyMap: Record<string, string> = {
   odendi: "paid",
 };
 
+// ── Assignee color palette ──────────────────────────────────────
+const ASSIGNEE_COLORS = [
+  "bg-blue-500",
+  "bg-orange-500",
+  "bg-emerald-500",
+  "bg-purple-500",
+  "bg-rose-500",
+  "bg-cyan-500",
+  "bg-amber-500",
+  "bg-indigo-500",
+];
+
+function getAssigneeColor(userId: string): string {
+  let hash = 0;
+  for (let i = 0; i < userId.length; i++) {
+    hash = ((hash << 5) - hash + userId.charCodeAt(i)) | 0;
+  }
+  return ASSIGNEE_COLORS[Math.abs(hash) % ASSIGNEE_COLORS.length];
+}
+
+function getInitials(name: string): string {
+  const parts = name.trim().split(/\s+/);
+  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+  return name.slice(0, 2).toUpperCase();
+}
+
 // ── Date filter type ────────────────────────────────────────────
 type DateFilterType =
   | "all"
@@ -88,11 +115,16 @@ type DateFilterType =
   | "next_month"
   | "custom";
 
+// ── Assignee filter type ────────────────────────────────────────
+type AssigneeFilterType = "all" | "mine" | "unassigned";
+
 interface ApplicationsClientProps {
   data: ApplicationRow[];
+  profiles: Profile[];
+  currentUserId: string | null;
 }
 
-export function ApplicationsClient({ data }: ApplicationsClientProps) {
+export function ApplicationsClient({ data, profiles, currentUserId }: ApplicationsClientProps) {
   const t = useTranslations("applications");
   const tVisa = useTranslations("visaStatus");
   const tInvoice = useTranslations("invoiceStatus");
@@ -106,6 +138,9 @@ export function ApplicationsClient({ data }: ApplicationsClientProps) {
   const [dateFilter, setDateFilter] = React.useState<DateFilterType>("all");
   const [customStart, setCustomStart] = React.useState("");
   const [customEnd, setCustomEnd] = React.useState("");
+
+  // ── Assignee quick-filter state ────────────────────────────────
+  const [assigneeFilter, setAssigneeFilter] = React.useState<AssigneeFilterType>("all");
 
   // ── Modal/Sheet states ────────────────────────────────────────
   const [formOpen, setFormOpen] = React.useState(false);
@@ -164,9 +199,19 @@ export function ApplicationsClient({ data }: ApplicationsClientProps) {
     router.refresh();
   }
 
-  // ── Filter data by appointment_date ──────────────────────────
+  // ── Filter data by appointment_date + assignee ─────────────────
   const filteredData = React.useMemo(() => {
-    if (dateFilter === "all") return data;
+    let result = data;
+
+    // Assignee filter
+    if (assigneeFilter === "mine" && currentUserId) {
+      result = result.filter((row) => row.assigned_user_id === currentUserId);
+    } else if (assigneeFilter === "unassigned") {
+      result = result.filter((row) => row.assigned_user_id === null);
+    }
+
+    // Date filter
+    if (dateFilter === "all") return result;
 
     const now = new Date();
 
@@ -191,20 +236,20 @@ export function ApplicationsClient({ data }: ApplicationsClientProps) {
         end = endOfMonth(addMonths(now, 1));
         break;
       case "custom":
-        if (!customStart || !customEnd) return data;
+        if (!customStart || !customEnd) return result;
         start = startOfDay(parseISO(customStart));
         end = endOfDay(parseISO(customEnd));
         break;
       default:
-        return data;
+        return result;
     }
 
-    return data.filter((row) => {
+    return result.filter((row) => {
       if (!row.appointment_date) return false;
       const d = parseISO(row.appointment_date);
       return isWithinInterval(d, { start, end });
     });
-  }, [data, dateFilter, customStart, customEnd]);
+  }, [data, dateFilter, customStart, customEnd, assigneeFilter, currentUserId]);
 
   // ── Visa status badge styling ─────────────────────────────────
   function visaStatusBadge(status: string | null) {
@@ -282,6 +327,97 @@ export function ApplicationsClient({ data }: ApplicationsClientProps) {
         ),
         size: 60,
         enableSorting: true,
+      },
+      {
+        id: "assignee",
+        size: 50,
+        header: () => <User className="size-3.5 text-muted-foreground mx-auto" />,
+        cell: ({ row }) => {
+          const assignedId = row.original.assigned_user_id;
+          const profile = assignedId
+            ? profiles.find((p) => p.id === assignedId)
+            : null;
+
+          return (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  className="cursor-pointer transition-all hover:scale-110 active:scale-95 mx-auto block"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {profile ? (
+                    <div
+                      className={`size-7 rounded-full ${getAssigneeColor(assignedId!)} flex items-center justify-center text-white text-[10px] font-bold`}
+                      title={profile.full_name}
+                    >
+                      {getInitials(profile.full_name)}
+                    </div>
+                  ) : (
+                    <div
+                      className="size-7 rounded-full border-2 border-dashed border-gray-300 dark:border-gray-600 flex items-center justify-center text-gray-400 dark:text-gray-500 text-xs font-bold"
+                      title={t("unassigned")}
+                    >
+                      ?
+                    </div>
+                  )}
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-40">
+                {profiles.map((p) => {
+                  const isCurrent = p.id === assignedId;
+                  return (
+                    <DropdownMenuItem
+                      key={p.id}
+                      disabled={isCurrent}
+                      className={isCurrent ? "font-bold opacity-60" : ""}
+                      onClick={async (e) => {
+                        e.stopPropagation();
+                        const { error } = await supabase
+                          .from("applications")
+                          .update({ assigned_user_id: p.id })
+                          .eq("id", row.original.id);
+                        if (error) {
+                          toast.error(error.message);
+                        } else {
+                          toast.success(`${row.original.full_name}: ${p.full_name}`);
+                          router.refresh();
+                        }
+                      }}
+                    >
+                      <div className="flex items-center gap-2">
+                        <div className={`size-5 rounded-full ${getAssigneeColor(p.id)} flex items-center justify-center text-white text-[8px] font-bold`}>
+                          {getInitials(p.full_name)}
+                        </div>
+                        {p.full_name}
+                      </div>
+                    </DropdownMenuItem>
+                  );
+                })}
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  disabled={!assignedId}
+                  className={!assignedId ? "font-bold opacity-60" : ""}
+                  onClick={async (e) => {
+                    e.stopPropagation();
+                    const { error } = await supabase
+                      .from("applications")
+                      .update({ assigned_user_id: null })
+                      .eq("id", row.original.id);
+                    if (error) {
+                      toast.error(error.message);
+                    } else {
+                      toast.success(`${row.original.full_name}: ${t("unassigned")}`);
+                      router.refresh();
+                    }
+                  }}
+                >
+                  {t("unassigned")}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          );
+        },
+        enableSorting: false,
       },
       {
         accessorKey: "tracking_code",
@@ -661,7 +797,7 @@ export function ApplicationsClient({ data }: ApplicationsClientProps) {
       },
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [t, tVisa, tInvoice, tPayment, tCommon, tPortal, tAppDocs]
+    [t, tVisa, tInvoice, tPayment, tCommon, tPortal, tAppDocs, profiles]
   );
 
   // ── Filterable columns config ─────────────────────────────────
@@ -710,33 +846,45 @@ export function ApplicationsClient({ data }: ApplicationsClientProps) {
 
   // ── Row color-coding based on visa_status + appointment proximity ─
   function getRowClassName(row: ApplicationRow): string {
+    const classes: string[] = [];
     const now = new Date();
+
+    // Group visual indicator — violet left border
+    if (row.group_id !== null) {
+      classes.push("border-l-[3px] border-l-violet-400 dark:border-l-violet-500");
+    }
 
     // Check appointment proximity first (highest priority for visual warning)
     if (row.appointment_date) {
       const apptDate = parseISO(row.appointment_date);
       if (isBefore(apptDate, startOfDay(now))) {
-        return "bg-gray-100 dark:bg-gray-900/40";
+        classes.push("bg-gray-100 dark:bg-gray-900/40");
+        return classes.join(" ");
       }
       const daysUntil = differenceInDays(apptDate, now);
       if (daysUntil >= 0 && daysUntil <= 10) {
-        return "bg-red-50 dark:bg-red-950/30";
+        classes.push("bg-red-50 dark:bg-red-950/30");
+        return classes.join(" ");
       }
     }
 
     // Visa status based coloring
     switch (row.visa_status) {
       case "pasaport_teslim":
-        return "bg-green-50 dark:bg-green-950/20";
+        classes.push("bg-green-50 dark:bg-green-950/20");
+        break;
       case "vize_cikti":
-        return "bg-blue-50 dark:bg-blue-950/20";
+        classes.push("bg-blue-50 dark:bg-blue-950/20");
+        break;
       case "konsoloslukta":
-        return "bg-yellow-50 dark:bg-yellow-950/20";
+        classes.push("bg-yellow-50 dark:bg-yellow-950/20");
+        break;
       case "ret_oldu":
-        return "bg-red-50 dark:bg-red-950/20";
-      default:
-        return "";
+        classes.push("bg-red-50 dark:bg-red-950/20");
+        break;
     }
+
+    return classes.join(" ");
   }
 
   // ── CSV export ────────────────────────────────────────────────
@@ -816,6 +964,28 @@ export function ApplicationsClient({ data }: ApplicationsClientProps) {
     </div>
   );
 
+  const assigneeQuickFilters = (
+    <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+      <User className="size-4 text-muted-foreground hidden sm:block" />
+      {(
+        [
+          ["all", t("allApplications")],
+          ["mine", t("myApplications")],
+          ["unassigned", t("unassigned")],
+        ] as [AssigneeFilterType, string][]
+      ).map(([value, label]) => (
+        <Button
+          key={value}
+          variant={assigneeFilter === value ? "default" : "outline"}
+          size="sm"
+          onClick={() => setAssigneeFilter(value)}
+        >
+          {label}
+        </Button>
+      ))}
+    </div>
+  );
+
   const dateQuickFilters = (
     <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
       <Calendar className="size-4 text-muted-foreground hidden sm:block" />
@@ -880,7 +1050,11 @@ export function ApplicationsClient({ data }: ApplicationsClientProps) {
         toolbarExtra={
           <div className="space-y-3">
             {dateFilterToolbar}
-            {dateQuickFilters}
+            <div className="flex flex-wrap items-center gap-3">
+              {assigneeQuickFilters}
+              <div className="hidden sm:block w-px h-5 bg-border" />
+              {dateQuickFilters}
+            </div>
           </div>
         }
       />

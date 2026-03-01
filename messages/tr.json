@@ -230,7 +230,11 @@
     "noteSaved": "Not kaydedildi",
     "noteDeleted": "Not silindi",
     "deleteNoteConfirm": "Bu notu sil?",
-    "noteSaving": "Kaydediliyor..."
+    "noteSaving": "Kaydediliyor...",
+    "assignee": "Sorumlu",
+    "unassigned": "Atanmamış",
+    "myApplications": "Benimkiler",
+    "allApplications": "Tümü"
   },
   "visaStatus": {
     "pending": "Beklemede",
@@ -1425,7 +1429,7 @@
     "employmentSection": "Is Bilgileri",
     "customPortalFields": "Portal Ozel Alanlari",
     "portalDocsSection": "Portal Belgeleri",
-    "processTrackingSection": "Surek Takibi",
+    "processTrackingSection": "Süreç Takibi",
     "financeSection": "Finans",
     "notesSection": "Notlar",
     "docUploaded": "{total} belgeden {count} tanesi yuklendi",

@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import {
   ArrowLeft,
   Bot,
+  ChevronDown,
   Copy,
   Edit,
   Trash2,
@@ -95,6 +96,37 @@ interface SmartTemplate {
   sub_fields: Array<{ key: string; label: string; label_tr: string }>;
 }
 
+// ── Assignee color palette ──────────────────────────────────────
+const ASSIGNEE_COLORS = [
+  "bg-blue-500",
+  "bg-orange-500",
+  "bg-emerald-500",
+  "bg-purple-500",
+  "bg-rose-500",
+  "bg-cyan-500",
+  "bg-amber-500",
+  "bg-indigo-500",
+];
+
+function getAssigneeColor(userId: string): string {
+  let hash = 0;
+  for (let i = 0; i < userId.length; i++) {
+    hash = ((hash << 5) - hash + userId.charCodeAt(i)) | 0;
+  }
+  return ASSIGNEE_COLORS[Math.abs(hash) % ASSIGNEE_COLORS.length];
+}
+
+function getInitials(name: string): string {
+  const parts = name.trim().split(/\s+/);
+  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+  return name.slice(0, 2).toUpperCase();
+}
+
+interface ProfileItem {
+  id: string;
+  full_name: string;
+}
+
 interface ApplicationDetailPageProps {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   application: Record<string, any>;
@@ -106,6 +138,7 @@ interface ApplicationDetailPageProps {
   fieldAssignments: Record<string, any>[];
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   smartAssignments: Record<string, any>[];
+  profiles: ProfileItem[];
 }
 
 // ── Stable field components (outside parent to avoid re-mount on every render) ──
@@ -229,6 +262,7 @@ export function ApplicationDetailPage({
   smartTemplates: rawSmartTemplates,
   fieldAssignments: rawFieldAssignments,
   smartAssignments: rawSmartAssignments,
+  profiles,
 }: ApplicationDetailPageProps) {
   const t = useTranslations("applications");
   const tDetail = useTranslations("applicationDetail");
@@ -416,6 +450,24 @@ export function ApplicationDetailPage({
       toast.error(tDetail("savedError"));
     } finally {
       setSaving(false);
+    }
+  }
+
+  // ── Assignee quick-change ───────────────────────────────────────
+  async function handleAssigneeChange(userId: string | null) {
+    const { error } = await supabase
+      .from("applications")
+      .update({ assigned_user_id: userId })
+      .eq("id", applicationId);
+
+    if (error) {
+      toast.error(error.message);
+    } else {
+      const label = userId
+        ? profiles.find((p) => p.id === userId)?.full_name ?? ""
+        : t("unassigned");
+      toast.success(`${app.full_name}: ${label}`);
+      router.refresh();
     }
   }
 
@@ -731,6 +783,68 @@ export function ApplicationDetailPage({
                   Portal
                 </Badge>
               )}
+              {/* Assignee */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button className="cursor-pointer rounded-md px-0.5 -mx-0.5 transition-all hover:bg-muted/60 hover:scale-105 active:scale-95 inline-flex items-center gap-1.5">
+                    {(() => {
+                      const assignedId = app.assigned_user_id as string | null;
+                      const profile = assignedId
+                        ? profiles.find((p) => p.id === assignedId)
+                        : null;
+                      if (profile) {
+                        return (
+                          <>
+                            <div
+                              className={`size-6 rounded-full ${getAssigneeColor(assignedId!)} flex items-center justify-center text-white text-[9px] font-bold`}
+                            >
+                              {getInitials(profile.full_name)}
+                            </div>
+                            <span className="text-xs font-medium">{profile.full_name}</span>
+                          </>
+                        );
+                      }
+                      return (
+                        <>
+                          <div className="size-6 rounded-full border-2 border-dashed border-gray-300 dark:border-gray-600 flex items-center justify-center text-gray-400 dark:text-gray-500 text-[9px] font-bold">
+                            ?
+                          </div>
+                          <span className="text-xs text-muted-foreground">{t("unassigned")}</span>
+                        </>
+                      );
+                    })()}
+                    <ChevronDown className="size-3 text-muted-foreground" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="w-40">
+                  {profiles.map((p) => {
+                    const isCurrent = p.id === (app.assigned_user_id as string | null);
+                    return (
+                      <DropdownMenuItem
+                        key={p.id}
+                        disabled={isCurrent}
+                        className={isCurrent ? "font-bold opacity-60" : ""}
+                        onClick={() => handleAssigneeChange(p.id)}
+                      >
+                        <div className="flex items-center gap-2">
+                          <div className={`size-5 rounded-full ${getAssigneeColor(p.id)} flex items-center justify-center text-white text-[8px] font-bold`}>
+                            {getInitials(p.full_name)}
+                          </div>
+                          {p.full_name}
+                        </div>
+                      </DropdownMenuItem>
+                    );
+                  })}
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    disabled={!app.assigned_user_id}
+                    className={!app.assigned_user_id ? "font-bold opacity-60" : ""}
+                    onClick={() => handleAssigneeChange(null)}
+                  >
+                    {t("unassigned")}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
         </div>
