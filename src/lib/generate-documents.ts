@@ -21,12 +21,9 @@ export async function generateDocumentsForApplication(
     return;
   }
 
-  const isGroup = !!app.group_id;
-  const hotelType = isGroup ? "group" : "individual";
-
   // 2. Run both in parallel
   await Promise.allSettled([
-    generateBookingPdf(supabase, app, hotelType, sharedHotelId),
+    generateBookingPdf(supabase, app, sharedHotelId),
     generateLetterOfIntent(supabase, app),
   ]);
 }
@@ -34,7 +31,6 @@ export async function generateDocumentsForApplication(
 async function generateBookingPdf(
   supabase: ReturnType<typeof createServiceClient>,
   app: Record<string, unknown>,
-  hotelType: string,
   sharedHotelId?: string
 ) {
   try {
@@ -59,7 +55,6 @@ async function generateBookingPdf(
       let query = supabase
         .from("booking_hotels")
         .select("*")
-        .eq("type", hotelType)
         .eq("is_active", true);
 
       if (country) {
@@ -73,25 +68,16 @@ async function generateBookingPdf(
         const { data: fallbackHotels } = await supabase
           .from("booking_hotels")
           .select("*")
-          .eq("type", hotelType)
           .eq("is_active", true);
 
         if (!fallbackHotels?.length) {
-          console.warn(
-            "No active hotels of type",
-            hotelType,
-            "— skipping booking PDF"
-          );
+          console.warn("No active hotels — skipping booking PDF");
           return;
         }
 
         hotel = fallbackHotels[Math.floor(Math.random() * fallbackHotels.length)];
       } else if (!hotels?.length) {
-        console.warn(
-          "No active hotels of type",
-          hotelType,
-          "— skipping booking PDF"
-        );
+        console.warn("No active hotels — skipping booking PDF");
         return;
       } else {
         hotel = hotels[Math.floor(Math.random() * hotels.length)];

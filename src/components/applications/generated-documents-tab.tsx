@@ -337,7 +337,7 @@ export function GeneratedDocumentsTab({ applicationId }: GeneratedDocumentsTabPr
                     </SelectTrigger>
                     <SelectContent>
                       {hotels.map(h => (
-                        <SelectItem key={h.id} value={h.id}>{h.name} ({h.type})</SelectItem>
+                        <SelectItem key={h.id} value={h.id}>{h.name}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
