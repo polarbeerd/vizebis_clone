@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { generateDocumentsForApplication } from "@/lib/generate-documents";
 import { getAuthenticatedUser } from "@/lib/auth";
 
+// Allow up to 60s for PDF generation + upload
+export const maxDuration = 60;
+
 export async function POST(req: NextRequest) {
   try {
     const user = await getAuthenticatedUser();
@@ -16,16 +19,15 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Invalid applicationId" }, { status: 400 });
     }
 
-    // Fire and forget — return immediately, generation happens in background
-    generateDocumentsForApplication(applicationId, {
+    // Await generation so the serverless function stays alive until completion
+    await generateDocumentsForApplication(applicationId, {
       hotelId: hotelId || undefined,
       type: type || "all",
-    }).catch((err) => {
-      console.error("Manual generation failed for application", applicationId, err);
     });
 
-    return NextResponse.json({ status: "started" });
-  } catch {
-    return NextResponse.json({ error: "Internal error" }, { status: 500 });
+    return NextResponse.json({ status: "done" });
+  } catch (err) {
+    console.error("Document generation failed:", err);
+    return NextResponse.json({ error: "Generation failed" }, { status: 500 });
   }
 }
