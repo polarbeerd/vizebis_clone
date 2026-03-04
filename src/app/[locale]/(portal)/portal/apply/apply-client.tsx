@@ -441,6 +441,7 @@ export function ApplyClient({
 
     setSmartSubmitted(true);
     for (const sa of smartAssignments) {
+      if (!sa.is_required) continue;
       const sfData = smartFieldData[sa.template_key];
       if (!sfData || sfData._valid !== true) {
         toast.error(t("fillSmartFields"), {
@@ -1684,6 +1685,7 @@ export function ApplyClient({
                         }
                       }
                       for (const sa of smartAssignments) {
+                        if (!sa.is_required) continue;
                         const sfData = smartFieldData[sa.template_key];
                         if (!sfData || sfData._valid !== true) {
                           errorFields.push(smartLabel(sa));

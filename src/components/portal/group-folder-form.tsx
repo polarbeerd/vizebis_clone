@@ -137,7 +137,7 @@ export function GroupFolderForm({
         {/* Travel dates smart field */}
         <div>
           <SmartFieldRenderer
-            templateKey="travelDates"
+            templateKey="travel_dates"
             label={t("sectionTravel")}
             description=""
             isRequired={false}
