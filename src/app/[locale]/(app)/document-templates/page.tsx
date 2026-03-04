@@ -33,23 +33,10 @@ export interface LetterExampleRow {
   created_at: string;
 }
 
-export interface LetterConfig {
-  systemPrompt: string;
-  tone: "formal" | "semi-formal";
-  maxWords: number;
-}
-
-const DEFAULT_CONFIG: LetterConfig = {
-  systemPrompt:
-    "You are a professional visa consultant. Write a formal letter of intent for a visa application. The letter should be professional, clear, and persuasive.",
-  tone: "formal",
-  maxWords: 500,
-};
-
 export default async function DocumentTemplatesPage() {
   const supabase = await createClient();
 
-  const [hotelsRes, examplesRes, configRes] = await Promise.all([
+  const [hotelsRes, examplesRes] = await Promise.all([
     supabase
       .from("booking_hotels")
       .select("*")
@@ -58,11 +45,6 @@ export default async function DocumentTemplatesPage() {
       .from("letter_intent_examples")
       .select("*")
       .order("created_at", { ascending: false }),
-    supabase
-      .from("settings")
-      .select("value")
-      .eq("key", "letter_intent_config")
-      .single(),
   ]);
 
   if (hotelsRes.error) {
@@ -72,16 +54,10 @@ export default async function DocumentTemplatesPage() {
     console.error("Error fetching letter examples:", examplesRes.error);
   }
 
-  const config: LetterConfig =
-    configRes.data?.value
-      ? (configRes.data.value as unknown as LetterConfig)
-      : DEFAULT_CONFIG;
-
   return (
     <DocumentTemplatesClient
       hotels={(hotelsRes.data ?? []) as HotelRow[]}
       letterExamples={(examplesRes.data ?? []) as LetterExampleRow[]}
-      letterConfig={config}
     />
   );
 }

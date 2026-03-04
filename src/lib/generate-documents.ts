@@ -9,6 +9,54 @@ interface GenerateOptions {
   type?: "booking" | "letter" | "all";
 }
 
+export function wrapInA4Template(innerHtml: string): string {
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<style>
+  @page {
+    size: A4;
+    margin: 2.5cm;
+  }
+  body {
+    font-family: "Georgia", "Times New Roman", serif;
+    font-size: 12pt;
+    line-height: 1.6;
+    color: #1a1a1a;
+    margin: 0;
+    padding: 0;
+  }
+  h1 {
+    font-size: 16pt;
+    margin-bottom: 0.5em;
+  }
+  h2 {
+    font-size: 14pt;
+    margin-bottom: 0.5em;
+  }
+  p {
+    margin-bottom: 0.8em;
+    text-align: justify;
+  }
+  strong {
+    font-weight: bold;
+  }
+  .date {
+    text-align: right;
+    margin-bottom: 2em;
+  }
+  .signature {
+    margin-top: 2em;
+  }
+</style>
+</head>
+<body>
+${innerHtml}
+</body>
+</html>`;
+}
+
 export async function generateDocumentsForApplication(
   applicationId: number,
   options: GenerateOptions = {}
@@ -29,24 +77,25 @@ export async function generateDocumentsForApplication(
   }
 
   // 2. Run requested generation(s)
-  const tasks: Promise<unknown>[] = [];
-
-  if (type === "booking" || type === "all") {
-    tasks.push(generateBookingPdf(supabase, app, hotelId));
+  if (type === "all") {
+    // Run booking first, then letter with the hotel ID from booking
+    const bookingHotelId = await generateBookingPdf(supabase, app, hotelId);
+    if (bookingHotelId) {
+      await generateLetterOfIntent(supabase, app, bookingHotelId);
+    }
+  } else if (type === "booking") {
+    await generateBookingPdf(supabase, app, hotelId);
+  } else if (type === "letter") {
+    await generateLetterOfIntent(supabase, app, hotelId);
   }
-
-  if (type === "letter" || type === "all") {
-    tasks.push(generateLetterOfIntent(supabase, app));
-  }
-
-  await Promise.allSettled(tasks);
 }
 
+/** Returns the hotel ID used, or undefined on failure */
 async function generateBookingPdf(
   supabase: ReturnType<typeof createServiceClient>,
   app: Record<string, unknown>,
   sharedHotelId?: string
-) {
+): Promise<string | undefined> {
   try {
     let hotel: Record<string, unknown>;
 
@@ -59,7 +108,7 @@ async function generateBookingPdf(
         .single();
       if (!hotelData) {
         console.warn("Shared hotel not found:", sharedHotelId);
-        return;
+        return undefined;
       }
       hotel = hotelData;
     } else {
@@ -86,13 +135,13 @@ async function generateBookingPdf(
 
         if (!fallbackHotels?.length) {
           console.warn("No active hotels — skipping booking PDF");
-          return;
+          return undefined;
         }
 
         hotel = fallbackHotels[Math.floor(Math.random() * fallbackHotels.length)];
       } else if (!hotels?.length) {
         console.warn("No active hotels — skipping booking PDF");
-        return;
+        return undefined;
       } else {
         hotel = hotels[Math.floor(Math.random() * hotels.length)];
       }
@@ -113,7 +162,7 @@ async function generateBookingPdf(
 
     if (insertError || !doc) {
       console.error("Failed to create generated_documents row:", insertError);
-      return;
+      return undefined;
     }
 
     // Get template URL
@@ -255,6 +304,7 @@ async function generateBookingPdf(
       .eq("id", doc.id);
 
     console.log(`Booking PDF generated for application ${app.id}`);
+    return hotel.id as string;
   } catch (error) {
     console.error(
       `Booking PDF generation failed for application ${app.id}:`,
@@ -272,12 +322,15 @@ async function generateBookingPdf(
       .eq("application_id", app.id as number)
       .eq("type", "booking_pdf")
       .eq("status", "generating");
+
+    return undefined;
   }
 }
 
 async function generateLetterOfIntent(
   supabase: ReturnType<typeof createServiceClient>,
-  app: Record<string, unknown>
+  app: Record<string, unknown>,
+  hotelId?: string
 ) {
   try {
     // Create generating record
@@ -296,6 +349,33 @@ async function generateLetterOfIntent(
       console.error("Failed to create generated_documents row:", insertError);
       return;
     }
+
+    // Fetch hotel data if hotelId provided
+    let hotelInfo: { name: string; address: string | null; city: string | null; country: string | null } | null = null;
+    if (hotelId) {
+      const { data: hotelData } = await supabase
+        .from("booking_hotels")
+        .select("name, address, city, country")
+        .eq("id", hotelId)
+        .single();
+      if (hotelData) {
+        hotelInfo = hotelData;
+      }
+    }
+
+    // Extract travel dates (same logic as booking)
+    const customFields = (app.custom_fields as Record<string, unknown>) || {};
+    const smartFields = (customFields._smart as Record<string, unknown>) || {};
+    const travelDates = smartFields.travel_dates as
+      | { departure_date?: string; return_date?: string }
+      | undefined;
+
+    const checkinDate =
+      travelDates?.departure_date ||
+      (app.travel_date as string) ||
+      (customFields.travel_date as string) ||
+      "";
+    const checkoutDate = travelDates?.return_date || "";
 
     // Fetch example letters (prefer matching country/visa, fallback to all)
     const country = app.country as string;
@@ -333,42 +413,57 @@ async function generateLetterOfIntent(
         .filter(Boolean) as string[];
     }
 
-    // Fetch generation config
-    const { data: configRow } = await supabase
-      .from("settings")
-      .select("value")
-      .eq("key", "letter_intent_config")
-      .single();
-
-    const config = (configRow?.value as Record<string, unknown>) || {};
-    const systemPrompt =
-      (config.systemPrompt as string) ||
-      "You are a professional visa consultant. Write a formal letter of intent for a visa application. The letter should be professional, clear, and persuasive.";
+    // Build the system prompt
+    const systemPrompt = `You are a professional visa consultant writing a formal letter of intent (motivation letter) for a visa application. Write a compelling, professional letter that:
+- Is addressed to the relevant consulate/embassy
+- Clearly states the purpose of travel
+- Includes accommodation details if provided
+- Includes travel dates if provided
+- Is written in a formal, persuasive tone
+- Fills approximately one full A4 page (3-4 substantial paragraphs)
+- Includes a proper date, salutation, body paragraphs, and formal closing with signature line
+- Uses proper HTML formatting (p, strong, br tags — NO h1/h2 headers, just flowing letter text)`;
 
     // Build application data for the prompt
-    const applicationData = {
+    const applicationData: Record<string, unknown> = {
       full_name: app.full_name,
       country: app.country,
       visa_type: app.visa_type,
-      travel_date: app.travel_date,
       email: app.email,
       phone: app.phone,
-      custom_fields: app.custom_fields,
     };
+
+    if (checkinDate) applicationData.travel_start = checkinDate;
+    if (checkoutDate) applicationData.travel_end = checkoutDate;
+
+    if (hotelInfo) {
+      applicationData.accommodation = {
+        hotel_name: hotelInfo.name,
+        address: hotelInfo.address,
+        city: hotelInfo.city,
+        country: hotelInfo.country,
+      };
+    }
+
+    // Include relevant custom fields (exclude _smart internals)
+    const relevantCustom = { ...customFields };
+    delete relevantCustom._smart;
+    if (Object.keys(relevantCustom).length > 0) {
+      applicationData.additional_info = relevantCustom;
+    }
 
     // Build the full prompt for Gemini
     let prompt = `${systemPrompt}\n\n`;
     prompt += `Application Data:\n${JSON.stringify(applicationData, null, 2)}\n\n`;
 
     if (examples.length > 0) {
-      prompt += `Here are example letters for reference:\n\n`;
+      prompt += `Here are example letters for reference (match the style and tone):\n\n`;
       examples.forEach((example, i) => {
         prompt += `--- Example ${i + 1} ---\n${example}\n\n`;
       });
     }
 
-    prompt +=
-      "Generate a professional letter of intent in HTML format. Use proper HTML tags (h1, p, strong, etc.) for formatting. Do not include <html>, <head>, or <body> tags — just the inner content.";
+    prompt += `Generate a professional letter of intent in HTML format. Output ONLY the inner HTML content — do NOT include <html>, <head>, <body>, or <style> tags. Use <p>, <strong>, and <br> tags for formatting. The letter should be formal and fill approximately one A4 page. Start with the date on the right, then the consulate address, then salutation, then 3-4 paragraphs, then closing with signature.`;
 
     // Call Gemini API directly
     const apiKey = process.env.GEMINI_API_KEY;
@@ -388,7 +483,7 @@ async function generateLetterOfIntent(
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             contents: [{ parts: [{ text: prompt }] }],
-            generationConfig: { temperature: 0.7, maxOutputTokens: 2048 },
+            generationConfig: { temperature: 0.7, maxOutputTokens: 8192 },
           }),
           signal: geminiController.signal,
         }
@@ -405,56 +500,64 @@ async function generateLetterOfIntent(
     }
 
     const geminiResult = await geminiResponse.json();
-    const htmlContent =
+    let htmlContent =
       geminiResult?.candidates?.[0]?.content?.parts?.[0]?.text || "";
 
     if (!htmlContent) {
       throw new Error("Empty response from Gemini");
     }
 
-    // Convert HTML to PDF via Python service
-    let storagePath: string | null = null;
+    // Strip markdown code fences if Gemini wraps the output
+    htmlContent = htmlContent
+      .replace(/^```html?\s*\n?/i, "")
+      .replace(/\n?```\s*$/i, "")
+      .trim();
+
+    // Convert HTML to PDF via Python service (mandatory — no HTML-only fallback)
+    const fullHtml = wrapInA4Template(htmlContent);
+
+    const pdfController = new AbortController();
+    const pdfTimeout = setTimeout(() => pdfController.abort(), 30_000);
+
+    let pdfResponse: Response;
     try {
-      const pdfController = new AbortController();
-      const pdfTimeout = setTimeout(() => pdfController.abort(), 30_000);
-
-      let pdfResponse: Response;
-      try {
-        pdfResponse = await fetch(`${PDF_SERVICE_URL}/html-to-pdf`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            ...(PDF_SERVICE_API_KEY ? { "x-api-key": PDF_SERVICE_API_KEY } : {}),
-          },
-          body: JSON.stringify({ html: htmlContent }),
-          signal: pdfController.signal,
-        });
-      } finally {
-        clearTimeout(pdfTimeout);
-      }
-
-      if (pdfResponse.ok) {
-        const pdfResult = await pdfResponse.json();
-        if (pdfResult.status === "success") {
-          const pdfBuffer = Buffer.from(pdfResult.pdf_base64, "base64");
-          storagePath = `${app.id}/letter-of-intent.pdf`;
-
-          await supabase.storage
-            .from("generated-docs")
-            .upload(storagePath, pdfBuffer, {
-              contentType: "application/pdf",
-              upsert: true,
-            });
-        }
-      }
-    } catch (pdfError) {
-      console.warn(
-        "HTML-to-PDF conversion failed, saving HTML only:",
-        pdfError
-      );
+      pdfResponse = await fetch(`${PDF_SERVICE_URL}/html-to-pdf`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(PDF_SERVICE_API_KEY ? { "x-api-key": PDF_SERVICE_API_KEY } : {}),
+        },
+        body: JSON.stringify({ html: fullHtml }),
+        signal: pdfController.signal,
+      });
+    } finally {
+      clearTimeout(pdfTimeout);
     }
 
-    // Update record with content and optional PDF
+    if (!pdfResponse.ok) {
+      throw new Error(`HTML-to-PDF service returned ${pdfResponse.status}`);
+    }
+
+    const pdfResult = await pdfResponse.json();
+    if (pdfResult.status !== "success") {
+      throw new Error(pdfResult.error || "PDF conversion failed");
+    }
+
+    const pdfBuffer = Buffer.from(pdfResult.pdf_base64, "base64");
+    const storagePath = `${app.id}/letter-of-intent.pdf`;
+
+    const { error: uploadError } = await supabase.storage
+      .from("generated-docs")
+      .upload(storagePath, pdfBuffer, {
+        contentType: "application/pdf",
+        upsert: true,
+      });
+
+    if (uploadError) {
+      throw new Error(`Storage upload failed: ${uploadError.message}`);
+    }
+
+    // Update record with content and PDF
     await supabase
       .from("generated_documents")
       .update({

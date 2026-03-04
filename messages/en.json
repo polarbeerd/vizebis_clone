@@ -1883,7 +1883,7 @@
   },
   "letterTemplates": {
     "title": "Letter of Intent",
-    "description": "Manage example letters and generation settings",
+    "description": "Manage example letters",
     "examples": "Example Letters",
     "addExample": "Add Example",
     "editExample": "Edit Example",
@@ -1895,12 +1895,6 @@
     "extractedText": "Extracted Text",
     "viewText": "View Extracted Text",
     "editText": "Edit Extracted Text",
-    "settings": "Generation Settings",
-    "systemPrompt": "System Prompt",
-    "tone": "Tone",
-    "formal": "Formal",
-    "semiFormal": "Semi-formal",
-    "maxWords": "Max Word Count",
     "noExamples": "No example letters added yet",
     "saveSuccess": "Saved successfully",
     "deleteSuccess": "Deleted successfully"
@@ -1936,7 +1930,9 @@
     "hotelPhone": "Phone",
     "delete": "Delete",
     "deleteConfirm": "Are you sure you want to delete this document?",
-    "deleted": "Document deleted"
+    "deleted": "Document deleted",
+    "generateLetterRequiresBooking": "Generate a booking PDF first",
+    "saveAndUpdatePdf": "Save & Update PDF"
   },
   "payment": {
     "pageTitle": "Payment",

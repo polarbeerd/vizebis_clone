@@ -4,18 +4,16 @@ import { useTranslations } from "next-intl";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { BookingTemplatesClient } from "../booking-templates/booking-templates-client";
 import { LetterTemplatesClient } from "../letter-templates/letter-templates-client";
-import type { HotelRow, LetterExampleRow, LetterConfig } from "./page";
+import type { HotelRow, LetterExampleRow } from "./page";
 
 interface DocumentTemplatesClientProps {
   hotels: HotelRow[];
   letterExamples: LetterExampleRow[];
-  letterConfig: LetterConfig;
 }
 
 export function DocumentTemplatesClient({
   hotels,
   letterExamples,
-  letterConfig,
 }: DocumentTemplatesClientProps) {
   const t = useTranslations("nav");
 
@@ -34,7 +32,7 @@ export function DocumentTemplatesClient({
         </TabsContent>
 
         <TabsContent value="letter" className="mt-4">
-          <LetterTemplatesClient data={letterExamples} config={letterConfig} />
+          <LetterTemplatesClient data={letterExamples} />
         </TabsContent>
       </Tabs>
     </div>

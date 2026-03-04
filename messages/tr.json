@@ -1883,7 +1883,7 @@
   },
   "letterTemplates": {
     "title": "Niyet Mektubu",
-    "description": "Örnek mektupları ve oluşturma ayarlarını yönetin",
+    "description": "Örnek mektupları yönetin",
     "examples": "Örnek Mektuplar",
     "addExample": "Örnek Ekle",
     "editExample": "Örneği Düzenle",
@@ -1895,12 +1895,6 @@
     "extractedText": "Çıkarılan Metin",
     "viewText": "Çıkarılan Metni Görüntüle",
     "editText": "Çıkarılan Metni Düzenle",
-    "settings": "Oluşturma Ayarları",
-    "systemPrompt": "Sistem İstemi",
-    "tone": "Ton",
-    "formal": "Resmi",
-    "semiFormal": "Yarı Resmi",
-    "maxWords": "Maksimum Kelime Sayısı",
     "noExamples": "Henüz örnek mektup eklenmedi",
     "saveSuccess": "Başarıyla kaydedildi",
     "deleteSuccess": "Başarıyla silindi"
@@ -1936,7 +1930,9 @@
     "hotelPhone": "Telefon",
     "delete": "Sil",
     "deleteConfirm": "Bu belgeyi silmek istediğinize emin misiniz?",
-    "deleted": "Belge silindi"
+    "deleted": "Belge silindi",
+    "generateLetterRequiresBooking": "Önce rezervasyon PDF'i oluşturun",
+    "saveAndUpdatePdf": "Kaydet ve PDF Güncelle"
   },
   "payment": {
     "pageTitle": "Ödeme",

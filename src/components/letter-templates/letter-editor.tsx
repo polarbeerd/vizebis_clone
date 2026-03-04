@@ -4,6 +4,7 @@ import React from "react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Underline from "@tiptap/extension-underline";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import {
   Bold,
@@ -27,6 +28,8 @@ interface LetterEditorProps {
 
 export function LetterEditor({ content, onSave, onClose }: LetterEditorProps) {
   const [saving, setSaving] = React.useState(false);
+  const t = useTranslations("generatedDocuments");
+  const tCommon = useTranslations("common");
 
   const editor = useEditor({
     extensions: [StarterKit, Underline],
@@ -116,11 +119,11 @@ export function LetterEditor({ content, onSave, onClose }: LetterEditorProps) {
       {/* Footer */}
       <div className="flex justify-end gap-2 pt-4">
         <Button variant="outline" onClick={onClose}>
-          Cancel
+          {tCommon("cancel")}
         </Button>
         <Button onClick={handleSave} disabled={saving}>
           {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          Save
+          {t("saveAndUpdatePdf")}
         </Button>
       </div>
     </div>

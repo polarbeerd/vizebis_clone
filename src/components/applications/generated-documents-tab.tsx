@@ -183,12 +183,13 @@ export function GeneratedDocumentsTab({ applicationId }: GeneratedDocumentsTabPr
     }
   }
 
-  // Generate letter manually
+  // Generate letter manually (requires booking to exist for hotel data)
   async function handleGenerateLetter() {
     if (!applicationId) return;
+    const hotelId = bookingDoc?.booking_hotels?.id;
     setGenerating("letter");
     try {
-      await triggerGeneration({ type: "letter" });
+      await triggerGeneration({ hotelId, type: "letter" });
       await fetchDocs();
       toast.success(t("ready"));
     } catch {
@@ -206,20 +207,24 @@ export function GeneratedDocumentsTab({ applicationId }: GeneratedDocumentsTabPr
     setEditorOpen(true);
   }
 
-  // Save letter edits
+  // Save letter edits + regenerate PDF
   async function handleSaveLetter(html: string) {
     if (!editorDocId) return;
-    const { error } = await supabase
-      .from("generated_documents")
-      .update({ content: html, updated_at: new Date().toISOString() })
-      .eq("id", editorDocId);
-    if (error) {
+    try {
+      const res = await fetch("/api/regenerate-letter-pdf", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ documentId: editorDocId, html }),
+      });
+      if (!res.ok) {
+        throw new Error(`API returned ${res.status}`);
+      }
+      toast.success(t("saveLetter"));
+      setEditorOpen(false);
+      await fetchDocs();
+    } catch {
       toast.error(t("error"));
-      return;
     }
-    toast.success(t("saveLetter"));
-    setEditorOpen(false);
-    await fetchDocs();
   }
 
   // Regenerate: delete old record, trigger server-side generation, fetch result
@@ -237,11 +242,10 @@ export function GeneratedDocumentsTab({ applicationId }: GeneratedDocumentsTabPr
 
       // Trigger server-side generation (only the requested type)
       const genType = isBooking ? "booking" : "letter";
-      const hotelId = isBooking && bookingDoc?.booking_hotels?.id
-        ? bookingDoc.booking_hotels.id
-        : undefined;
+      // For both booking and letter regeneration, use the existing hotel ID
+      const regenHotelId = bookingDoc?.booking_hotels?.id || undefined;
 
-      await triggerGeneration({ hotelId, type: genType });
+      await triggerGeneration({ hotelId: regenHotelId, type: genType });
       await fetchDocs();
       toast.success(t("ready"));
     } catch {
@@ -490,14 +494,21 @@ export function GeneratedDocumentsTab({ applicationId }: GeneratedDocumentsTabPr
             ) : (
               <div className="space-y-3">
                 <p className="text-sm text-muted-foreground">{t("noDocuments")}</p>
-                <Button
-                  size="sm"
-                  onClick={handleGenerateLetter}
-                  disabled={generating === "letter"}
-                >
-                  {generating === "letter" && <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />}
-                  {t("generateLetter")}
-                </Button>
+                {bookingDoc?.status !== "ready" ? (
+                  <p className="text-sm text-amber-600 dark:text-amber-400 flex items-center gap-1.5">
+                    <AlertCircle className="h-4 w-4" />
+                    {t("generateLetterRequiresBooking")}
+                  </p>
+                ) : (
+                  <Button
+                    size="sm"
+                    onClick={handleGenerateLetter}
+                    disabled={generating === "letter"}
+                  >
+                    {generating === "letter" && <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />}
+                    {t("generateLetter")}
+                  </Button>
+                )}
               </div>
             )}
           </CardContent>

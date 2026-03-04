@@ -1,5 +1,6 @@
 import os
-from fastapi import FastAPI, Header, HTTPException
+import io
+from fastapi import FastAPI, File, Header, HTTPException, UploadFile
 from pydantic import BaseModel
 import httpx
 import base64
@@ -91,6 +92,19 @@ async def html_to_pdf(req: HtmlToPdfRequest, x_api_key: str = Header(default="")
 
         pdf_bytes = HTML(string=req.html, url_fetcher=safe_url_fetcher).write_pdf()
         return {"status": "success", "pdf_base64": base64.b64encode(pdf_bytes).decode()}
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return {"status": "error", "error": str(e)}
+
+@app.post("/extract-text")
+async def extract_text(file: UploadFile = File(...), x_api_key: str = Header(default="")):
+    verify_api_key(x_api_key)
+    try:
+        from pdfminer.high_level import extract_text as pdfminer_extract
+        content = await file.read()
+        text = pdfminer_extract(io.BytesIO(content))
+        return {"status": "success", "text": text.strip()}
     except Exception as e:
         import traceback
         traceback.print_exc()

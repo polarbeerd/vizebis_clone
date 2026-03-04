@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "@/lib/auth";
 
+const PDF_SERVICE_URL = process.env.PDF_SERVICE_URL || "http://localhost:8000";
+const PDF_SERVICE_API_KEY = process.env.PDF_SERVICE_API_KEY || "";
+
 export async function POST(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user) {
@@ -14,14 +17,38 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "No file provided" }, { status: 400 });
     }
 
-    const buffer = Buffer.from(await file.arrayBuffer());
+    // Forward the file to the Python sidecar
+    const proxyForm = new FormData();
+    proxyForm.append("file", file);
 
-    // Use dynamic import for pdf-parse (CommonJS module)
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const pdfParse = require("pdf-parse") as (buf: Buffer) => Promise<{ text: string }>;
-    const data = await pdfParse(buffer);
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 30_000);
 
-    return NextResponse.json({ text: data.text });
+    let response: Response;
+    try {
+      response = await fetch(`${PDF_SERVICE_URL}/extract-text`, {
+        method: "POST",
+        headers: {
+          ...(PDF_SERVICE_API_KEY ? { "x-api-key": PDF_SERVICE_API_KEY } : {}),
+        },
+        body: proxyForm,
+        signal: controller.signal,
+      });
+    } finally {
+      clearTimeout(timeout);
+    }
+
+    if (!response.ok) {
+      throw new Error(`PDF service returned ${response.status}`);
+    }
+
+    const result = await response.json();
+
+    if (result.status !== "success") {
+      throw new Error(result.error || "Text extraction failed");
+    }
+
+    return NextResponse.json({ text: result.text });
   } catch (error) {
     return NextResponse.json(
       { error: "Failed to extract text from PDF", details: String(error) },

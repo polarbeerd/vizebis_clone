@@ -10,8 +10,6 @@ import {
   Loader2,
   Plus,
   RefreshCw,
-  Save,
-  Settings,
   Trash2,
 } from "lucide-react";
 
@@ -27,15 +25,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -44,17 +33,15 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import type { LetterExampleRow, LetterConfig } from "./page";
+import type { LetterExampleRow } from "./page";
 import { ExampleForm } from "@/components/letter-templates/example-form";
 
 interface LetterTemplatesClientProps {
   data: LetterExampleRow[];
-  config: LetterConfig;
 }
 
 export function LetterTemplatesClient({
   data,
-  config,
 }: LetterTemplatesClientProps) {
   const t = useTranslations("letterTemplates");
   const tCommon = useTranslations("common");
@@ -78,14 +65,6 @@ export function LetterTemplatesClient({
   );
   const [editedText, setEditedText] = React.useState("");
   const [savingText, setSavingText] = React.useState(false);
-
-  // --- Generation settings state ---
-  const [systemPrompt, setSystemPrompt] = React.useState(config.systemPrompt);
-  const [tone, setTone] = React.useState<"formal" | "semi-formal">(
-    config.tone
-  );
-  const [maxWords, setMaxWords] = React.useState(config.maxWords);
-  const [savingConfig, setSavingConfig] = React.useState(false);
 
   const supabase = React.useMemo(() => createClient(), []);
 
@@ -179,35 +158,6 @@ export function LetterTemplatesClient({
       toast.error(tCommon("save") + " error");
     } finally {
       setSavingText(false);
-    }
-  }
-
-  // --- Generation settings ---
-  async function handleSaveConfig() {
-    setSavingConfig(true);
-
-    try {
-      const configValue: LetterConfig = {
-        systemPrompt,
-        tone,
-        maxWords,
-      };
-
-      const { error } = await supabase
-        .from("settings")
-        .upsert(
-          { key: "letter_intent_config", value: configValue as unknown as Record<string, unknown> },
-          { onConflict: "key" }
-        );
-
-      if (error) throw error;
-
-      toast.success(t("saveSuccess"));
-    } catch (err) {
-      console.error("Error saving config:", err);
-      toast.error(tCommon("save") + " error");
-    } finally {
-      setSavingConfig(false);
     }
   }
 
@@ -351,76 +301,6 @@ export function LetterTemplatesClient({
           </div>
         )}
       </div>
-
-      {/* ========== Section 2: Generation Settings ========== */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Settings className="size-5" />
-            {t("settings")}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {/* System Prompt */}
-          <div className="space-y-2">
-            <Label htmlFor="systemPrompt">{t("systemPrompt")}</Label>
-            <Textarea
-              id="systemPrompt"
-              rows={4}
-              value={systemPrompt}
-              onChange={(e) => setSystemPrompt(e.target.value)}
-            />
-          </div>
-
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            {/* Tone */}
-            <div className="space-y-2">
-              <Label htmlFor="tone">{t("tone")}</Label>
-              <Select
-                value={tone}
-                onValueChange={(v) =>
-                  setTone(v as "formal" | "semi-formal")
-                }
-              >
-                <SelectTrigger id="tone">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="formal">{t("formal")}</SelectItem>
-                  <SelectItem value="semi-formal">
-                    {t("semiFormal")}
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Max Words */}
-            <div className="space-y-2">
-              <Label htmlFor="maxWords">{t("maxWords")}</Label>
-              <Input
-                id="maxWords"
-                type="number"
-                min={100}
-                max={5000}
-                value={maxWords}
-                onChange={(e) =>
-                  setMaxWords(parseInt(e.target.value, 10) || 500)
-                }
-              />
-            </div>
-          </div>
-        </CardContent>
-        <CardFooter>
-          <Button onClick={handleSaveConfig} disabled={savingConfig}>
-            {savingConfig ? (
-              <Loader2 className="mr-2 size-4 animate-spin" />
-            ) : (
-              <Save className="mr-2 size-4" />
-            )}
-            {tCommon("save")}
-          </Button>
-        </CardFooter>
-      </Card>
 
       {/* ========== Example Form Dialog ========== */}
       <ExampleForm
