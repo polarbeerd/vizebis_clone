@@ -247,22 +247,31 @@ def _replace_tj_array_centered(stream, tj_pattern, new_text, tm_y, new_x):
         stream = stream[:match.start()] + new_tj + stream[match.end():]
     return stream
 
-def _replace_weekday(stream, old_weekday, new_weekday, new_x, font_size):
+def _replace_weekday(stream, old_weekday, new_weekday, new_x, font_size, month_tm_y=None):
     old_tj = f"({old_weekday})Tj"
     tj_idx = stream.find(old_tj)
     if tj_idx < 0:
         return stream
-    region_start = max(0, tj_idx - 200)
+    region_start = max(0, tj_idx - 300)
     region = stream[region_start:tj_idx]
     td_match = re.search(r'([\-\d.]+)\s+([\-\d.]+)\s+Td', region)
     if not td_match:
         return stream.replace(old_tj, f"({_esc(new_weekday)})Tj", 1)
     td_abs = region_start + td_match.start()
     before_td = stream[:td_abs]
-    tm_matches = list(re.finditer(r'(\d+\.?\d+)\s+486\.6125\s+Tm', before_td))
-    if not tm_matches:
+    # Find the month Tm — use specific y-coordinate if provided, otherwise try common values
+    current_month_x = None
+    if month_tm_y:
+        tm_matches = list(re.finditer(rf'(\d+\.?\d+)\s+{re.escape(month_tm_y)}\s+Tm', before_td))
+        if tm_matches:
+            current_month_x = float(tm_matches[-1].group(1))
+    if current_month_x is None:
+        # Fallback: find the nearest Tm with the same y as the month (look for 7.5pt font Tm before the Td)
+        tm_matches = list(re.finditer(r'7\.5\s+0\s+0\s+7\.5\s+(\d+\.?\d+)\s+(\d+\.?\d+)\s+Tm', before_td))
+        if tm_matches:
+            current_month_x = float(tm_matches[-1].group(1))
+    if current_month_x is None:
         return stream.replace(old_tj, f"({_esc(new_weekday)})Tj", 1)
-    current_month_x = float(tm_matches[-1].group(1))
     new_dx = (new_x - current_month_x) / font_size
     old_td = td_match.group(0)
     new_td = old_td.replace(td_match.group(1), f"{new_dx:.3f}", 1)
@@ -311,8 +320,10 @@ def _replace_email_on_page(stream, new_email):
         arr_content = m.group(1)
         parts = re.findall(r'\(([^)]*)\)', arr_content)
         full_text = ''.join(parts)
-        if re.search(email_re, full_text):
-            new_text = re.sub(email_re, new_email, full_text)
+        # Strip control characters (CR, LF, etc.) that break email regex matching
+        clean_text = re.sub(r'[\x00-\x1f\x7f]', '', full_text)
+        if re.search(email_re, clean_text):
+            new_text = re.sub(email_re, new_email, clean_text)
             return f"({_esc(new_text)})Tj"
         return m.group(0)
 
@@ -357,6 +368,19 @@ def _replace_text_adjust_following_td(stream, old_text, new_text, font_metrics, 
 
         abs_start = tj_idx + len(new_tj) + td_match.start()
         stream = stream[:abs_start] + new_td_str + stream[abs_start + len(old_td_str):]
+
+        # Also adjust the return Td (negative counterpart) that brings cursor back
+        after_forward = stream[abs_start + len(new_td_str):]
+        return_td = re.search(r'([\-\d.]+)\s+([\-\d.]+)\s+Td', after_forward[:300])
+        if return_td:
+            rx = float(return_td.group(1))
+            # Return Td should be negative of forward Td (within tolerance)
+            if rx < 0 and abs(rx + old_td_x) < 2.0:
+                new_rx = -new_td_x
+                old_r_str = return_td.group(0)
+                new_r_str = f"{new_rx:.3f} {return_td.group(2)} Td"
+                r_abs = abs_start + len(new_td_str) + return_td.start()
+                stream = stream[:r_abs] + new_r_str + stream[r_abs + len(old_r_str):]
 
     return stream
 
@@ -522,7 +546,7 @@ def edit_booking_pdf(template_bytes: bytes, booking: BookingData, edit_config: d
     stream = _replace_tj_array_simple(stream, guest_pat, f" {booking.guest_name}")
     stream = _replace_tm_and_tj(stream, ci_day_cfg["old_tm_x"], ci_day_cfg["tm_y"], ci_day_cfg["old_text"], booking.checkin_day, ci_day_x)
     stream = _replace_tj_array_centered(stream, ci_month_cfg["pattern"], booking.checkin_month, ci_month_cfg["tm_y"], ci_month_x)
-    stream = _replace_weekday(stream, ci_wday_cfg["old_text"], booking.checkin_weekday, ci_wday_x, 7.5)
+    stream = _replace_weekday(stream, ci_wday_cfg["old_text"], booking.checkin_weekday, ci_wday_x, 7.5, month_tm_y=ci_month_cfg.get("tm_y"))
     stream = _replace_tj_array_simple(stream, ci_time_pat, booking.checkin_time)
     stream = _replace_tm_and_tj(stream, co_day_cfg["old_tm_x"], co_day_cfg["tm_y"], co_day_cfg["old_text"], booking.checkout_day, co_day_x)
 
@@ -532,7 +556,7 @@ def edit_booking_pdf(template_bytes: bytes, booking: BookingData, edit_config: d
     else:
         stream = _replace_tm_and_tj(stream, co_month_cfg["old_tm_x"], co_month_cfg["tm_y"], co_month_cfg["old_text"], booking.checkout_month, co_month_x)
 
-    stream = _replace_weekday(stream, co_wday_cfg["old_text"], booking.checkout_weekday, co_wday_x, 7.5)
+    stream = _replace_weekday(stream, co_wday_cfg["old_text"], booking.checkout_weekday, co_wday_x, 7.5, month_tm_y=co_month_cfg.get("tm_y"))
     stream = _replace_tj_array_simple(stream, co_time_pat, booking.checkout_time)
     stream = _replace_tm_and_tj(stream, nights_cfg["old_tm_x"], nights_cfg["tm_y"], nights_cfg["old_text"], booking.nights, nights_x)
 
