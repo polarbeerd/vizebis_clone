@@ -125,7 +125,7 @@ function buildDynamicSchema(fields: FormField[]) {
     }
 
     if (field.field_type !== "email" && field.field_type !== "tel" && field.max_chars != null) {
-      schema = schema.pipe(z.string().length(field.max_chars));
+      schema = schema.pipe(z.string().max(field.max_chars));
     }
 
     shape[field.field_key] = schema;
@@ -843,9 +843,7 @@ export function ApplyClient({
           <p className="mt-1 text-xs text-red-500">
             {field.field_type === "email"
               ? tPortal("invalidEmail")
-              : field.max_chars != null && (form.watch(field.field_key) || "").length > 0
-                ? tPortal("exactChars", { count: field.max_chars })
-                : tPortal("required")}
+              : tPortal("required")}
           </p>
         )}
       </div>
