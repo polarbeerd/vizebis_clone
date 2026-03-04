@@ -46,9 +46,10 @@ interface KeyPointItem {
 interface CountryGuidesClientProps {
   data: GuideRow[];
   countries: CountryOption[];
+  embedded?: boolean;
 }
 
-export function CountryGuidesClient({ data, countries }: CountryGuidesClientProps) {
+export function CountryGuidesClient({ data, countries, embedded }: CountryGuidesClientProps) {
   const t = useTranslations("portalContent");
   const router = useRouter();
   const supabase = React.useMemo(() => createClient(), []);
@@ -225,13 +226,15 @@ export function CountryGuidesClient({ data, countries }: CountryGuidesClientProp
   // ── Render ────────────────────────────────────────────
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">{t("title")}</h1>
-          <p className="text-sm text-muted-foreground">{t("description")}</p>
+      {/* Header — hidden when embedded as a tab */}
+      {!embedded && (
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">{t("title")}</h1>
+            <p className="text-sm text-muted-foreground">{t("description")}</p>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Country selector */}
       <Select value={selectedCountry} onValueChange={setSelectedCountry}>

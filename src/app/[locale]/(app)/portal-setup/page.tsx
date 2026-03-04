@@ -21,6 +21,17 @@ export interface VisaTypeRow {
   sort_order: number;
 }
 
+export interface GuideRow {
+  id: number;
+  title: string;
+  content: string;
+  content_type: string;
+  country: string | null;
+  video_url: string | null;
+  sort_order: number;
+  is_published: boolean;
+}
+
 export default async function PortalSetupPage() {
   const supabase = await createClient();
 
@@ -29,6 +40,7 @@ export default async function PortalSetupPage() {
     visaTypesAllRes,
     definitionsRes,
     smartTemplatesRes,
+    contentRes,
   ] = await Promise.all([
     supabase
       .from("countries")
@@ -46,6 +58,11 @@ export default async function PortalSetupPage() {
       .from("portal_smart_field_templates")
       .select("id, template_key, label, label_tr, description, description_tr, sub_fields")
       .order("id", { ascending: true }),
+    supabase
+      .from("portal_content")
+      .select("id, title, content, content_type, country, video_url, sort_order, is_published")
+      .in("content_type", ["video", "key_point"])
+      .order("sort_order", { ascending: true }),
   ]);
 
   const countriesAll: CountryRow[] = (countriesAllRes.data ?? []).map(
@@ -100,12 +117,21 @@ export default async function PortalSetupPage() {
     })
   );
 
+  const guideContent: GuideRow[] = (contentRes.data ?? []) as GuideRow[];
+
+  // Active countries for guide country selector
+  const activeCountries = countriesAll
+    .filter((c) => c.is_active)
+    .map((c) => ({ id: c.id, name: c.name, flag_emoji: c.flag_emoji }));
+
   return (
     <PortalSetupClient
       countriesAll={countriesAll}
       visaTypesAll={visaTypesAll}
       definitions={definitions}
       smartTemplates={smartTemplates}
+      guideContent={guideContent}
+      activeCountries={activeCountries}
     />
   );
 }

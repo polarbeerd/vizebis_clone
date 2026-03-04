@@ -9,13 +9,18 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { applicationId } = await req.json();
+    const body = await req.json();
+    const { applicationId, hotelId, type } = body;
+
     if (!applicationId || typeof applicationId !== "number") {
       return NextResponse.json({ error: "Invalid applicationId" }, { status: 400 });
     }
 
     // Fire and forget — return immediately, generation happens in background
-    generateDocumentsForApplication(applicationId).catch((err) => {
+    generateDocumentsForApplication(applicationId, {
+      hotelId: hotelId || undefined,
+      type: type || "all",
+    }).catch((err) => {
       console.error("Manual generation failed for application", applicationId, err);
     });
 

@@ -14,7 +14,6 @@ import {
   Settings as SettingsIcon,
   ScrollText,
   Sliders,
-  BookOpen,
   FileStack,
   type LucideIcon,
 } from "lucide-react";
@@ -47,7 +46,6 @@ export function useNavGroups(): NavGroup[] {
       title: t("portalGroup"),
       items: [
         { label: t("portalSetup"), href: "/portal-setup", icon: Sliders },
-        { label: t("portalContent"), href: "/portal-content", icon: BookOpen },
         { label: t("documentTemplates"), href: "/document-templates", icon: FileStack },
       ],
     },
