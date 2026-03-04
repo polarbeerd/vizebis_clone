@@ -1933,7 +1933,10 @@
     "hotelPostalCode": "Postal Code",
     "hotelCity": "City",
     "hotelEmail": "Email",
-    "hotelPhone": "Phone"
+    "hotelPhone": "Phone",
+    "delete": "Delete",
+    "deleteConfirm": "Are you sure you want to delete this document?",
+    "deleted": "Document deleted"
   },
   "payment": {
     "pageTitle": "Payment",

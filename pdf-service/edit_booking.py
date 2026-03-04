@@ -40,6 +40,7 @@ class BookingData:
     num_guests: str = ""
     cancel_before_str: str = ""  # "March 26, 2026" — day before check-in in US format
     cancel_from_str: str = ""   # "March 27, 2026" — check-in date in US format
+    guest_email: str = ""
     refund_amount_tl: str = ""
     price_base_tl: str = ""
     price_vat_tl: str = ""
@@ -54,7 +55,7 @@ def _fmt_tl_decimal(val):
     """Format with comma thousands and 2 decimals: 23880.67 -> '23,880.67'"""
     return f"{val:,.2f}"
 
-def booking_from_dates(checkin_date, checkout_date, confirmation_number, pin_code, guest_name, checkin_time=" 15:00 - 00:00", checkout_time=" until 11:00", num_guests=1, refund_amount_tl=None, price_total_tl=None, price_total_dkk=None):
+def booking_from_dates(checkin_date, checkout_date, confirmation_number, pin_code, guest_name, checkin_time=" 15:00 - 00:00", checkout_time=" until 11:00", num_guests=1, refund_amount_tl=None, price_total_tl=None, price_total_dkk=None, guest_email=""):
     ci = datetime.strptime(checkin_date, "%Y-%m-%d")
     co = datetime.strptime(checkout_date, "%Y-%m-%d")
     refund_date_str = f"{ci.day} {ci.strftime('%B')} {ci.year}"
@@ -85,7 +86,8 @@ def booking_from_dates(checkin_date, checkout_date, confirmation_number, pin_cod
         nights=str((co - ci).days), confirmation_number=confirmation_number,
         pin_code=pin_code, guest_name=guest_name.upper(), refund_date_str=refund_date_str,
         cancel_before_str=cancel_before_str, cancel_from_str=cancel_from_str,
-        num_guests=str(num_guests), refund_amount_tl=_fmt_tl_decimal(refund_amount_tl) if refund_amount_tl is not None else "",
+        num_guests=str(num_guests), guest_email=guest_email,
+        refund_amount_tl=_fmt_tl_decimal(refund_amount_tl) if refund_amount_tl is not None else "",
         price_base_tl=p_base_tl, price_vat_tl=p_vat_tl, price_total_tl=p_total_tl, price_total_dkk=p_total_dkk,
     )
 
@@ -286,6 +288,142 @@ def _replace_simple_text(stream, old_text, new_text, context=None):
 def _replace_tj_array_simple(stream, pattern, new_text):
     return re.sub(pattern, f"({_esc(new_text)})Tj", stream, count=1)
 
+def _replace_email_on_page(stream, new_email):
+    """Replace email address in a page's content stream (handles both Tj and TJ formats)."""
+    email_re = r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}'
+
+    # 1. Handle simple Tj strings containing @ (e.g. Cabinn template)
+    def replace_in_tj(m):
+        inner = m.group(1)
+        new_inner = re.sub(email_re, new_email, inner)
+        if new_inner != inner:
+            return f"({_esc(new_inner)})Tj"
+        return m.group(0)
+
+    result = re.sub(r'\(([^)]*@[^)]*)\)Tj', replace_in_tj, stream)
+    if result != stream:
+        return result
+
+    # 2. Handle TJ arrays containing @ (e.g. AC Hotel split email)
+    tj_arr_pat = r'\[((?:\([^)]*\)\s*-?\d*\s*)+)\]TJ'
+
+    def replace_in_tj_array(m):
+        arr_content = m.group(1)
+        parts = re.findall(r'\(([^)]*)\)', arr_content)
+        full_text = ''.join(parts)
+        if re.search(email_re, full_text):
+            new_text = re.sub(email_re, new_email, full_text)
+            return f"({_esc(new_text)})Tj"
+        return m.group(0)
+
+    return re.sub(tj_arr_pat, replace_in_tj_array, stream)
+
+def _replace_text_adjust_following_td(stream, old_text, new_text, font_metrics, font_size, context=None):
+    """Replace text and adjust the Td that follows to prevent overlap."""
+    old_tj = f"({old_text})Tj"
+    new_tj = f"({_esc(new_text)})Tj"
+
+    if context:
+        ctx_idx = stream.find(context)
+        if ctx_idx < 0:
+            return _replace_simple_text(stream, old_text, new_text, context)
+        tj_idx = stream.find(old_tj, ctx_idx)
+    else:
+        tj_idx = stream.find(old_tj)
+
+    if tj_idx < 0:
+        return stream
+
+    old_width = font_metrics.text_width(old_text, font_size)
+    new_width = font_metrics.text_width(new_text, font_size)
+    diff_pts = new_width - old_width  # positive = new text is wider
+
+    # Replace text
+    stream = stream[:tj_idx] + new_tj + stream[tj_idx + len(old_tj):]
+
+    if abs(diff_pts) < 0.5:
+        return stream
+
+    # Find and adjust following Td to prevent overlap
+    after_section = stream[tj_idx + len(new_tj):]
+    td_match = re.search(r'([\-\d.]+)\s+([\-\d.]+)\s+Td', after_section[:200])
+    if td_match:
+        old_td_x = float(td_match.group(1))
+        adjustment = diff_pts / font_size
+        new_td_x = old_td_x + adjustment
+
+        old_td_str = td_match.group(0)
+        new_td_str = f"{new_td_x:.3f} {td_match.group(2)} Td"
+
+        abs_start = tj_idx + len(new_tj) + td_match.start()
+        stream = stream[:abs_start] + new_td_str + stream[abs_start + len(old_td_str):]
+
+    return stream
+
+def _replace_price_aligned(stream, pat, new_text, font_metrics, font_size):
+    """Replace price text (TJ array or simple Tj) and adjust Td for right-alignment."""
+    is_dict = isinstance(pat, dict)
+
+    if is_dict:
+        old_text = pat["old_text"]
+        old_tj_str = f"({old_text})Tj"
+        match_start = stream.find(old_tj_str)
+        if match_start < 0:
+            return stream
+        match_end = match_start + len(old_tj_str)
+        old_visible = old_text
+    else:
+        m = re.search(pat, stream)
+        if not m:
+            return stream
+        match_start = m.start()
+        match_end = m.end()
+        parts = re.findall(r'\(([^)]*)\)', m.group(0))
+        old_visible = ''.join(parts)
+
+    old_width = font_metrics.text_width(old_visible, font_size)
+    new_width = font_metrics.text_width(new_text, font_size)
+    diff_pts = old_width - new_width  # positive = new text is narrower → shift right
+
+    new_tj = f"({_esc(new_text)})Tj"
+
+    if abs(diff_pts) < 0.5:
+        return stream[:match_start] + new_tj + stream[match_end:]
+
+    # Find the last Td before the price
+    region = stream[:match_start]
+    td_iter = list(re.finditer(r'([\-\d.]+)\s+([\-\d.]+)\s+Td', region))
+    if not td_iter:
+        return stream[:match_start] + new_tj + stream[match_end:]
+
+    last_td = td_iter[-1]
+    old_td_x = float(last_td.group(1))
+    adjustment = diff_pts / font_size
+    new_td_x = old_td_x + adjustment
+
+    new_td_str = f"{new_td_x:.3f} {last_td.group(2)} Td"
+
+    # Build: before_td + new_td + between + new_tj + after
+    before = stream[:last_td.start()]
+    between = stream[last_td.end():match_start]
+    after = stream[match_end:]
+    result = before + new_td_str + between + new_tj + after
+
+    # Adjust the return Td (negative counterpart) after the price
+    new_tj_pos = len(before) + len(new_td_str) + len(between)
+    after_section = result[new_tj_pos + len(new_tj):]
+    return_td = re.search(r'([\-\d.]+)\s+([\-\d.]+)\s+Td', after_section[:150])
+    if return_td:
+        rx = float(return_td.group(1))
+        if rx < 0 and abs(rx + old_td_x) < 2.0:
+            new_rx = -new_td_x
+            old_r_str = return_td.group(0)
+            new_r_str = f"{new_rx:.3f} {return_td.group(2)} Td"
+            r_abs = new_tj_pos + len(new_tj) + return_td.start()
+            result = result[:r_abs] + new_r_str + result[r_abs + len(old_r_str):]
+
+    return result
+
 def _collect_all_text_codepoints(booking):
     """Collect all Unicode codepoints that appear in the booking data."""
     all_text = (
@@ -295,6 +433,7 @@ def _collect_all_text_codepoints(booking):
         booking.confirmation_number + booking.pin_code + booking.guest_name +
         booking.refund_date_str + booking.cancel_before_str + booking.cancel_from_str +
         booking.num_guests + booking.refund_amount_tl +
+        booking.guest_email +
         booking.price_base_tl + booking.price_vat_tl + booking.price_total_tl + booking.price_total_dkk +
         # Static text fragments that appear in replacements
         "You'll get a full refund if you cancel before 11:59" +
@@ -343,6 +482,11 @@ def edit_booking_pdf(template_bytes: bytes, booking: BookingData, edit_config: d
     # 2. Calculate centered positions
     bold = FontMetrics(BOLD_FONT_PATH)
     italic = FontMetrics(ITALIC_FONT_PATH)
+    regular = FontMetrics(REGULAR_FONT_PATH)
+
+    # Font sizes for Td adjustments (configurable per hotel)
+    cancel_font_size = edit_config.get("cancel_font_size", 6.75)
+    price_font_size = edit_config.get("price_font_size", 7.5)
 
     ci_day_x = bold.centered_x(booking.checkin_day, 19.5, ci_center)
     co_day_x = bold.centered_x(booking.checkout_day, 19.5, co_center)
@@ -429,11 +573,13 @@ def edit_booking_pdf(template_bytes: bytes, booking: BookingData, edit_config: d
 
     cancel_from_cfg = patterns.get("cancel_from")
     if cancel_from_cfg:
+        new_cancel = f"from {booking.cancel_from_str} 12:00 AM: "
         if isinstance(cancel_from_cfg, dict):
-            new_cancel = f"from {booking.cancel_from_str} 12:00 AM: "
-            stream = _replace_simple_text(stream, cancel_from_cfg["old_text"], new_cancel)
+            stream = _replace_text_adjust_following_td(
+                stream, cancel_from_cfg["old_text"], new_cancel,
+                regular, cancel_font_size
+            )
         else:
-            new_cancel = f"from {booking.cancel_from_str} 12:00 AM: "
             stream = _replace_tj_array_simple(stream, cancel_from_cfg, new_cancel)
 
     # Replace number of guests in apartment section
@@ -453,34 +599,34 @@ def edit_booking_pdf(template_bytes: bytes, booking: BookingData, edit_config: d
 
     if booking.price_base_tl:
         pat = patterns.get("price_base_tl", r'\[\(2\)-?\d*\s*\(1,727\)\]TJ')
-        if isinstance(pat, dict):
-            stream = _replace_simple_text(stream, pat["old_text"], booking.price_base_tl, context=pat.get("context"))
-        else:
-            stream = _replace_tj_array_simple(stream, pat, booking.price_base_tl)
+        stream = _replace_price_aligned(stream, pat, booking.price_base_tl, bold, price_font_size)
 
     if booking.price_vat_tl:
         pat = patterns.get("price_vat_tl", r'\[\(5\)-?\d*\s*\(,431\)\]TJ')
-        if isinstance(pat, dict):
-            stream = _replace_simple_text(stream, pat["old_text"], booking.price_vat_tl, context=pat.get("context"))
-        else:
-            stream = _replace_tj_array_simple(stream, pat, booking.price_vat_tl)
+        stream = _replace_price_aligned(stream, pat, booking.price_vat_tl, bold, price_font_size)
 
     if booking.price_total_tl:
         pat = patterns.get("price_total_tl", {"old_text": "27,158"})
-        if isinstance(pat, dict):
-            stream = _replace_simple_text(stream, pat["old_text"], booking.price_total_tl, context=pat.get("context"))
-        else:
-            stream = _replace_tj_array_simple(stream, pat, booking.price_total_tl)
+        stream = _replace_price_aligned(stream, pat, booking.price_total_tl, bold, price_font_size)
 
     if booking.price_total_dkk:
         pat = patterns.get("price_total_dkk", r'\[\(3,91\)-?\d*\s*\(5\)\]TJ')
-        if isinstance(pat, dict):
-            stream = _replace_simple_text(stream, pat["old_text"], booking.price_total_dkk, context=pat.get("context"))
-        else:
-            stream = _replace_tj_array_simple(stream, pat, booking.price_total_dkk)
+        stream = _replace_price_aligned(stream, pat, booking.price_total_dkk, bold, price_font_size)
 
-    # 4. Write back
+    # 4. Write back page 0
     contents.write(stream.encode('latin-1', errors='replace'))
+
+    # 5. Replace email on ALL pages (footer email → guest's portal email)
+    if booking.guest_email:
+        for page_idx in range(len(pdf.pages)):
+            p = pdf.pages[page_idx]
+            p_contents = p.get("/Contents")
+            if p_contents is None:
+                continue
+            p_stream = p_contents.read_bytes().decode('latin-1')
+            new_p_stream = _replace_email_on_page(p_stream, booking.guest_email)
+            if new_p_stream != p_stream:
+                p_contents.write(new_p_stream.encode('latin-1', errors='replace'))
 
     output = io.BytesIO()
     pdf.save(output)

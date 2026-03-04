@@ -27,6 +27,7 @@ class BookingRequest(BaseModel):
     confirmation_number: str | None = None
     pin_code: str | None = None
     num_guests: int | None = None
+    guest_email: str | None = None
     refund_amount_tl: float | None = None
     price_total_tl: float | None = None
     price_total_dkk: float | None = None
@@ -59,6 +60,7 @@ async def generate_booking(req: BookingRequest, x_api_key: str = Header(default=
             pin_code=pin,
             guest_name=req.guest_name,
             num_guests=req.num_guests or 1,
+            guest_email=req.guest_email or "",
             refund_amount_tl=req.refund_amount_tl,
             price_total_tl=req.price_total_tl,
             price_total_dkk=req.price_total_dkk,

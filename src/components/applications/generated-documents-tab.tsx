@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/dialog";
 import { LetterEditor } from "@/components/letter-templates/letter-editor";
 import {
-  Copy, Download, Eye, RefreshCw, Loader2, FileText, Hotel, AlertCircle, Pencil
+  Copy, Download, Eye, RefreshCw, Loader2, FileText, Hotel, AlertCircle, Pencil, Trash2
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -251,6 +251,28 @@ export function GeneratedDocumentsTab({ applicationId }: GeneratedDocumentsTabPr
     }
   }
 
+  // Delete generated document
+  async function handleDelete(docType: string) {
+    if (!applicationId) return;
+    const doc = docType === "booking_pdf" ? bookingDoc : letterDoc;
+    if (!doc) return;
+
+    if (!confirm(t("deleteConfirm"))) return;
+
+    try {
+      // Delete file from storage if exists
+      if (doc.file_path) {
+        await supabase.storage.from("generated-docs").remove([doc.file_path]);
+      }
+      // Delete DB record
+      await supabase.from("generated_documents").delete().eq("id", doc.id);
+      await fetchDocs();
+      toast.success(t("deleted"));
+    } catch {
+      toast.error(t("error"));
+    }
+  }
+
   // Compact row with label: value + copy button
   function HotelDetailRow({ label, value }: { label: string; value: string | null | undefined }) {
     if (!value) return null;
@@ -316,6 +338,9 @@ export function GeneratedDocumentsTab({ applicationId }: GeneratedDocumentsTabPr
                     <Button size="sm" variant="outline" onClick={() => handleRegenerate("booking_pdf")} disabled={generating === "booking"}>
                       <RefreshCw className={`mr-1.5 h-3.5 w-3.5 ${generating === "booking" ? "animate-spin" : ""}`} /> {t("regenerate")}
                     </Button>
+                    <Button size="sm" variant="outline" className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/30" onClick={() => handleDelete("booking_pdf")}>
+                      <Trash2 className="mr-1.5 h-3.5 w-3.5" /> {t("delete")}
+                    </Button>
                   </div>
                 )}
 
@@ -330,14 +355,19 @@ export function GeneratedDocumentsTab({ applicationId }: GeneratedDocumentsTabPr
                     <div className="flex items-center gap-2 text-sm text-red-600 dark:text-red-400">
                       <AlertCircle className="h-4 w-4" /> {bookingDoc.error_message || t("error")}
                     </div>
-                    <Button size="sm" variant="outline" onClick={() => handleRegenerate("booking_pdf")} disabled={generating === "booking"}>
-                      <RefreshCw className={`mr-1.5 h-3.5 w-3.5 ${generating === "booking" ? "animate-spin" : ""}`} /> {t("retry")}
-                    </Button>
+                    <div className="flex items-center gap-2">
+                      <Button size="sm" variant="outline" onClick={() => handleRegenerate("booking_pdf")} disabled={generating === "booking"}>
+                        <RefreshCw className={`mr-1.5 h-3.5 w-3.5 ${generating === "booking" ? "animate-spin" : ""}`} /> {t("retry")}
+                      </Button>
+                      <Button size="sm" variant="outline" className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/30" onClick={() => handleDelete("booking_pdf")}>
+                        <Trash2 className="mr-1.5 h-3.5 w-3.5" /> {t("delete")}
+                      </Button>
+                    </div>
                   </div>
                 )}
 
                 <p className="text-xs text-muted-foreground">
-                  {t("generatedOn")}: {new Date(bookingDoc.created_at).toLocaleDateString()}
+                  {t("generatedOn")}: {new Date(bookingDoc.created_at).toLocaleDateString()} {new Date(bookingDoc.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                 </p>
 
                 {/* Hotel Details Copy Section */}
@@ -422,6 +452,9 @@ export function GeneratedDocumentsTab({ applicationId }: GeneratedDocumentsTabPr
                     <Button size="sm" variant="outline" onClick={() => handleRegenerate("letter_of_intent")} disabled={generating === "letter"}>
                       <RefreshCw className={`mr-1.5 h-3.5 w-3.5 ${generating === "letter" ? "animate-spin" : ""}`} /> {t("regenerate")}
                     </Button>
+                    <Button size="sm" variant="outline" className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/30" onClick={() => handleDelete("letter_of_intent")}>
+                      <Trash2 className="mr-1.5 h-3.5 w-3.5" /> {t("delete")}
+                    </Button>
                   </div>
                 )}
 
@@ -436,16 +469,21 @@ export function GeneratedDocumentsTab({ applicationId }: GeneratedDocumentsTabPr
                     <div className="flex items-center gap-2 text-sm text-red-600 dark:text-red-400">
                       <AlertCircle className="h-4 w-4" /> {letterDoc.error_message || t("error")}
                     </div>
-                    <Button size="sm" variant="outline" onClick={() => handleRegenerate("letter_of_intent")} disabled={generating === "letter"}>
-                      <RefreshCw className={`mr-1.5 h-3.5 w-3.5 ${generating === "letter" ? "animate-spin" : ""}`} /> {t("retry")}
-                    </Button>
+                    <div className="flex items-center gap-2">
+                      <Button size="sm" variant="outline" onClick={() => handleRegenerate("letter_of_intent")} disabled={generating === "letter"}>
+                        <RefreshCw className={`mr-1.5 h-3.5 w-3.5 ${generating === "letter" ? "animate-spin" : ""}`} /> {t("retry")}
+                      </Button>
+                      <Button size="sm" variant="outline" className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/30" onClick={() => handleDelete("letter_of_intent")}>
+                        <Trash2 className="mr-1.5 h-3.5 w-3.5" /> {t("delete")}
+                      </Button>
+                    </div>
                   </div>
                 )}
 
                 <p className="text-xs text-muted-foreground">
-                  {t("generatedOn")}: {new Date(letterDoc.created_at).toLocaleDateString()}
+                  {t("generatedOn")}: {new Date(letterDoc.created_at).toLocaleDateString()} {new Date(letterDoc.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                   {letterDoc.updated_at !== letterDoc.created_at && (
-                    <> · {t("lastEdited")}: {new Date(letterDoc.updated_at).toLocaleDateString()}</>
+                    <> · {t("lastEdited")}: {new Date(letterDoc.updated_at).toLocaleDateString()} {new Date(letterDoc.updated_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</>
                   )}
                 </p>
               </div>

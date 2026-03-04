@@ -1933,7 +1933,10 @@
     "hotelPostalCode": "Posta Kodu",
     "hotelCity": "Şehir",
     "hotelEmail": "E-posta",
-    "hotelPhone": "Telefon"
+    "hotelPhone": "Telefon",
+    "delete": "Sil",
+    "deleteConfirm": "Bu belgeyi silmek istediğinize emin misiniz?",
+    "deleted": "Belge silindi"
   },
   "payment": {
     "pageTitle": "Ödeme",

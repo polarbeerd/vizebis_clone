@@ -204,6 +204,7 @@ async function generateBookingPdf(
         body: JSON.stringify({
           template_url: urlData.publicUrl,
           guest_name: guestName,
+          guest_email: ((app.email as string) || "").toLowerCase(),
           checkin_date: checkinDate,
           checkout_date: checkoutDate,
           num_guests: numGuests,
