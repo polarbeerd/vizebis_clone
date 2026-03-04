@@ -125,20 +125,25 @@ async function generateBookingPdf(
     const guestName = (app.full_name as string) || "GUEST";
     const customFields = (app.custom_fields as Record<string, unknown>) || {};
 
-    // Try to get dates from travel_date or custom fields
+    // Try to get dates: smart field (travel_dates) → top-level travel_date → fallback
+    const travelDates = customFields.travel_dates as
+      | { departure_date?: string; return_date?: string }
+      | undefined;
     const nextWeek = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
 
     const checkinDate =
+      travelDates?.departure_date ||
       (app.travel_date as string) ||
       (customFields.travel_date as string) ||
       nextWeek.toISOString().split("T")[0];
 
-    // Default checkout = checkin + 7 days
+    // Use return_date from smart field, otherwise checkin + 7 days
     const checkin = new Date(checkinDate);
     const defaultCheckout = new Date(
       checkin.getTime() + 7 * 24 * 60 * 60 * 1000
     );
-    const checkoutDate = defaultCheckout.toISOString().split("T")[0];
+    const checkoutDate =
+      travelDates?.return_date || defaultCheckout.toISOString().split("T")[0];
 
     // Calculate nights
     const checkout = new Date(checkoutDate);
