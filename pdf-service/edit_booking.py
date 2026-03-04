@@ -1,7 +1,7 @@
 import pikepdf
 import re
 from decimal import Decimal
-from datetime import datetime
+from datetime import datetime, timedelta
 from dataclasses import dataclass
 from fontTools.ttLib import TTFont
 from fontTools import subset as ft_subset
@@ -38,6 +38,8 @@ class BookingData:
     guest_name: str
     refund_date_str: str
     num_guests: str = ""
+    cancel_before_str: str = ""  # "March 26, 2026" — day before check-in in US format
+    cancel_from_str: str = ""   # "March 27, 2026" — check-in date in US format
     refund_amount_tl: str = ""
     price_base_tl: str = ""
     price_vat_tl: str = ""
@@ -56,6 +58,9 @@ def booking_from_dates(checkin_date, checkout_date, confirmation_number, pin_cod
     ci = datetime.strptime(checkin_date, "%Y-%m-%d")
     co = datetime.strptime(checkout_date, "%Y-%m-%d")
     refund_date_str = f"{ci.day} {ci.strftime('%B')} {ci.year}"
+    cancel_before = ci - timedelta(days=1)
+    cancel_before_str = f"{cancel_before.strftime('%B')} {cancel_before.day}, {cancel_before.year}"
+    cancel_from_str = f"{ci.strftime('%B')} {ci.day}, {ci.year}"
 
     # Calculate price breakdown (base + 25% VAT = total)
     p_base_tl = ""
@@ -79,6 +84,7 @@ def booking_from_dates(checkin_date, checkout_date, confirmation_number, pin_cod
         checkout_weekday=co.strftime("%A"), checkout_time=checkout_time,
         nights=str((co - ci).days), confirmation_number=confirmation_number,
         pin_code=pin_code, guest_name=guest_name.upper(), refund_date_str=refund_date_str,
+        cancel_before_str=cancel_before_str, cancel_from_str=cancel_from_str,
         num_guests=str(num_guests), refund_amount_tl=_fmt_tl_decimal(refund_amount_tl) if refund_amount_tl is not None else "",
         price_base_tl=p_base_tl, price_vat_tl=p_vat_tl, price_total_tl=p_total_tl, price_total_dkk=p_total_dkk,
     )
@@ -287,7 +293,8 @@ def _collect_all_text_codepoints(booking):
         booking.checkin_time + booking.checkout_day + booking.checkout_month +
         booking.checkout_weekday + booking.checkout_time + booking.nights +
         booking.confirmation_number + booking.pin_code + booking.guest_name +
-        booking.refund_date_str + booking.num_guests + booking.refund_amount_tl +
+        booking.refund_date_str + booking.cancel_before_str + booking.cancel_from_str +
+        booking.num_guests + booking.refund_amount_tl +
         booking.price_base_tl + booking.price_vat_tl + booking.price_total_tl + booking.price_total_dkk +
         # Static text fragments that appear in replacements
         "You'll get a full refund if you cancel before 11:59" +
@@ -408,6 +415,26 @@ def edit_booking_pdf(template_bytes: bytes, booking: BookingData, edit_config: d
                 old_tj = refund_match.group(0)
                 new_tj = f"({_esc(booking.refund_amount_tl)} refund.)Tj"
                 stream = stream.replace(old_tj, new_tj, 1)
+
+    # Cancellation date replacements (for hotels with different cancellation text format)
+    # AC Hotel style: "until April 13, 2026 11:59 PM" / "from April 14, 2026 12:00 AM"
+    cancel_until_cfg = patterns.get("cancel_until")
+    if cancel_until_cfg:
+        if isinstance(cancel_until_cfg, dict):
+            new_cancel = f"until {booking.cancel_before_str} 11:59 PM: DKK"
+            stream = _replace_simple_text(stream, cancel_until_cfg["old_text"], new_cancel)
+        else:
+            new_cancel = f"until {booking.cancel_before_str} 11:59 PM: DKK"
+            stream = _replace_tj_array_simple(stream, cancel_until_cfg, new_cancel)
+
+    cancel_from_cfg = patterns.get("cancel_from")
+    if cancel_from_cfg:
+        if isinstance(cancel_from_cfg, dict):
+            new_cancel = f"from {booking.cancel_from_str} 12:00 AM: "
+            stream = _replace_simple_text(stream, cancel_from_cfg["old_text"], new_cancel)
+        else:
+            new_cancel = f"from {booking.cancel_from_str} 12:00 AM: "
+            stream = _replace_tj_array_simple(stream, cancel_from_cfg, new_cancel)
 
     # Replace number of guests in apartment section
     if booking.num_guests and booking.num_guests != "1":

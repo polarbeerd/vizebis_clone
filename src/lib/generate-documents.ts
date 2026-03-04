@@ -125,8 +125,11 @@ async function generateBookingPdf(
     const guestName = (app.full_name as string) || "GUEST";
     const customFields = (app.custom_fields as Record<string, unknown>) || {};
 
-    // Try to get dates: smart field (travel_dates) → top-level travel_date → fallback
-    const travelDates = customFields.travel_dates as
+    // Smart fields are stored under _smart key in custom_fields
+    const smartFields = (customFields._smart as Record<string, unknown>) || {};
+
+    // Try to get dates: smart field (_smart.travel_dates) → top-level travel_date → fallback
+    const travelDates = smartFields.travel_dates as
       | { departure_date?: string; return_date?: string }
       | undefined;
     const nextWeek = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
