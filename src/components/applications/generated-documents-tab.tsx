@@ -168,44 +168,17 @@ export function GeneratedDocumentsTab({ applicationId }: GeneratedDocumentsTabPr
     }
   }
 
-  // Poll with exponential backoff until status changes from "generating"
-  function pollUntilDone(maxAttempts = 12) {
-    let attempt = 0;
-    const delays = [2000, 3000, 4000, 5000, 5000, 5000, 5000, 5000, 5000, 5000, 5000, 5000];
-    function tick() {
-      if (attempt >= maxAttempts) {
-        setGenerating(null);
-        return;
-      }
-      const delay = delays[attempt] ?? 5000;
-      attempt++;
-      setTimeout(async () => {
-        await fetchDocs();
-        // Check if still generating — if so, keep polling
-        setDocs((prev) => {
-          const stillGenerating = prev.some((d) => d.status === "generating");
-          if (stillGenerating && attempt < maxAttempts) {
-            tick();
-          } else {
-            setGenerating(null);
-          }
-          return prev;
-        });
-      }, delay);
-    }
-    tick();
-  }
-
   // Generate booking PDF manually
   async function handleGenerateBooking(hotelId: string) {
     if (!applicationId || !hotelId) return;
     setGenerating("booking");
     try {
       await triggerGeneration({ hotelId, type: "booking" });
-      toast.success(t("generating"));
-      pollUntilDone();
+      await fetchDocs();
+      toast.success(t("ready"));
     } catch {
       toast.error(t("error"));
+    } finally {
       setGenerating(null);
     }
   }
@@ -216,10 +189,11 @@ export function GeneratedDocumentsTab({ applicationId }: GeneratedDocumentsTabPr
     setGenerating("letter");
     try {
       await triggerGeneration({ type: "letter" });
-      toast.success(t("generating"));
-      pollUntilDone();
+      await fetchDocs();
+      toast.success(t("ready"));
     } catch {
       toast.error(t("error"));
+    } finally {
       setGenerating(null);
     }
   }
@@ -248,16 +222,16 @@ export function GeneratedDocumentsTab({ applicationId }: GeneratedDocumentsTabPr
     await fetchDocs();
   }
 
-  // Regenerate: reset existing record to 'generating' and trigger server-side generation
+  // Regenerate: delete old record, trigger server-side generation, fetch result
   async function handleRegenerate(docType: string) {
     if (!applicationId) return;
     const isBooking = docType === "booking_pdf";
     setGenerating(isBooking ? "booking" : "letter");
     try {
-      // Reset existing record status
+      // Delete old record so the server creates a fresh one
       await supabase
         .from("generated_documents")
-        .update({ status: "generating", error_message: null, updated_at: new Date().toISOString() })
+        .delete()
         .eq("application_id", applicationId)
         .eq("type", docType);
 
@@ -268,10 +242,11 @@ export function GeneratedDocumentsTab({ applicationId }: GeneratedDocumentsTabPr
         : undefined;
 
       await triggerGeneration({ hotelId, type: genType });
-      toast.success(t("generating"));
-      pollUntilDone();
+      await fetchDocs();
+      toast.success(t("ready"));
     } catch {
       toast.error(t("error"));
+    } finally {
       setGenerating(null);
     }
   }
