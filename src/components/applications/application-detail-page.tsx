@@ -339,6 +339,10 @@ export function ApplicationDetailPage({
       visa_status: app.visa_status ?? "beklemede",
       appointment_date: app.appointment_date ?? "",
       appointment_time: app.appointment_time ?? "",
+      denmark_embassy_email: app.denmark_embassy_email ?? "",
+      denmark_embassy_password: app.denmark_embassy_password ?? "",
+      vfs_account_email: app.vfs_account_email ?? "",
+      vfs_account_password: app.vfs_account_password ?? "",
       consulate_fee: app.consulate_fee ?? 0,
       service_fee: app.service_fee ?? 0,
       currency: app.currency ?? "TL",
@@ -947,6 +951,30 @@ export function ApplicationDetailPage({
               <span className="text-muted-foreground text-xs sm:text-sm">{t("appointmentTime")}</span>
               <div className="sm:col-span-2">
                 <FieldValue fieldKey="appointment_time" type="time" editMode={editMode} editData={editData} app={app} onUpdate={updateField} />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-1 sm:gap-2 py-1 items-center">
+              <span className="text-muted-foreground text-xs sm:text-sm">{t("denmarkEmbassyEmail")}</span>
+              <div className="sm:col-span-2">
+                <FieldValue fieldKey="denmark_embassy_email" type="text" editMode={editMode} editData={editData} app={app} onUpdate={updateField} />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-1 sm:gap-2 py-1 items-center">
+              <span className="text-muted-foreground text-xs sm:text-sm">{t("denmarkEmbassyPassword")}</span>
+              <div className="sm:col-span-2">
+                <FieldValue fieldKey="denmark_embassy_password" type="text" editMode={editMode} editData={editData} app={app} onUpdate={updateField} />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-1 sm:gap-2 py-1 items-center">
+              <span className="text-muted-foreground text-xs sm:text-sm">{t("vfsAccountEmail")}</span>
+              <div className="sm:col-span-2">
+                <FieldValue fieldKey="vfs_account_email" type="text" editMode={editMode} editData={editData} app={app} onUpdate={updateField} />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-1 sm:gap-2 py-1 items-center">
+              <span className="text-muted-foreground text-xs sm:text-sm">{t("vfsAccountPassword")}</span>
+              <div className="sm:col-span-2">
+                <FieldValue fieldKey="vfs_account_password" type="text" editMode={editMode} editData={editData} app={app} onUpdate={updateField} />
               </div>
             </div>
           </CardContent>
