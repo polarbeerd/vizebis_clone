@@ -320,8 +320,9 @@ def _replace_email_on_page(stream, new_email):
         arr_content = m.group(1)
         parts = re.findall(r'\(([^)]*)\)', arr_content)
         full_text = ''.join(parts)
-        # Strip control characters (CR, LF, etc.) that break email regex matching
-        clean_text = re.sub(r'[\x00-\x1f\x7f]', '', full_text)
+        # Strip PDF escape sequences (\r, \n, \t) and actual control characters
+        clean_text = re.sub(r'\\[nrt]', '', full_text)
+        clean_text = re.sub(r'[\x00-\x1f\x7f]', '', clean_text)
         if re.search(email_re, clean_text):
             new_text = re.sub(email_re, new_email, clean_text)
             return f"({_esc(new_text)})Tj"
