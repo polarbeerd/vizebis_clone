@@ -54,6 +54,7 @@ const hotelSchema = z.object({
   phone_country_code: z.string().default(""),
   phone: z.string().min(1, "Phone is required"),
   website: z.string().default(""),
+  price_per_night_eur: z.coerce.number().min(0).default(0),
   type: z.enum(["individual", "group"]).default("individual"),
   is_active: z.boolean().default(true),
 });
@@ -117,6 +118,7 @@ export function HotelForm({
       phone_country_code: "",
       phone: "",
       website: "",
+      price_per_night_eur: 0,
       type: "individual",
       is_active: true,
     },
@@ -148,6 +150,7 @@ export function HotelForm({
         phone_country_code: hotel.phone_country_code ?? "",
         phone: hotel.phone ?? "",
         website: hotel.website ?? "",
+        price_per_night_eur: hotel.price_per_night_eur ?? 0,
         type: (hotel.type as "individual" | "group") ?? "individual",
         is_active: hotel.is_active ?? true,
       });
@@ -210,6 +213,7 @@ export function HotelForm({
           phone_country_code: values.phone_country_code || null,
           phone: values.phone,
           website: values.website || null,
+          price_per_night_eur: values.price_per_night_eur,
           type: values.type,
           is_active: values.is_active,
           edit_config: editConfig,
@@ -242,6 +246,7 @@ export function HotelForm({
           phone_country_code: values.phone_country_code || null,
           phone: values.phone,
           website: values.website || null,
+          price_per_night_eur: values.price_per_night_eur,
           type: values.type,
           is_active: values.is_active,
           edit_config: editConfig,
@@ -453,6 +458,27 @@ export function HotelForm({
                   />
 
                 </div>
+
+                {/* Price Per Night (EUR) */}
+                <FormField
+                  control={form.control}
+                  name="price_per_night_eur"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t("pricePerNight")}</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          min={0}
+                          step="0.01"
+                          placeholder="0"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
                 {/* Active toggle */}
                 <FormField

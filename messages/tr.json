@@ -1849,7 +1849,8 @@
     "uploadError": "PDF şablonu yüklenemedi",
     "country": "Ülke",
     "selectCountry": "Ülke seçin",
-    "noCountry": "Ülke Belirtilmemiş"
+    "noCountry": "Ülke Belirtilmemiş",
+    "pricePerNight": "Gecelik Fiyat (EUR)"
   },
   "createBooking": {
     "title": "Rezervasyon Oluştur",
@@ -1926,7 +1927,13 @@
     "noDocuments": "Henüz belge oluşturulmadı",
     "selectHotel": "Otel Seç",
     "saveLetter": "Mektubu Kaydet",
-    "regenerateConfirm": "Yeniden oluşturma mevcut belgenin yerine geçecektir. Devam edilsin mi?"
+    "regenerateConfirm": "Yeniden oluşturma mevcut belgenin yerine geçecektir. Devam edilsin mi?",
+    "hotelDetails": "Otel Bilgileri",
+    "hotelAddress": "Adres",
+    "hotelPostalCode": "Posta Kodu",
+    "hotelCity": "Şehir",
+    "hotelEmail": "E-posta",
+    "hotelPhone": "Telefon"
   },
   "payment": {
     "pageTitle": "Ödeme",

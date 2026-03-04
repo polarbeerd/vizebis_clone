@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/dialog";
 import { LetterEditor } from "@/components/letter-templates/letter-editor";
 import {
-  Download, Eye, RefreshCw, Loader2, FileText, Hotel, AlertCircle, Pencil
+  Copy, Download, Eye, RefreshCw, Loader2, FileText, Hotel, AlertCircle, Pencil
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -34,6 +34,13 @@ interface GeneratedDoc {
     id: string;
     name: string;
     type: string;
+    address: string | null;
+    postal_code: string | null;
+    city: string | null;
+    country: string | null;
+    email: string | null;
+    phone: string | null;
+    phone_country_code: string | null;
   } | null;
 }
 
@@ -67,7 +74,7 @@ export function GeneratedDocumentsTab({ applicationId }: GeneratedDocumentsTabPr
     setLoading(true);
     const { data } = await supabase
       .from("generated_documents")
-      .select("*, booking_hotels(id, name, type)")
+      .select("*, booking_hotels(id, name, type, address, postal_code, city, country, email, phone, phone_country_code)")
       .eq("application_id", applicationId)
       .order("created_at", { ascending: false });
 
@@ -145,13 +152,20 @@ export function GeneratedDocumentsTab({ applicationId }: GeneratedDocumentsTabPr
   }
 
   // Trigger server-side generation via API route
-  async function triggerGeneration() {
+  async function triggerGeneration(options?: { hotelId?: string; type?: "booking" | "letter" | "all" }) {
     if (!applicationId) return;
-    await fetch("/api/generate-documents", {
+    const res = await fetch("/api/generate-documents", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ applicationId }),
+      body: JSON.stringify({
+        applicationId,
+        hotelId: options?.hotelId,
+        type: options?.type ?? "all",
+      }),
     });
+    if (!res.ok) {
+      throw new Error(`API returned ${res.status}`);
+    }
   }
 
   // Poll with exponential backoff until status changes from "generating"
@@ -187,7 +201,7 @@ export function GeneratedDocumentsTab({ applicationId }: GeneratedDocumentsTabPr
     if (!applicationId || !hotelId) return;
     setGenerating("booking");
     try {
-      await triggerGeneration();
+      await triggerGeneration({ hotelId, type: "booking" });
       toast.success(t("generating"));
       pollUntilDone();
     } catch {
@@ -201,7 +215,7 @@ export function GeneratedDocumentsTab({ applicationId }: GeneratedDocumentsTabPr
     if (!applicationId) return;
     setGenerating("letter");
     try {
-      await triggerGeneration();
+      await triggerGeneration({ type: "letter" });
       toast.success(t("generating"));
       pollUntilDone();
     } catch {
@@ -235,28 +249,52 @@ export function GeneratedDocumentsTab({ applicationId }: GeneratedDocumentsTabPr
   }
 
   // Regenerate: reset existing record to 'generating' and trigger server-side generation
-  async function handleRegenerate(type: string) {
+  async function handleRegenerate(docType: string) {
     if (!applicationId) return;
-    setGenerating(type === "booking_pdf" ? "booking" : "letter");
+    const isBooking = docType === "booking_pdf";
+    setGenerating(isBooking ? "booking" : "letter");
     try {
       // Reset existing record status
       await supabase
         .from("generated_documents")
         .update({ status: "generating", error_message: null, updated_at: new Date().toISOString() })
         .eq("application_id", applicationId)
-        .eq("type", type);
+        .eq("type", docType);
 
-      // Trigger server-side generation
-      await triggerGeneration();
+      // Trigger server-side generation (only the requested type)
+      const genType = isBooking ? "booking" : "letter";
+      const hotelId = isBooking && bookingDoc?.booking_hotels?.id
+        ? bookingDoc.booking_hotels.id
+        : undefined;
+
+      await triggerGeneration({ hotelId, type: genType });
       toast.success(t("generating"));
-      await fetchDocs();
-      setTimeout(() => fetchDocs(), 3000);
-      setTimeout(() => fetchDocs(), 8000);
+      pollUntilDone();
     } catch {
       toast.error(t("error"));
-    } finally {
       setGenerating(null);
     }
+  }
+
+  // Compact row with label: value + copy button
+  function HotelDetailRow({ label, value }: { label: string; value: string | null | undefined }) {
+    if (!value) return null;
+    return (
+      <div className="flex items-center gap-2 text-sm">
+        <span className="text-muted-foreground min-w-[80px]">{label}:</span>
+        <span className="font-medium flex-1">{value}</span>
+        <button
+          type="button"
+          className="text-muted-foreground hover:text-foreground transition-colors p-0.5"
+          onClick={() => {
+            navigator.clipboard.writeText(value);
+            toast("Copied!", { duration: 1000 });
+          }}
+        >
+          <Copy className="h-3.5 w-3.5" />
+        </button>
+      </div>
+    );
   }
 
   if (!applicationId) return null;
@@ -326,6 +364,26 @@ export function GeneratedDocumentsTab({ applicationId }: GeneratedDocumentsTabPr
                 <p className="text-xs text-muted-foreground">
                   {t("generatedOn")}: {new Date(bookingDoc.created_at).toLocaleDateString()}
                 </p>
+
+                {/* Hotel Details Copy Section */}
+                {bookingDoc.status === "ready" && bookingDoc.booking_hotels && (
+                  <div className="mt-4 border-t pt-3 space-y-1.5">
+                    <p className="text-sm font-medium">{t("hotelDetails")}</p>
+                    <HotelDetailRow label={t("hotel")} value={bookingDoc.booking_hotels.name} />
+                    <HotelDetailRow label={t("hotelAddress")} value={bookingDoc.booking_hotels.address} />
+                    <HotelDetailRow label={t("hotelPostalCode")} value={bookingDoc.booking_hotels.postal_code} />
+                    <HotelDetailRow label={t("hotelCity")} value={bookingDoc.booking_hotels.city} />
+                    <HotelDetailRow label={t("hotelEmail")} value={bookingDoc.booking_hotels.email} />
+                    <HotelDetailRow
+                      label={t("hotelPhone")}
+                      value={
+                        bookingDoc.booking_hotels.phone
+                          ? `${bookingDoc.booking_hotels.phone_country_code ?? ""} ${bookingDoc.booking_hotels.phone}`.trim()
+                          : null
+                      }
+                    />
+                  </div>
+                )}
               </div>
             ) : (
               <div className="space-y-3">

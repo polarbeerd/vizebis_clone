@@ -1849,7 +1849,8 @@
     "uploadError": "Failed to upload PDF template",
     "country": "Country",
     "selectCountry": "Select country",
-    "noCountry": "No Country"
+    "noCountry": "No Country",
+    "pricePerNight": "Price Per Night (EUR)"
   },
   "createBooking": {
     "title": "Create Booking",
@@ -1926,7 +1927,13 @@
     "noDocuments": "No documents generated yet",
     "selectHotel": "Select Hotel",
     "saveLetter": "Save Letter",
-    "regenerateConfirm": "Regenerate will replace the current document. Continue?"
+    "regenerateConfirm": "Regenerate will replace the current document. Continue?",
+    "hotelDetails": "Hotel Details",
+    "hotelAddress": "Address",
+    "hotelPostalCode": "Postal Code",
+    "hotelCity": "City",
+    "hotelEmail": "Email",
+    "hotelPhone": "Phone"
   },
   "payment": {
     "pageTitle": "Payment",

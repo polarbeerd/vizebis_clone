@@ -1,12 +1,19 @@
 import { createServiceClient } from "@/lib/supabase/service";
+import { fetchFxRates } from "@/lib/fx-rates";
 
 const PDF_SERVICE_URL = process.env.PDF_SERVICE_URL || "http://localhost:8000";
 const PDF_SERVICE_API_KEY = process.env.PDF_SERVICE_API_KEY || "";
 
+interface GenerateOptions {
+  hotelId?: string;
+  type?: "booking" | "letter" | "all";
+}
+
 export async function generateDocumentsForApplication(
   applicationId: number,
-  sharedHotelId?: string
+  options: GenerateOptions = {}
 ) {
+  const { hotelId, type = "all" } = options;
   const supabase = createServiceClient();
 
   // 1. Fetch application
@@ -21,11 +28,18 @@ export async function generateDocumentsForApplication(
     return;
   }
 
-  // 2. Run both in parallel
-  await Promise.allSettled([
-    generateBookingPdf(supabase, app, sharedHotelId),
-    generateLetterOfIntent(supabase, app),
-  ]);
+  // 2. Run requested generation(s)
+  const tasks: Promise<unknown>[] = [];
+
+  if (type === "booking" || type === "all") {
+    tasks.push(generateBookingPdf(supabase, app, hotelId));
+  }
+
+  if (type === "letter" || type === "all") {
+    tasks.push(generateLetterOfIntent(supabase, app));
+  }
+
+  await Promise.allSettled(tasks);
 }
 
 async function generateBookingPdf(
@@ -126,21 +140,75 @@ async function generateBookingPdf(
     );
     const checkoutDate = defaultCheckout.toISOString().split("T")[0];
 
-    // Call Python service
-    const response = await fetch(`${PDF_SERVICE_URL}/generate-booking`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        ...(PDF_SERVICE_API_KEY ? { "x-api-key": PDF_SERVICE_API_KEY } : {}),
-      },
-      body: JSON.stringify({
-        template_url: urlData.publicUrl,
-        guest_name: guestName,
-        checkin_date: checkinDate,
-        checkout_date: checkoutDate,
-        edit_config: hotel.edit_config || {},
-      }),
-    });
+    // Calculate nights
+    const checkout = new Date(checkoutDate);
+    const nights = Math.max(
+      1,
+      Math.round(
+        (checkout.getTime() - checkin.getTime()) / (24 * 60 * 60 * 1000)
+      )
+    );
+
+    // Determine number of guests (group_id → count group members, otherwise 1)
+    let numGuests = 1;
+    const groupId = app.group_id as string | null;
+    if (groupId) {
+      const { count } = await supabase
+        .from("applications")
+        .select("id", { count: "exact", head: true })
+        .eq("group_id", groupId);
+      if (count && count > 0) numGuests = count;
+    }
+
+    // Dynamic pricing from hotel.price_per_night_eur
+    const pricePerNight = Number(hotel.price_per_night_eur) || 0;
+    let priceTotalTl = 0;
+    let priceTotalDkk = 0;
+    let refundAmountTl = 0;
+
+    if (pricePerNight > 0) {
+      try {
+        const rates = await fetchFxRates();
+        const totalEur = pricePerNight * nights * numGuests;
+        priceTotalTl = Math.round(totalEur * rates.EUR_TRY * 100) / 100;
+        priceTotalDkk = Math.round(totalEur * rates.EUR_DKK * 100) / 100;
+        refundAmountTl =
+          nights > 1
+            ? Math.round(priceTotalTl * ((nights - 1) / nights) * 100) / 100
+            : 0;
+      } catch (fxError) {
+        console.warn("FX rate fetch failed, using zero prices:", fxError);
+      }
+    }
+
+    // Call Python service (30s timeout)
+    const pdfController = new AbortController();
+    const pdfTimeout = setTimeout(() => pdfController.abort(), 30_000);
+
+    let response: Response;
+    try {
+      response = await fetch(`${PDF_SERVICE_URL}/generate-booking`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(PDF_SERVICE_API_KEY ? { "x-api-key": PDF_SERVICE_API_KEY } : {}),
+        },
+        body: JSON.stringify({
+          template_url: urlData.publicUrl,
+          guest_name: guestName,
+          checkin_date: checkinDate,
+          checkout_date: checkoutDate,
+          num_guests: numGuests,
+          price_total_tl: priceTotalTl,
+          price_total_dkk: priceTotalDkk,
+          refund_amount_tl: refundAmountTl,
+          edit_config: hotel.edit_config || {},
+        }),
+        signal: pdfController.signal,
+      });
+    } finally {
+      clearTimeout(pdfTimeout);
+    }
 
     if (!response.ok) {
       throw new Error(`PDF service returned ${response.status}`);
