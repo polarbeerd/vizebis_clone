@@ -1,0 +1,793 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<style>
+  /* ===== RESET & PAGE ===== */
+  @page {
+    size: A4;
+    margin: 0;
+  }
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+  html, body {
+    font-family: "BlinkMacSystemFont", "Segoe UI", "Roboto", "Helvetica Neue", Arial, sans-serif;
+    font-size: 7.5pt;
+    line-height: 1.35;
+    color: #333;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ===== PAGE CONTAINERS ===== */
+  .page {
+    width: 210mm;
+    min-height: 297mm;
+    padding: 10mm 15mm 8mm 15mm;
+    position: relative;
+    overflow: hidden;
+  }
+  .page-2 {
+    page-break-before: always;
+    width: 210mm;
+    min-height: 297mm;
+    padding: 14mm 15mm 12mm 15mm;
+    position: relative;
+  }
+
+  /* ===== COLORS ===== */
+  .navy { color: #003580; }
+  .blue-link { color: #0071c2; }
+  .dark { color: #222; }
+
+  /* ===== HEADER ===== */
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 6mm;
+    border-bottom: 1px solid #e0e0e0;
+    padding-bottom: 4mm;
+  }
+  .logo {
+    font-size: 22pt;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    line-height: 1;
+  }
+  .logo .booking { color: #003580; }
+  .logo .dot-com { color: #0071c2; }
+  .header-right {
+    text-align: right;
+    font-size: 7pt;
+    line-height: 1.4;
+  }
+  .header-right .title {
+    font-size: 12pt;
+    font-weight: 400;
+    color: #333;
+    margin-bottom: 1mm;
+  }
+  .header-right .conf-number {
+    font-weight: 700;
+    font-size: 9pt;
+  }
+
+  /* ===== SIDE-BY-SIDE HERO (photo_map_side_by_side) ===== */
+  .hero-side-by-side {
+    display: flex;
+    gap: 3mm;
+    margin-bottom: 4mm;
+  }
+  .hero-side-by-side img {
+    width: 50%;
+    height: 55mm;
+    object-fit: cover;
+    border-radius: 2px;
+  }
+
+  /* ===== HOTEL INFO + DATE GRID ===== */
+  .hotel-date-section {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 4mm;
+    border: 1px solid #d9d9d9;
+    padding: 3mm;
+  }
+  .hotel-info {
+    flex: 1;
+    min-width: 0;
+  }
+  .hotel-info-with-photo {
+    display: flex;
+    gap: 3mm;
+    align-items: flex-start;
+    flex: 1;
+    min-width: 0;
+  }
+  .hotel-photo-small {
+    width: 24mm;
+    height: 24mm;
+    object-fit: cover;
+    border-radius: 2px;
+    flex-shrink: 0;
+  }
+  .hotel-name {
+    font-size: 9pt;
+    font-weight: 700;
+    color: #003580;
+    margin-bottom: 1mm;
+    line-height: 1.2;
+  }
+  .hotel-detail {
+    font-size: 6.5pt;
+    color: #555;
+    line-height: 1.4;
+  }
+  .hotel-detail strong {
+    color: #333;
+  }
+
+  /* ===== DATE GRID ===== */
+  .date-grid {
+    display: flex;
+    gap: 0;
+    flex-shrink: 0;
+  }
+  .date-box {
+    border: 1px solid #d9d9d9;
+    text-align: center;
+    padding: 2mm 3mm;
+    min-width: 20mm;
+  }
+  .date-box .label {
+    font-size: 5.5pt;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    margin-bottom: 0.5mm;
+  }
+  .date-box .day {
+    font-size: 20pt;
+    font-weight: 700;
+    color: #003580;
+    line-height: 1;
+    margin-bottom: 0.5mm;
+  }
+  .date-box .month {
+    font-size: 7pt;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: #333;
+    margin-bottom: 0.5mm;
+  }
+  .date-box .weekday {
+    font-size: 6.5pt;
+    font-style: italic;
+    color: #666;
+    margin-bottom: 0.5mm;
+  }
+  .date-box .time {
+    font-size: 5.5pt;
+    color: #888;
+  }
+  .date-box-nights {
+    border: 1px solid #d9d9d9;
+    text-align: center;
+    padding: 2mm 3mm;
+    min-width: 16mm;
+    background: #fafafa;
+  }
+  .date-box-nights .label {
+    font-size: 5.5pt;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    margin-bottom: 0.5mm;
+  }
+  .date-box-nights .day {
+    font-size: 20pt;
+    font-weight: 700;
+    color: #003580;
+    line-height: 1;
+    margin-bottom: 0.5mm;
+  }
+  .date-box-nights .sub-label {
+    font-size: 5.5pt;
+    color: #888;
+    text-transform: uppercase;
+  }
+  .date-box-group {
+    border: 1px solid #d9d9d9;
+    text-align: center;
+    padding: 2mm 3mm;
+    min-width: 16mm;
+    background: #fafafa;
+  }
+  .date-box-group .label {
+    font-size: 5.5pt;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    margin-bottom: 0.5mm;
+  }
+  .date-box-group .day {
+    font-size: 20pt;
+    font-weight: 700;
+    color: #003580;
+    line-height: 1;
+    margin-bottom: 0.5mm;
+  }
+  .date-box-group .sub-label {
+    font-size: 5.5pt;
+    color: #888;
+  }
+
+  /* ===== PRICE SECTION ===== */
+  .price-section {
+    margin-bottom: 3mm;
+    padding-bottom: 3mm;
+    border-bottom: 1px solid #e0e0e0;
+  }
+  .price-title {
+    font-size: 9pt;
+    font-weight: 700;
+    color: #003580;
+    margin-bottom: 2mm;
+  }
+  .price-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 0.5mm;
+  }
+  .price-row .label {
+    font-size: 7pt;
+    color: #555;
+  }
+  .price-row .amount {
+    font-size: 7pt;
+    font-weight: 700;
+    color: #333;
+    text-align: right;
+  }
+  .price-total-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-top: 1.5mm;
+    padding-top: 1.5mm;
+  }
+  .price-total-row .label {
+    font-size: 8pt;
+    font-weight: 700;
+    color: #333;
+  }
+  .price-total-row .amount {
+    font-size: 8pt;
+    font-weight: 700;
+    color: #333;
+    text-align: right;
+  }
+  .price-total-row .sub {
+    font-size: 6.5pt;
+    font-weight: 400;
+    color: #888;
+    display: block;
+    text-align: right;
+  }
+  .price-note {
+    font-size: 6.5pt;
+    color: #555;
+    margin-top: 1.5mm;
+    font-weight: 700;
+  }
+  .price-note-sub {
+    font-size: 6pt;
+    color: #888;
+    margin-top: 0.5mm;
+  }
+
+  /* ===== INFO SECTIONS ===== */
+  .info-section {
+    margin-bottom: 3mm;
+    padding-bottom: 3mm;
+    border-bottom: 1px solid #e0e0e0;
+  }
+  .info-section:last-child {
+    border-bottom: none;
+  }
+  .info-title {
+    font-size: 8pt;
+    font-weight: 700;
+    color: #003580;
+    margin-bottom: 1.5mm;
+  }
+  .info-text {
+    font-size: 6.5pt;
+    color: #555;
+    line-height: 1.45;
+  }
+  .info-text strong {
+    color: #333;
+  }
+
+  /* ===== MAP SECTION ===== */
+  .map-section {
+    margin-bottom: 4mm;
+  }
+  .map-section img {
+    width: 100%;
+    height: 50mm;
+    object-fit: cover;
+    border: 1px solid #d9d9d9;
+    border-radius: 2px;
+  }
+  .map-attribution {
+    font-size: 5pt;
+    color: #999;
+    text-align: right;
+    margin-top: 0.5mm;
+  }
+
+  /* ===== ROOM DETAILS + CANCELLATION (two-column) ===== */
+  .room-cancel-section {
+    display: flex;
+    gap: 4mm;
+    margin-bottom: 3mm;
+    padding-bottom: 3mm;
+    border-top: 2px solid #003580;
+    border-bottom: 1px solid #e0e0e0;
+    padding-top: 3mm;
+  }
+  .room-details {
+    flex: 1.1;
+    min-width: 0;
+  }
+  .cancel-details {
+    flex: 0.9;
+    min-width: 0;
+  }
+  .room-title {
+    font-size: 8.5pt;
+    font-weight: 700;
+    color: #003580;
+    margin-bottom: 2mm;
+  }
+  .room-icon {
+    display: inline-block;
+    width: 3mm;
+    height: 3mm;
+    margin-right: 1mm;
+  }
+  .room-field {
+    font-size: 6.5pt;
+    color: #555;
+    margin-bottom: 0.8mm;
+  }
+  .room-field strong {
+    color: #333;
+  }
+  .room-amenities {
+    font-size: 6pt;
+    color: #666;
+    margin-top: 1.5mm;
+    line-height: 1.4;
+  }
+  .bed-size {
+    font-size: 6pt;
+    color: #666;
+    margin-top: 1mm;
+  }
+  .cancel-title {
+    font-size: 7pt;
+    font-weight: 700;
+    color: #333;
+    margin-bottom: 1.5mm;
+  }
+  .cancel-text {
+    font-size: 6.5pt;
+    color: #555;
+    line-height: 1.45;
+    margin-bottom: 1.5mm;
+  }
+  .cancel-bold {
+    font-weight: 700;
+    color: #333;
+  }
+  .cancel-note {
+    font-size: 6pt;
+    font-weight: 700;
+    color: #555;
+    margin-top: 1.5mm;
+  }
+  .refund-section {
+    margin-top: 2mm;
+  }
+  .refund-title {
+    font-size: 6.5pt;
+    font-weight: 700;
+    color: #333;
+    margin-bottom: 1mm;
+  }
+  .refund-text {
+    font-size: 6pt;
+    color: #555;
+    line-height: 1.45;
+  }
+
+  /* ===== IMPORTANT INFO + HOTEL POLICIES (two-column) ===== */
+  .bottom-two-col {
+    display: flex;
+    gap: 4mm;
+    margin-bottom: 3mm;
+    border-top: 1px solid #e0e0e0;
+    padding-top: 3mm;
+  }
+  .bottom-col {
+    flex: 1;
+    min-width: 0;
+  }
+  .bottom-title {
+    font-size: 7.5pt;
+    font-weight: 700;
+    color: #003580;
+    margin-bottom: 2mm;
+    display: flex;
+    align-items: center;
+    gap: 1.5mm;
+  }
+  .bottom-title .icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 4mm;
+    height: 4mm;
+    border: 1.5px solid #003580;
+    border-radius: 50%;
+    font-size: 6pt;
+    font-weight: 700;
+    color: #003580;
+    flex-shrink: 0;
+  }
+  .bottom-text {
+    font-size: 6.5pt;
+    color: #555;
+    line-height: 1.45;
+  }
+  .bottom-text strong {
+    color: #333;
+  }
+  .policy-subtitle {
+    font-size: 6.5pt;
+    font-weight: 700;
+    color: #333;
+    margin-top: 1.5mm;
+    margin-bottom: 0.5mm;
+  }
+  .policy-item {
+    font-size: 6.5pt;
+    color: #555;
+    padding-left: 3mm;
+    position: relative;
+    margin-bottom: 0.5mm;
+  }
+  .policy-item::before {
+    content: "\2022";
+    position: absolute;
+    left: 0;
+  }
+
+  /* ===== PAGE 2 ===== */
+  .page2-title {
+    font-size: 11pt;
+    font-weight: 700;
+    color: #003580;
+    margin-bottom: 2mm;
+  }
+  .page2-subtitle {
+    font-size: 8pt;
+    font-weight: 700;
+    color: #333;
+    margin-bottom: 1.5mm;
+  }
+  .page2-text {
+    font-size: 7pt;
+    color: #555;
+    line-height: 1.5;
+    margin-bottom: 2mm;
+  }
+  .page2-text a {
+    color: #0071c2;
+    text-decoration: none;
+  }
+  .page2-link {
+    color: #0071c2;
+    text-decoration: none;
+  }
+  .page2-safety {
+    margin-top: 5mm;
+  }
+  .page2-safety-title {
+    font-size: 8pt;
+    font-weight: 700;
+    color: #003580;
+    margin-bottom: 1.5mm;
+  }
+  .page2-safety-text {
+    font-size: 7pt;
+    color: #555;
+    line-height: 1.5;
+  }
+  .page2-safety-text a {
+    color: #0071c2;
+    text-decoration: none;
+  }
+  .page2-footer {
+    position: absolute;
+    bottom: 12mm;
+    left: 15mm;
+    right: 15mm;
+    border-top: 1px solid #e0e0e0;
+    padding-top: 3mm;
+    font-size: 6pt;
+    color: #999;
+    line-height: 1.5;
+    text-align: center;
+  }
+  .page2-footer .icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 3.5mm;
+    height: 3.5mm;
+    border: 1px solid #999;
+    border-radius: 50%;
+    font-size: 5pt;
+    color: #999;
+    margin-right: 1mm;
+    vertical-align: middle;
+  }
+
+  /* ===== DIVIDER LINE ===== */
+  .thin-line {
+    border: none;
+    border-top: 1px solid #e0e0e0;
+    margin: 2mm 0;
+  }
+</style>
+</head>
+<body>
+
+<!-- ==================== PAGE 1 ==================== -->
+<div class="page">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="logo">
+      <span class="booking">Booking</span><span class="dot-com">.com</span>
+    </div>
+    <div class="header-right">
+      <div class="title">Booking confirmation</div>
+      <div>CONFIRMATION NUMBER: <span class="conf-number">{{ confirmation_number }}</span></div>
+      <div>PIN CODE: <strong>{{ pin_code }}</strong></div>
+    </div>
+  </div>
+
+  <!-- HERO: photo_map_side_by_side layout -->
+  {% if layout == "photo_map_side_by_side" and photo_url and map_url %}
+  <div class="hero-side-by-side">
+    <img src="{{ photo_url }}" alt="{{ hotel_name }}">
+    <img src="{{ map_url }}" alt="Map">
+  </div>
+  {% endif %}
+
+  <!-- HOTEL INFO + DATE GRID -->
+  <div class="hotel-date-section">
+    <div class="hotel-info">
+      {% if layout in ["photo_only", "photo_and_map"] and photo_url %}
+      <div class="hotel-info-with-photo">
+        <img class="hotel-photo-small" src="{{ photo_url }}" alt="{{ hotel_name }}">
+        <div>
+          <div class="hotel-name">{{ hotel_name }}</div>
+          <div class="hotel-detail">
+            <strong>Address:</strong> {{ hotel_address }}<br>
+            <strong>Phone:</strong> {{ hotel_phone }}<br>
+            <strong>GPS coordinates:</strong> {{ hotel_gps }}
+          </div>
+        </div>
+      </div>
+      {% else %}
+      <div class="hotel-name">{{ hotel_name }}</div>
+      <div class="hotel-detail">
+        <strong>Address:</strong> {{ hotel_address }}<br>
+        <strong>Phone:</strong> {{ hotel_phone }}<br>
+        <strong>GPS coordinates:</strong> {{ hotel_gps }}
+      </div>
+      {% endif %}
+    </div>
+
+    <div class="date-grid">
+      <div class="date-box">
+        <div class="label">Check-in</div>
+        <div class="day">{{ checkin_day }}</div>
+        <div class="month">{{ checkin_month }}</div>
+        <div class="weekday">{{ checkin_weekday }}</div>
+        <div class="time">{{ checkin_time }}</div>
+      </div>
+      <div class="date-box">
+        <div class="label">Check-out</div>
+        <div class="day">{{ checkout_day }}</div>
+        <div class="month">{{ checkout_month }}</div>
+        <div class="weekday">{{ checkout_weekday }}</div>
+        <div class="time">{{ checkout_time }}</div>
+      </div>
+      <div class="date-box-group">
+        <div class="label">Units</div>
+        <div class="day">{{ num_guests }}</div>
+        <div class="sub-label">YOUR GROUP</div>
+      </div>
+      <div class="date-box-nights">
+        <div class="label">Nights</div>
+        <div class="day">{{ nights }}</div>
+        <div class="sub-label">{{ your_group }}</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PRICE -->
+  <div class="price-section">
+    <div class="price-title">PRICE</div>
+    <div class="price-row">
+      <span class="label">1 room</span>
+      <span class="amount">TL {{ price_rooms }}</span>
+    </div>
+    <div class="price-row">
+      <span class="label">25 % VAT</span>
+      <span class="amount">TL {{ price_vat }}</span>
+    </div>
+    <div class="price-total-row">
+      <div>
+        <span class="label">Price</span><br>
+        <span style="font-size: 6pt; color: #888;">(for {{ num_guests }} guest)</span>
+      </div>
+      <div class="amount">
+        approx. TL {{ price_total_tl }}
+        <span class="sub">DKK {{ price_total_dkk }}</span>
+      </div>
+    </div>
+    <div class="price-note">The final price shown is the amount you will pay to the property.</div>
+    <div class="price-note-sub">Booking.com does not charge guests any reservation, administration or other fees.<br>Your card issuer may charge you a foreign transaction fee.</div>
+  </div>
+
+  <!-- PAYMENT INFORMATION -->
+  <div class="info-section">
+    <div class="info-title">Payment Information</div>
+    <div class="info-text">{{ payment_handles_text|replace("\n", "<br>")|safe }}<br>
+    {{ payment_accepts_text|replace("\n", "<br>")|safe }}</div>
+  </div>
+
+  <!-- CURRENCY AND EXCHANGE RATE -->
+  <div class="info-section">
+    <div class="info-title">Currency and exchange rate information</div>
+    <div class="info-text">{{ currency_note|replace("\n", "<br>")|safe }}</div>
+  </div>
+
+  <!-- ADDITIONAL INFORMATION -->
+  <div class="info-section">
+    <div class="info-title">Additional information</div>
+    <div class="info-text">{{ additional_info|replace("\n", "<br>")|safe }}</div>
+  </div>
+
+  <!-- MAP: photo_and_map layout (map below additional info) -->
+  {% if layout == "photo_and_map" and map_url %}
+  <div class="map-section">
+    <img src="{{ map_url }}" alt="Map showing {{ hotel_name }}">
+    <div class="map-attribution">Map data &copy;2026 Google</div>
+  </div>
+  {% endif %}
+
+  <!-- ROOM DETAILS + CANCELLATION (two-column) -->
+  <div class="room-cancel-section">
+    <div class="room-details">
+      <div class="room-title">{{ room_type }} &#9728;</div>
+      <div class="room-field"><strong>Guest name:</strong> {{ guest_name }}</div>
+      <div class="room-field"><strong>Number of guests:</strong> {{ num_guests }} adult</div>
+      <div class="room-field"><strong>Meal Plan:</strong> {{ meal_plan }}</div>
+      <div class="room-amenities">{{ amenities|replace("\n", "<br>")|safe }}</div>
+      <div class="bed-size"><strong>Bed Size(s):</strong> {{ bed_size }}</div>
+    </div>
+    <div class="cancel-details">
+      <div class="cancel-title">Prepayment:</div>
+      <div class="cancel-text">{{ prepayment }}</div>
+      <div class="cancel-title">Cancellation cost:</div>
+      <div class="cancel-text">
+        until {{ cancel_until_date }} {{ cancel_until_time }}: DKK 0<br>
+        from {{ cancel_from_date }}: {{ cancel_policy_note|replace("\n", "<br>")|safe }}
+      </div>
+      <div class="cancel-note">Cancellation deadlines are in the property's local time.</div>
+      {% if refund_amount_tl %}
+      <div class="refund-section">
+        <div class="refund-title">Refund schedule:</div>
+        <div class="refund-text">
+          You'll get a full refund if you cancel before 11:59<br>
+          on {{ refund_until_date }}. If you cancel from 12:00 on<br>
+          {{ refund_from_date }}, you'll get a TL {{ refund_amount_tl }} refund.
+        </div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- IMPORTANT INFO + HOTEL POLICIES (two-column) -->
+  <div class="bottom-two-col">
+    <div class="bottom-col">
+      <div class="bottom-title">
+        <span class="icon">i</span>
+        Important information
+      </div>
+      <div class="bottom-text">{{ important_info|replace("\n", "<br>")|safe }}</div>
+    </div>
+    <div class="bottom-col">
+      <div class="bottom-title">
+        Hotel Policies
+      </div>
+      {% if parking_policy %}
+      <div class="policy-subtitle">Guest parking</div>
+      <div class="policy-item">{{ parking_policy|replace("\n", "</div><div class='policy-item'>")|safe }}</div>
+      {% endif %}
+      {% if wifi_policy %}
+      <div class="policy-subtitle">WiFi</div>
+      <div class="policy-item">{{ wifi_policy|replace("\n", "</div><div class='policy-item'>")|safe }}</div>
+      {% endif %}
+    </div>
+  </div>
+
+</div>
+
+<!-- ==================== PAGE 2 ==================== -->
+<div class="page-2">
+
+  <div class="page2-title">Need help?</div>
+  <div class="page2-subtitle">You can always view, change or cancel your booking online at:</div>
+  <div class="page2-text"><a href="#">yourbookings.com</a></div>
+
+  <div class="page2-text">{{ page2_contact_text|replace("\n", "<br>")|safe }}</div>
+
+  <div class="page2-subtitle">Or contact us by phone &mdash; we're available 24 hours a day.</div>
+  <div class="page2-text">
+    When calling from a landline or IP phone: 00800 446 826 Scl.<br>
+    Please dial the international number when calling from a mobile phone.<br>
+    When abroad or from Denmark: +44 20 1320 2609<br>
+    English: <a href="#">+44 20 1320 2609</a>
+  </div>
+
+  <div class="page2-text">
+    Find more information about travelling safely in our<br>
+    <a href="#">Safety resource centre</a>.
+  </div>
+
+  <div class="page2-safety">
+    <div class="page2-safety-title">Your safety is our top concern.</div>
+    <div class="page2-safety-text">
+      In case of an emergency while on<br>
+      holiday, dial 1-1-2 to reach police, the fire brigade, or emergency medical<br>
+      services. This number works in most European countries and is free of<br>
+      charge.<br><br>
+      Find more <a href="#">local emergency phone numbers</a> to help give you complete<br>
+      peace of mind during your stay in Denmark.
+    </div>
+  </div>
+
+  <div class="page2-footer">
+    <span class="icon">c</span>
+    This print version of your confirmation contains the most important information about your booking. It can be used to check in when you arrive at {{ hotel_name }}. For further details please refer to your confirmation email sent to {{ guest_email }}.
+  </div>
+
+</div>
+
+</body>
+</html>

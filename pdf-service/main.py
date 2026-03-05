@@ -2,10 +2,9 @@ import os
 import io
 from fastapi import FastAPI, File, Header, HTTPException, UploadFile
 from pydantic import BaseModel
-import httpx
 import base64
 import random
-from edit_booking import edit_booking_pdf, booking_from_dates
+from generate_booking_html import BookingData, render_booking_html
 
 app = FastAPI(title="Booking PDF Service")
 PORT = int(os.environ.get("PORT", 8000))
@@ -21,18 +20,18 @@ def verify_api_key(x_api_key: str = Header(default="")):
 
 
 class BookingRequest(BaseModel):
-    template_url: str
     guest_name: str
+    guest_email: str = ""
     checkin_date: str
     checkout_date: str
     confirmation_number: str | None = None
     pin_code: str | None = None
-    num_guests: int | None = None
-    guest_email: str | None = None
-    refund_amount_tl: float | None = None
-    price_total_tl: float | None = None
-    price_total_dkk: float | None = None
-    edit_config: dict = {}
+    num_guests: int = 1
+    price_total_tl: float = 0.0
+    price_total_dkk: float = 0.0
+    refund_amount_tl: float = 0.0
+    hotel_config: dict = {}
+    hotel_record: dict = {}
 
 class HtmlToPdfRequest(BaseModel):
     html: str
@@ -41,33 +40,35 @@ class HtmlToPdfRequest(BaseModel):
 async def generate_booking(req: BookingRequest, x_api_key: str = Header(default="")):
     verify_api_key(x_api_key)
     try:
-        # Validate template_url — only allow HTTPS URLs from trusted Supabase storage
-        supabase_url = os.environ.get("SUPABASE_URL", "")
-        if supabase_url and not req.template_url.startswith(supabase_url):
-            raise ValueError(f"Untrusted template URL origin: {req.template_url}")
-
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            resp = await client.get(req.template_url)
-            resp.raise_for_status()
-            template_bytes = resp.content
+        from weasyprint import HTML
+        from weasyprint.urls import default_url_fetcher
 
         conf = req.confirmation_number or f"{random.randint(1000,9999)}.{random.randint(100,999)}.{random.randint(100,999)}"
         pin = req.pin_code or f"{random.randint(1000,9999)}"
 
-        booking = booking_from_dates(
-            checkin_date=req.checkin_date,
-            checkout_date=req.checkout_date,
+        booking = BookingData(
+            guest_name=req.guest_name,
+            guest_email=req.guest_email,
             confirmation_number=conf,
             pin_code=pin,
-            guest_name=req.guest_name,
-            num_guests=req.num_guests or 1,
-            guest_email=req.guest_email or "",
-            refund_amount_tl=req.refund_amount_tl,
+            checkin_date=req.checkin_date,
+            checkout_date=req.checkout_date,
+            num_guests=req.num_guests,
             price_total_tl=req.price_total_tl,
             price_total_dkk=req.price_total_dkk,
+            refund_amount_tl=req.refund_amount_tl,
         )
 
-        pdf_bytes = edit_booking_pdf(template_bytes, booking, req.edit_config)
+        html = render_booking_html(booking, req.hotel_config, req.hotel_record)
+
+        def safe_url_fetcher(url, timeout=10, ssl_context=None):
+            if url.startswith("data:"):
+                return default_url_fetcher(url, timeout=timeout, ssl_context=ssl_context)
+            if url.startswith("https://"):
+                return default_url_fetcher(url, timeout=timeout, ssl_context=ssl_context)
+            raise ValueError(f"Blocked URL fetch: {url}")
+
+        pdf_bytes = HTML(string=html, url_fetcher=safe_url_fetcher).write_pdf()
         return {"status": "success", "pdf_base64": base64.b64encode(pdf_bytes).decode()}
     except Exception as e:
         import traceback

@@ -5,7 +5,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useTranslations } from "next-intl";
-import { ChevronDown, Loader2, Upload } from "lucide-react";
+import { ChevronDown, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { createClient } from "@/lib/supabase/client";
@@ -57,22 +57,35 @@ const hotelSchema = z.object({
   price_per_night_eur: z.coerce.number().min(0).default(0),
   type: z.enum(["individual", "group"]).default("individual"),
   is_active: z.boolean().default(true),
+  // hotel_config fields for PDF generation
+  hotel_name_pdf: z.string().default(""),
+  hotel_address_pdf: z.string().default(""),
+  hotel_phone_pdf: z.string().default(""),
+  hotel_gps: z.string().default(""),
+  layout: z.enum(["no_visuals", "photo_only", "photo_and_map", "photo_map_side_by_side"]).default("no_visuals"),
+  photo_path: z.string().default(""),
+  map_path: z.string().default(""),
+  checkin_time: z.string().default("15:00 - 00:00"),
+  checkout_time: z.string().default("until 12:00"),
+  room_type: z.string().default("Standard Room"),
+  meal_plan: z.string().default("There is no meal option with this room."),
+  amenities: z.string().default(""),
+  bed_size: z.string().default("1 large double bed (151-180cm wide)"),
+  prepayment: z.string().default("No prepayment is needed."),
+  cancel_days_before: z.coerce.number().min(0).default(3),
+  cancel_time: z.string().default("11:59 PM"),
+  cancel_policy_note: z.string().default("Changing the dates of your stay is not possible."),
+  payment_handles_text: z.string().default(""),
+  payment_accepts_text: z.string().default(""),
+  currency_note: z.string().default(""),
+  additional_info: z.string().default(""),
+  important_info: z.string().default(""),
+  parking_policy: z.string().default(""),
+  wifi_policy: z.string().default(""),
+  page2_contact_text: z.string().default(""),
 });
 
 type HotelFormValues = z.output<typeof hotelSchema>;
-
-const DEFAULT_EDIT_CONFIG: Record<string, unknown> = {
-  column_centers: { checkin: 364.9, checkout: 448.0, nights: 545.5 },
-  font_names: {
-    bold: ["/TT0", "/TT9", "/TT12"],
-    italic: ["/TT13"],
-    regular: ["/TT3", "/TT4"],
-  },
-  patterns: {
-    // "refund_tl_amount": { "old_text": "12345", "context": "TL" },
-    // "num_guests": { "old_text": "1", "context": "guest" }
-  },
-};
 
 interface CountryOption {
   name: string;
@@ -96,11 +109,8 @@ export function HotelForm({
   const tCommon = useTranslations("common");
 
   const [loading, setLoading] = React.useState(false);
-  const [pdfFile, setPdfFile] = React.useState<File | null>(null);
-  const [editConfigJson, setEditConfigJson] = React.useState("");
-  const [configOpen, setConfigOpen] = React.useState(false);
+  const [pdfConfigOpen, setPdfConfigOpen] = React.useState(false);
   const [countries, setCountries] = React.useState<CountryOption[]>([]);
-  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   const isEdit = !!hotel;
   const supabase = React.useMemo(() => createClient(), []);
@@ -121,6 +131,31 @@ export function HotelForm({
       price_per_night_eur: 0,
       type: "individual",
       is_active: true,
+      hotel_name_pdf: "",
+      hotel_address_pdf: "",
+      hotel_phone_pdf: "",
+      hotel_gps: "",
+      layout: "no_visuals",
+      photo_path: "",
+      map_path: "",
+      checkin_time: "15:00 - 00:00",
+      checkout_time: "until 12:00",
+      room_type: "Standard Room",
+      meal_plan: "There is no meal option with this room.",
+      amenities: "",
+      bed_size: "1 large double bed (151-180cm wide)",
+      prepayment: "No prepayment is needed.",
+      cancel_days_before: 3,
+      cancel_time: "11:59 PM",
+      cancel_policy_note: "Changing the dates of your stay is not possible.",
+      payment_handles_text: "",
+      payment_accepts_text: "",
+      currency_note: "",
+      additional_info: "",
+      important_info: "",
+      parking_policy: "",
+      wifi_policy: "",
+      page2_contact_text: "",
     },
   });
 
@@ -140,6 +175,8 @@ export function HotelForm({
   // Pre-fill form when editing
   React.useEffect(() => {
     if (open && hotel) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const cfg = (hotel as any).hotel_config as Record<string, unknown> | undefined;
       form.reset({
         name: hotel.name ?? "",
         country: hotel.country ?? "",
@@ -153,128 +190,106 @@ export function HotelForm({
         price_per_night_eur: hotel.price_per_night_eur ?? 0,
         type: (hotel.type as "individual" | "group") ?? "individual",
         is_active: hotel.is_active ?? true,
+        // hotel_config fields
+        hotel_name_pdf: (cfg?.hotel_name as string) ?? "",
+        hotel_address_pdf: (cfg?.hotel_address as string) ?? "",
+        hotel_phone_pdf: (cfg?.hotel_phone as string) ?? "",
+        hotel_gps: (cfg?.gps as string) ?? "",
+        layout: (cfg?.layout as "no_visuals" | "photo_only" | "photo_and_map" | "photo_map_side_by_side") ?? "no_visuals",
+        photo_path: (cfg?.photo_path as string) ?? "",
+        map_path: (cfg?.map_path as string) ?? "",
+        checkin_time: (cfg?.checkin_time as string) ?? "15:00 - 00:00",
+        checkout_time: (cfg?.checkout_time as string) ?? "until 12:00",
+        room_type: (cfg?.room_type as string) ?? "Standard Room",
+        meal_plan: (cfg?.meal_plan as string) ?? "There is no meal option with this room.",
+        amenities: (cfg?.amenities as string) ?? "",
+        bed_size: (cfg?.bed_size as string) ?? "1 large double bed (151-180cm wide)",
+        prepayment: (cfg?.prepayment as string) ?? "No prepayment is needed.",
+        cancel_days_before: Number(cfg?.cancel_days_before) || 3,
+        cancel_time: (cfg?.cancel_time as string) ?? "11:59 PM",
+        cancel_policy_note: (cfg?.cancel_policy_note as string) ?? "Changing the dates of your stay is not possible.",
+        payment_handles_text: (cfg?.payment_handles_text as string) ?? "",
+        payment_accepts_text: (cfg?.payment_accepts_text as string) ?? "",
+        currency_note: (cfg?.currency_note as string) ?? "",
+        additional_info: (cfg?.additional_info as string) ?? "",
+        important_info: (cfg?.important_info as string) ?? "",
+        parking_policy: (cfg?.parking_policy as string) ?? "",
+        wifi_policy: (cfg?.wifi_policy as string) ?? "",
+        page2_contact_text: (cfg?.page2_contact_text as string) ?? "",
       });
-      setEditConfigJson(
-        JSON.stringify(hotel.edit_config ?? DEFAULT_EDIT_CONFIG, null, 2)
-      );
-      setPdfFile(null);
     } else if (open && !hotel) {
       form.reset();
-      setEditConfigJson(JSON.stringify(DEFAULT_EDIT_CONFIG, null, 2));
-      setPdfFile(null);
     }
   }, [open, hotel, form]);
 
-  async function uploadPdf(hotelId: string): Promise<string | null> {
-    if (!pdfFile) return null;
-
-    const filePath = `${hotelId}.pdf`;
-
-    const { error } = await supabase.storage
-      .from("booking-templates")
-      .upload(filePath, pdfFile, {
-        upsert: true,
-        contentType: "application/pdf",
-      });
-
-    if (error) {
-      console.error("PDF upload error:", error);
-      toast.error(t("uploadError"));
-      return null;
-    }
-
-    toast.success(t("uploadSuccess"));
-    return filePath;
-  }
-
-  function parseEditConfig(): Record<string, unknown> {
-    try {
-      return JSON.parse(editConfigJson);
-    } catch {
-      return DEFAULT_EDIT_CONFIG;
-    }
+  function buildHotelConfig(values: HotelFormValues): Record<string, unknown> {
+    return {
+      hotel_name: values.hotel_name_pdf || values.name,
+      hotel_address: values.hotel_address_pdf || values.address,
+      hotel_phone: values.hotel_phone_pdf || values.phone,
+      gps: values.hotel_gps,
+      layout: values.layout,
+      photo_path: values.photo_path,
+      map_path: values.map_path,
+      checkin_time: values.checkin_time,
+      checkout_time: values.checkout_time,
+      room_type: values.room_type,
+      meal_plan: values.meal_plan,
+      amenities: values.amenities,
+      bed_size: values.bed_size,
+      prepayment: values.prepayment,
+      cancel_days_before: values.cancel_days_before,
+      cancel_time: values.cancel_time,
+      cancel_policy_note: values.cancel_policy_note,
+      payment_handles_text: values.payment_handles_text,
+      payment_accepts_text: values.payment_accepts_text,
+      currency_note: values.currency_note,
+      additional_info: values.additional_info,
+      important_info: values.important_info,
+      parking_policy: values.parking_policy,
+      wifi_policy: values.wifi_policy,
+      page2_contact_text: values.page2_contact_text,
+    };
   }
 
   async function onSubmit(values: HotelFormValues) {
     setLoading(true);
 
-    const editConfig = parseEditConfig();
+    const hotelConfig = buildHotelConfig(values);
 
     try {
+      const payload: Record<string, unknown> = {
+        name: values.name,
+        country: values.country,
+        address: values.address,
+        postal_code: values.postal_code || null,
+        city: values.city || null,
+        email: values.email,
+        phone_country_code: values.phone_country_code || null,
+        phone: values.phone,
+        website: values.website || null,
+        price_per_night_eur: values.price_per_night_eur,
+        type: values.type,
+        is_active: values.is_active,
+        hotel_config: hotelConfig,
+        photo_path: values.photo_path || null,
+        map_path: values.map_path || null,
+      };
+
       if (isEdit && hotel) {
-        // Update hotel record
-        const payload: Record<string, unknown> = {
-          name: values.name,
-          country: values.country,
-          address: values.address,
-          postal_code: values.postal_code || null,
-          city: values.city || null,
-          email: values.email,
-          phone_country_code: values.phone_country_code || null,
-          phone: values.phone,
-          website: values.website || null,
-          price_per_night_eur: values.price_per_night_eur,
-          type: values.type,
-          is_active: values.is_active,
-          edit_config: editConfig,
-        };
-
-        // Upload PDF if a new file was selected
-        if (pdfFile) {
-          const templatePath = await uploadPdf(hotel.id);
-          if (templatePath) {
-            payload.template_path = templatePath;
-          }
-        }
-
         const { error } = await supabase
           .from("booking_hotels")
           .update(payload)
           .eq("id", hotel.id);
-
         if (error) throw error;
-        toast.success(t("saveSuccess"));
       } else {
-        // Insert new hotel record
-        const payload: Record<string, unknown> = {
-          name: values.name,
-          country: values.country,
-          address: values.address,
-          postal_code: values.postal_code || null,
-          city: values.city || null,
-          email: values.email,
-          phone_country_code: values.phone_country_code || null,
-          phone: values.phone,
-          website: values.website || null,
-          price_per_night_eur: values.price_per_night_eur,
-          type: values.type,
-          is_active: values.is_active,
-          edit_config: editConfig,
-          template_path: "",
-        };
-
-        const { data: inserted, error } = await supabase
+        const { error } = await supabase
           .from("booking_hotels")
-          .insert(payload)
-          .select("id")
-          .single();
-
+          .insert(payload);
         if (error) throw error;
-
-        // Upload PDF if provided
-        if (pdfFile && inserted) {
-          const templatePath = await uploadPdf(inserted.id);
-          if (templatePath) {
-            await supabase
-              .from("booking_hotels")
-              .update({ template_path: templatePath })
-              .eq("id", inserted.id);
-          }
-        }
-
-        toast.success(t("saveSuccess"));
       }
 
+      toast.success(t("saveSuccess"));
       onOpenChange(false);
       onSuccess();
     } catch (err) {
@@ -499,44 +514,8 @@ export function HotelForm({
                   )}
                 />
 
-                {/* PDF Template Upload */}
-                <div className="space-y-2">
-                  <FormLabel>{t("pdfTemplate")}</FormLabel>
-                  <div
-                    className="flex items-center gap-3 rounded-lg border border-dashed p-4 cursor-pointer hover:bg-muted/50 transition-colors"
-                    onClick={() => fileInputRef.current?.click()}
-                  >
-                    <Upload className="text-muted-foreground size-5" />
-                    <div className="flex-1">
-                      {pdfFile ? (
-                        <span className="text-sm font-medium">
-                          {pdfFile.name}
-                        </span>
-                      ) : hotel?.template_path ? (
-                        <span className="text-muted-foreground text-sm">
-                          {hotel.template_path} &mdash; {t("uploadPdf")}
-                        </span>
-                      ) : (
-                        <span className="text-muted-foreground text-sm">
-                          {t("uploadPdf")}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept=".pdf"
-                    className="hidden"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0] ?? null;
-                      setPdfFile(file);
-                    }}
-                  />
-                </div>
-
-                {/* Advanced: PDF Edit Config */}
-                <Collapsible open={configOpen} onOpenChange={setConfigOpen}>
+                {/* ========== PDF Config Section ========== */}
+                <Collapsible open={pdfConfigOpen} onOpenChange={setPdfConfigOpen}>
                   <CollapsibleTrigger asChild>
                     <Button
                       type="button"
@@ -544,20 +523,353 @@ export function HotelForm({
                       size="sm"
                       className="w-full justify-between"
                     >
-                      {t("editConfig")}
+                      PDF Configuration
                       <ChevronDown
                         className={`size-4 transition-transform ${
-                          configOpen ? "rotate-180" : ""
+                          pdfConfigOpen ? "rotate-180" : ""
                         }`}
                       />
                     </Button>
                   </CollapsibleTrigger>
-                  <CollapsibleContent className="pt-2">
-                    <Textarea
-                      rows={10}
-                      className="font-mono text-sm"
-                      value={editConfigJson}
-                      onChange={(e) => setEditConfigJson(e.target.value)}
+                  <CollapsibleContent className="pt-2 space-y-4">
+                    {/* Layout */}
+                    <FormField
+                      control={form.control}
+                      name="layout"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Layout variant</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="no_visuals">No visuals</SelectItem>
+                              <SelectItem value="photo_only">Photo only</SelectItem>
+                              <SelectItem value="photo_and_map">Photo + Map (stacked)</SelectItem>
+                              <SelectItem value="photo_map_side_by_side">Photo + Map (side by side)</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </FormItem>
+                      )}
+                    />
+
+                    {/* Image paths */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="photo_path"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Photo path (hotel-assets bucket)</FormLabel>
+                            <FormControl>
+                              <Input placeholder="wakeup/photo.png" {...field} />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="map_path"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Map path (hotel-assets bucket)</FormLabel>
+                            <FormControl>
+                              <Input placeholder="wakeup/map.png" {...field} />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+
+                    {/* PDF hotel name override */}
+                    <FormField
+                      control={form.control}
+                      name="hotel_name_pdf"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Hotel name (PDF) — leave empty to use hotel name above</FormLabel>
+                          <FormControl>
+                            <Input {...field} />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+
+                    {/* PDF address + phone + GPS */}
+                    <FormField
+                      control={form.control}
+                      name="hotel_address_pdf"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Full address (PDF)</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Bernstorffsgade 35, 1577 Copenhagen, Denmark" {...field} />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="hotel_phone_pdf"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Phone (PDF)</FormLabel>
+                            <FormControl>
+                              <Input placeholder="+45 44 80 00 00" {...field} />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="hotel_gps"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>GPS coordinates</FormLabel>
+                            <FormControl>
+                              <Input placeholder="N 55° 40.122, E 12° 34.334" {...field} />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+
+                    {/* Check-in/out times */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="checkin_time"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Check-in time</FormLabel>
+                            <FormControl>
+                              <Input {...field} />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="checkout_time"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Check-out time</FormLabel>
+                            <FormControl>
+                              <Input {...field} />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+
+                    {/* Room details */}
+                    <FormField
+                      control={form.control}
+                      name="room_type"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Room type</FormLabel>
+                          <FormControl>
+                            <Input {...field} />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="meal_plan"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Meal plan</FormLabel>
+                          <FormControl>
+                            <Input {...field} />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="bed_size"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Bed size</FormLabel>
+                          <FormControl>
+                            <Input {...field} />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="amenities"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Amenities (use * or bullet separator)</FormLabel>
+                          <FormControl>
+                            <Textarea rows={3} {...field} />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+
+                    {/* Cancellation */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="cancel_days_before"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Cancel days before check-in</FormLabel>
+                            <FormControl>
+                              <Input type="number" min={0} {...field} />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="cancel_time"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Cancel deadline time</FormLabel>
+                            <FormControl>
+                              <Input placeholder="11:59 PM" {...field} />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                    <FormField
+                      control={form.control}
+                      name="prepayment"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Prepayment policy</FormLabel>
+                          <FormControl>
+                            <Input {...field} />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="cancel_policy_note"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Cancellation policy note</FormLabel>
+                          <FormControl>
+                            <Textarea rows={2} {...field} />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+
+                    {/* Payment */}
+                    <FormField
+                      control={form.control}
+                      name="payment_handles_text"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Payment handles text</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Hotel Name handles all payments." {...field} />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="payment_accepts_text"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Payment accepts text</FormLabel>
+                          <FormControl>
+                            <Textarea rows={2} placeholder="This property accepts: Visa, Mastercard..." {...field} />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="currency_note"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Currency / exchange note</FormLabel>
+                          <FormControl>
+                            <Textarea rows={2} {...field} />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+
+                    {/* Additional / Important info */}
+                    <FormField
+                      control={form.control}
+                      name="additional_info"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Additional information</FormLabel>
+                          <FormControl>
+                            <Textarea rows={3} {...field} />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="important_info"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Important information</FormLabel>
+                          <FormControl>
+                            <Textarea rows={3} {...field} />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+
+                    {/* Policies */}
+                    <FormField
+                      control={form.control}
+                      name="parking_policy"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Parking policy</FormLabel>
+                          <FormControl>
+                            <Textarea rows={2} {...field} />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="wifi_policy"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>WiFi policy</FormLabel>
+                          <FormControl>
+                            <Input {...field} />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+
+                    {/* Page 2 */}
+                    <FormField
+                      control={form.control}
+                      name="page2_contact_text"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Page 2 contact text</FormLabel>
+                          <FormControl>
+                            <Textarea rows={2} placeholder="For any questions..." {...field} />
+                          </FormControl>
+                        </FormItem>
+                      )}
                     />
                   </CollapsibleContent>
                 </Collapsible>
