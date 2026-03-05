@@ -37,7 +37,6 @@ import { GeneratedDocumentsTab } from "@/components/applications/generated-docum
 // ── Types ─────────────────────────────────────────────────────────
 export interface ApplicationDetail {
   id: number;
-  tracking_code: string | null;
   full_name: string | null;
   id_number: string | null;
   date_of_birth: string | null;
@@ -500,69 +499,51 @@ export function ApplicationCard({
                     )}
                   </Badge>
                 )}
-                {application.tracking_code && (
-                  <>
-                    <span className="text-xs font-mono text-muted-foreground">#{application.tracking_code}</span>
-                    <Button
-                      variant="ghost"
-                      size="icon-xs"
-                      onClick={() => {
-                        const url = `${window.location.origin}/portal/${application.tracking_code}`;
-                        navigator.clipboard.writeText(url);
-                        toast.success(tPortal("portalLinkCopied"));
-                      }}
-                      title={tPortal("copyPortalLink")}
-                    >
-                      <Copy className="size-3.5" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon-xs"
-                      onClick={() => {
-                        if (!application) return;
-                        const exportData: Record<string, unknown> = {
-                          id: application.id,
-                          tracking_code: application.tracking_code,
-                          full_name: application.full_name,
-                          id_number: application.id_number,
-                          date_of_birth: application.date_of_birth,
-                          phone: application.phone,
-                          email: application.email,
-                          passport_no: application.passport_no,
-                          passport_expiry: application.passport_expiry,
-                          visa_status: application.visa_status,
-                          visa_type: application.visa_type,
-                          country: application.country,
-                          appointment_date: application.appointment_date,
-                          appointment_time: application.appointment_time,
-                          consulate_office: application.consulate_office,
-                          source: application.source,
-                        };
-                        if (application.custom_fields) {
-                          const cf = application.custom_fields as Record<string, unknown>;
-                          for (const [k, v] of Object.entries(cf)) {
-                            if (k === "_smart") {
-                              const smart = v as Record<string, Record<string, unknown>>;
-                              for (const [sfKey, sfData] of Object.entries(smart)) {
-                                for (const [subKey, subVal] of Object.entries(sfData)) {
-                                  if (subKey === "_valid") continue;
-                                  exportData[`${sfKey}_${subKey}`] = subVal;
-                                }
-                              }
-                            } else if (!k.startsWith("_")) {
-                              exportData[k] = v;
+                <Button
+                  variant="ghost"
+                  size="icon-xs"
+                  onClick={() => {
+                    if (!application) return;
+                    const exportData: Record<string, unknown> = {
+                      id: application.id,
+                      full_name: application.full_name,
+                      id_number: application.id_number,
+                      date_of_birth: application.date_of_birth,
+                      phone: application.phone,
+                      email: application.email,
+                      passport_no: application.passport_no,
+                      passport_expiry: application.passport_expiry,
+                      visa_status: application.visa_status,
+                      visa_type: application.visa_type,
+                      country: application.country,
+                      appointment_date: application.appointment_date,
+                      appointment_time: application.appointment_time,
+                      consulate_office: application.consulate_office,
+                      source: application.source,
+                    };
+                    if (application.custom_fields) {
+                      const cf = application.custom_fields as Record<string, unknown>;
+                      for (const [k, v] of Object.entries(cf)) {
+                        if (k === "_smart") {
+                          const smart = v as Record<string, Record<string, unknown>>;
+                          for (const [sfKey, sfData] of Object.entries(smart)) {
+                            for (const [subKey, subVal] of Object.entries(sfData)) {
+                              if (subKey === "_valid") continue;
+                              exportData[`${sfKey}_${subKey}`] = subVal;
                             }
                           }
+                        } else if (!k.startsWith("_")) {
+                          exportData[k] = v;
                         }
-                        navigator.clipboard.writeText(JSON.stringify(exportData, null, 2));
-                        toast.success(tDetail("jsonCopied"));
-                      }}
-                      title={tDetail("copyJson")}
-                    >
-                      <span className="text-[10px] font-mono">{"{}"}</span>
-                    </Button>
-                  </>
-                )}
+                      }
+                    }
+                    navigator.clipboard.writeText(JSON.stringify(exportData, null, 2));
+                    toast.success(tDetail("jsonCopied"));
+                  }}
+                  title={tDetail("copyJson")}
+                >
+                  <span className="text-[10px] font-mono">{"{}"}</span>
+                </Button>
               </div>
               <div className="flex gap-2">
                 {onEdit && (

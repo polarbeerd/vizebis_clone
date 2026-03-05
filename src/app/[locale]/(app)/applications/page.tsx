@@ -16,7 +16,6 @@ export interface ApplicationRow {
   payment_status: string | null;
   visa_status: string | null;
   notes: string | null;
-  tracking_code: string | null;
   source: string | null;
   group_id: number | null;
   doc_total: number;
@@ -45,7 +44,6 @@ export default async function ApplicationsPage() {
       payment_status,
       visa_status,
       notes,
-      tracking_code,
       source,
       group_id,
       assignee
@@ -87,7 +85,6 @@ export default async function ApplicationsPage() {
     payment_status: app.payment_status as string | null,
     visa_status: app.visa_status as string | null,
     notes: app.notes as string | null,
-    tracking_code: app.tracking_code as string | null,
     source: app.source as string | null,
     group_id: app.group_id as number | null,
     doc_total: docMap.get(app.id as number)?.total ?? 0,

@@ -21,33 +21,25 @@ export function wrapInA4Template(innerHtml: string): string {
   }
   body {
     font-family: "Georgia", "Times New Roman", serif;
-    font-size: 12pt;
-    line-height: 1.6;
+    font-size: 11pt;
+    line-height: 1.5;
     color: #1a1a1a;
     margin: 0;
     padding: 0;
   }
-  h1 {
-    font-size: 16pt;
-    margin-bottom: 0.5em;
-  }
-  h2 {
-    font-size: 14pt;
-    margin-bottom: 0.5em;
-  }
   p {
-    margin-bottom: 0.8em;
+    margin-bottom: 0.6em;
     text-align: justify;
   }
-  strong {
-    font-weight: bold;
+  strong, b {
+    font-weight: normal;
   }
   .date {
     text-align: right;
-    margin-bottom: 2em;
+    margin-bottom: 1.5em;
   }
   .signature {
-    margin-top: 2em;
+    margin-top: 1.5em;
   }
 </style>
 </head>
@@ -414,15 +406,16 @@ async function generateLetterOfIntent(
     }
 
     // Build the system prompt
-    const systemPrompt = `You are a professional visa consultant writing a formal letter of intent (motivation letter) for a visa application. Write a compelling, professional letter that:
+    const systemPrompt = `You are a visa consultant writing a letter of intent (motivation letter) for a visa application. Write a clear, straightforward letter that:
 - Is addressed to the relevant consulate/embassy
 - Clearly states the purpose of travel
-- Includes accommodation details if provided
-- Includes travel dates if provided
-- Is written in a formal, persuasive tone
-- Fills approximately one full A4 page (3-4 substantial paragraphs)
-- Includes a proper date, salutation, body paragraphs, and formal closing with signature line
-- Uses proper HTML formatting (p, strong, br tags — NO h1/h2 headers, just flowing letter text)`;
+- Mentions accommodation and travel dates if provided
+- Uses simple, easy-to-read English (B1-B2 level, no fancy vocabulary or complex sentences)
+- MUST fit on a single A4 page — keep it concise: 2-3 short paragraphs maximum
+- Includes date, salutation, body paragraphs, and closing with signature line
+- Uses ONLY plain <p> and <br> tags — absolutely NO <strong>, <b>, <em>, <i>, or any bold/italic formatting
+- Do NOT use headers (h1, h2, etc.)
+- Keep sentences short and direct. Avoid filler phrases and repetition.`;
 
     // Build application data for the prompt
     const applicationData: Record<string, unknown> = {
@@ -463,7 +456,7 @@ async function generateLetterOfIntent(
       });
     }
 
-    prompt += `Generate a professional letter of intent in HTML format. Output ONLY the inner HTML content — do NOT include <html>, <head>, <body>, or <style> tags. Use <p>, <strong>, and <br> tags for formatting. The letter should be formal and fill approximately one A4 page. Start with the date on the right, then the consulate address, then salutation, then 3-4 paragraphs, then closing with signature.`;
+    prompt += `Generate a letter of intent in HTML format. Output ONLY the inner HTML content — do NOT include <html>, <head>, <body>, or <style> tags. Use ONLY <p> and <br> tags — no bold, italic, or any other formatting tags. The letter MUST fit on a single A4 page (2.5cm margins, 11pt font). Keep it short and direct: date on right, consulate address, salutation, 2-3 concise paragraphs, closing with signature. Use simple English throughout.`;
 
     // Call Gemini API directly
     const apiKey = process.env.GEMINI_API_KEY;
@@ -483,7 +476,7 @@ async function generateLetterOfIntent(
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             contents: [{ parts: [{ text: prompt }] }],
-            generationConfig: { temperature: 0.7, maxOutputTokens: 8192 },
+            generationConfig: { temperature: 0.5, maxOutputTokens: 4096 },
           }),
           signal: geminiController.signal,
         }

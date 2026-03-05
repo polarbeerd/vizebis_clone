@@ -9,7 +9,6 @@ import {
   AlertTriangle,
   Calendar,
   ChevronDown,
-  Copy,
   Plus,
   Trash2,
   User,
@@ -108,7 +107,6 @@ export function ApplicationsClient({ data }: ApplicationsClientProps) {
   const tInvoice = useTranslations("invoiceStatus");
   const tPayment = useTranslations("paymentStatus");
   const tCommon = useTranslations("common");
-  const tPortal = useTranslations("portal");
   const tAppDocs = useTranslations("applicationDocuments");
   const router = useRouter();
 
@@ -395,35 +393,6 @@ export function ApplicationsClient({ data }: ApplicationsClientProps) {
             </DropdownMenu>
           );
         },
-        enableSorting: false,
-      },
-      {
-        accessorKey: "tracking_code",
-        header: () => tPortal("trackingCode"),
-        cell: ({ row }) => {
-          const code = row.getValue("tracking_code") as string | null;
-          if (!code) return "-";
-          return (
-            <div className="flex items-center gap-1">
-              <span className="font-mono text-xs whitespace-nowrap" title={code}>
-                {code}
-              </span>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  const url = `${window.location.origin}/portal/${code}`;
-                  navigator.clipboard.writeText(url);
-                  toast.success(tPortal("portalLinkCopied"));
-                }}
-                className="text-muted-foreground hover:text-foreground transition-colors"
-                title={tPortal("copyPortalLink")}
-              >
-                <Copy className="size-3.5" />
-              </button>
-            </div>
-          );
-        },
-        size: 180,
         enableSorting: false,
       },
       {
@@ -775,7 +744,7 @@ export function ApplicationsClient({ data }: ApplicationsClientProps) {
       },
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [t, tVisa, tInvoice, tPayment, tCommon, tPortal, tAppDocs]
+    [t, tVisa, tInvoice, tPayment, tCommon, tAppDocs]
   );
 
   // ── Filterable columns config ─────────────────────────────────

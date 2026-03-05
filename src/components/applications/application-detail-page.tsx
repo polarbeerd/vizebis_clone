@@ -755,25 +755,6 @@ export function ApplicationDetailPage({
                   {app.visa_type}
                 </Badge>
               )}
-              {app.tracking_code && (
-                <div className="flex items-center gap-1">
-                  <span className="text-xs font-mono text-muted-foreground">
-                    #{app.tracking_code}
-                  </span>
-                  <Button
-                    variant="ghost"
-                    size="icon-xs"
-                    onClick={() => {
-                      const url = `${window.location.origin}/portal/${app.tracking_code}`;
-                      navigator.clipboard.writeText(url);
-                      toast.success(tPortal("portalLinkCopied"));
-                    }}
-                    title={tPortal("copyPortalLink")}
-                  >
-                    <Copy className="size-3.5" />
-                  </Button>
-                </div>
-              )}
               {app.source === "portal" && (
                 <Badge
                   variant="outline"

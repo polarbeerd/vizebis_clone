@@ -33,7 +33,6 @@ import { toast } from "sonner";
 // ── Types ─────────────────────────────────────────────────────────
 interface ApplicationDetail {
   id: number;
-  tracking_code: string | null;
   full_name: string | null;
   id_number: string | null;
   date_of_birth: string | null;
@@ -477,23 +476,8 @@ export function ApplicationDetailSheet({
           </div>
         ) : application ? (
           <ScrollArea className="flex-1 min-h-0 overflow-hidden px-4 pb-4">
-            {/* Tracking code + portal link */}
-            {application.tracking_code && (
-              <div className="mb-3 flex items-center gap-2 rounded-lg border border-dashed border-blue-200 bg-blue-50/50 px-3 py-2 dark:border-blue-800 dark:bg-blue-950/30">
-                <span className="text-xs text-muted-foreground">{tPortal("trackingCode")}:</span>
-                <code className="flex-1 truncate text-xs font-mono">{application.tracking_code}</code>
-                <Button
-                  variant="ghost"
-                  size="icon-xs"
-                  onClick={() => {
-                    const url = `${window.location.origin}/portal/${application.tracking_code}`;
-                    navigator.clipboard.writeText(url);
-                    toast.success(tPortal("portalLinkCopied"));
-                  }}
-                  title={tPortal("copyPortalLink")}
-                >
-                  <Copy className="size-3.5" />
-                </Button>
+            {/* JSON export */}
+            <div className="mb-3 flex justify-end">
                 <Button
                   variant="ghost"
                   size="icon-xs"
@@ -501,7 +485,6 @@ export function ApplicationDetailSheet({
                     if (!application) return;
                     const exportData: Record<string, unknown> = {
                       id: application.id,
-                      tracking_code: application.tracking_code,
                       full_name: application.full_name,
                       id_number: application.id_number,
                       date_of_birth: application.date_of_birth,
@@ -540,8 +523,7 @@ export function ApplicationDetailSheet({
                 >
                   <span className="text-[10px] font-mono">{"{}"}</span>
                 </Button>
-              </div>
-            )}
+            </div>
 
             {/* Visa status badge */}
             <div className="mb-4">
