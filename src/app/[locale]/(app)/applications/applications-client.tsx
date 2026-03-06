@@ -6,7 +6,6 @@ import { useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/navigation";
 import { toast } from "sonner";
 import {
-  AlertTriangle,
   Calendar,
   ChevronDown,
   Plus,
@@ -435,30 +434,14 @@ export function ApplicationsClient({ data }: ApplicationsClientProps) {
         cell: ({ row }) => {
           const name = row.getValue("full_name") as string | null;
           const id = row.original.id;
-          const appointmentDate = row.original.appointment_date;
-          const now = new Date();
-          let warningIcon = null;
-
-          if (appointmentDate) {
-            const apptDate = parseISO(appointmentDate);
-            const daysUntil = differenceInDays(apptDate, now);
-            if (daysUntil >= 0 && daysUntil <= 10) {
-              warningIcon = (
-                <AlertTriangle className="ml-1 inline size-3.5 text-red-500" />
-              );
-            }
-          }
 
           return (
-            <div className="flex items-center">
-              <Link
-                href={`/applications/${id}`}
-                className="max-w-[180px] truncate font-medium hover:underline cursor-pointer text-foreground"
-              >
-                {name ?? "-"}
-              </Link>
-              {warningIcon}
-            </div>
+            <Link
+              href={`/applications/${id}`}
+              className="max-w-[180px] truncate font-medium hover:underline cursor-pointer text-foreground"
+            >
+              {name ?? "-"}
+            </Link>
           );
         },
         enableSorting: true,
