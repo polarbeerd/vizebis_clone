@@ -401,8 +401,14 @@ def _replace_in_page(page, sorted_reps, pdf, font_widths):
 def _process_operators(ops, sorted_reps, type0_fonts: set, font_widths: dict):
     """Walk content-stream operators; replace text in Tj / TJ / ' / \" ops.
     Tracks current font via Tf to handle Type0 (2-byte) vs TrueType (1-byte).
-    After replacement, adjusts the most recent positioning operator (Tm or Td)
-    so that text stays visually centered or right-aligned when its width changes."""
+
+    Two alignment mechanisms:
+    1. Pre-adjustment: for text with its own Tm/Td, adjust that operator to
+       center or right-align the replacement text.
+    2. Cursor compensation: when inline text changes width, the text cursor
+       shifts. The next Td/TD operator gets its dx adjusted to compensate,
+       preventing downstream text from overlapping or drifting.
+    """
     result = []
     current_font_is_type0 = False
     current_font_name = ""
@@ -411,6 +417,13 @@ def _process_operators(ops, sorted_reps, type0_fonts: set, font_widths: dict):
     last_pos_index = -1      # index in result[] of the Tm or Td to adjust
     last_pos_type = ""       # "Tm" or "Td"
     last_tm_scale = 0.0      # font scale from the most recent Tm
+    # Cumulative Td dx adjustment: when a Td's dx is modified (either by
+    # cursor compensation or pre-adjustment), track the cumulative shift.
+    # ALL subsequent Td/TD operators in the same text block get their dx
+    # counter-adjusted so that the net position returns to the correct place.
+    # Reset on Tm or BT which set absolute positions.
+    td_dx_shift = 0.0       # cumulative dx shift applied to Td operators (text-space units)
+    pending_cursor_delta = 0.0  # width change from text replacement (font units, 1000=1em)
 
     for operands, operator in ops:
         op_name = str(operator)
@@ -422,16 +435,52 @@ def _process_operators(ops, sorted_reps, type0_fonts: set, font_widths: dict):
             if len(operands) > 1:
                 current_font_size = float(operands[1])
 
-        # Track text matrix: Tm sets absolute position
+        # Tm sets absolute position — resets everything
         if op_name == "Tm" and len(operands) >= 6:
+            td_dx_shift = 0.0
+            pending_cursor_delta = 0.0
             result.append((operands, operator))
             last_pos_index = len(result) - 1
             last_pos_type = "Tm"
             last_tm_scale = float(operands[0])
             continue
 
-        # Track relative position: Td/TD set relative offset
+        # BT resets everything
+        if op_name == "BT":
+            td_dx_shift = 0.0
+            pending_cursor_delta = 0.0
+
+        # T* moves to new line start — resets cursor delta but not Td shift
+        # (T* is Td 0 -TL: no dx change, only dy)
+        if op_name == "T*":
+            pending_cursor_delta = 0.0
+
+        # Td/TD: apply cursor compensation AND counter-adjust for prior Td shifts
         if op_name in ("Td", "TD") and len(operands) >= 2:
+            dx = float(operands[0])
+            dy = float(operands[1])
+            adjusted = False
+
+            # Apply cursor compensation from text width changes
+            if dy == 0 and abs(pending_cursor_delta) > 0.5:
+                # Same-line Td: compensate for wider/narrower replacement text
+                delta_tu = pending_cursor_delta / 1000.0  # convert font units to text-space units
+                dx += delta_tu
+                td_dx_shift += delta_tu
+                pending_cursor_delta = 0.0
+                adjusted = True
+            elif dy != 0 and abs(td_dx_shift) > 0.001:
+                # New-line Td: counter-adjust dx to undo cumulative Td shift
+                # so the next line starts at the correct x position
+                dx -= td_dx_shift
+                td_dx_shift = 0.0
+                pending_cursor_delta = 0.0
+                adjusted = True
+
+            if adjusted:
+                operands = list(operands)
+                operands[0] = pikepdf.Object.parse(f"{dx:.4f}".encode())
+
             result.append((operands, operator))
             last_pos_index = len(result) - 1
             last_pos_type = op_name
@@ -444,9 +493,16 @@ def _process_operators(ops, sorted_reps, type0_fonts: set, font_widths: dict):
             if new_operands is not operands:
                 new_text = _get_text(new_operands, op_name, current_font_is_type0)
                 if old_text and new_text and old_text != new_text:
-                    _adjust_position(result, last_pos_index, last_pos_type,
-                                     last_tm_scale, current_font_name, font_widths,
-                                     old_text, new_text)
+                    adjusted = _adjust_position(result, last_pos_index, last_pos_type,
+                                                last_tm_scale, current_font_name, font_widths,
+                                                old_text, new_text)
+                    if not adjusted:
+                        # Accumulate cursor delta for same-line downstream adjustment
+                        fw = font_widths.get(current_font_name)
+                        if fw:
+                            old_w = sum(fw.get(ord(c), 500) for c in old_text)
+                            new_w = sum(fw.get(ord(c), 500) for c in new_text)
+                            pending_cursor_delta += (new_w - old_w)
             operands = new_operands
 
         elif op_name == "TJ" and operands:
@@ -456,9 +512,15 @@ def _process_operators(ops, sorted_reps, type0_fonts: set, font_widths: dict):
             if new_operands is not operands:
                 new_text = _get_TJ_text(new_operands, current_font_is_type0)
                 if old_text and new_text and old_text != new_text:
-                    _adjust_position(result, last_pos_index, last_pos_type,
-                                     last_tm_scale, current_font_name, font_widths,
-                                     old_text, new_text)
+                    adjusted = _adjust_position(result, last_pos_index, last_pos_type,
+                                                last_tm_scale, current_font_name, font_widths,
+                                                old_text, new_text)
+                    if not adjusted:
+                        fw = font_widths.get(current_font_name)
+                        if fw:
+                            old_w = sum(fw.get(ord(c), 500) for c in old_text)
+                            new_w = sum(fw.get(ord(c), 500) for c in new_text)
+                            pending_cursor_delta += (new_w - old_w)
             operands = new_operands
 
         result.append((operands, operator))
@@ -491,22 +553,23 @@ def _get_TJ_text(operands, is_type0: bool) -> str:
 
 def _adjust_position(result: list, pos_index: int, pos_type: str,
                      tm_scale: float, font_name: str, font_widths: dict,
-                     old_text: str, new_text: str):
+                     old_text: str, new_text: str) -> bool:
     """Adjust the positioning operator (Tm or Td) at result[pos_index] so that
-    the replaced text maintains its visual alignment."""
+    the replaced text maintains its visual alignment.
+    Returns True if an adjustment was made, False otherwise."""
     if pos_index < 0 or pos_index >= len(result):
-        return
+        return False
 
     fw = font_widths.get(font_name)
     if not fw:
-        return
+        return False
 
     # Calculate widths in font units
     old_width_fu = sum(fw.get(ord(c), 500) for c in old_text)
     new_width_fu = sum(fw.get(ord(c), 500) for c in new_text)
 
     if old_width_fu == new_width_fu:
-        return  # same width, no adjustment needed
+        return False  # same width, no adjustment needed
 
     # Actual font size in points = tm_scale * tf_size (tf_size is usually 1.0)
     font_size_pt = tm_scale  # since Tf size=1, the Tm scale IS the font size
@@ -520,7 +583,7 @@ def _adjust_position(result: list, pos_index: int, pos_type: str,
     alignment = _detect_alignment(old_text, new_text, font_size_pt)
 
     if alignment == "left":
-        return  # no adjustment for left-aligned text
+        return False  # no adjustment for left-aligned text
 
     pos_operands, pos_op = result[pos_index]
 
@@ -535,6 +598,7 @@ def _adjust_position(result: list, pos_index: int, pos_type: str,
         new_operands = list(pos_operands)
         new_operands[4] = pikepdf.Object.parse(f"{new_tx:.4f}".encode())
         result[pos_index] = (new_operands, pos_op)
+        return True
 
     elif pos_type in ("Td", "TD"):
         # Relative positioning: adjust dx (operand index 0)
@@ -547,6 +611,9 @@ def _adjust_position(result: list, pos_index: int, pos_type: str,
         new_operands = list(pos_operands)
         new_operands[0] = pikepdf.Object.parse(f"{new_dx:.4f}".encode())
         result[pos_index] = (new_operands, pos_op)
+        return True
+
+    return False
 
 
 def _detect_alignment(old_text: str, new_text: str, font_size_pt: float) -> str:
