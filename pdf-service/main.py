@@ -1,5 +1,6 @@
 import os
 import io
+import unicodedata
 from datetime import datetime, timedelta
 from fastapi import FastAPI, File, Header, HTTPException, UploadFile
 from pydantic import BaseModel
@@ -62,6 +63,16 @@ async def generate_booking(req: BookingRequest, x_api_key: str = Header(default=
         return {"status": "error", "error": str(e)}
 
 
+_TR_MAP = str.maketrans("çÇğĞıİöÖşŞüÜ", "cCgGiIoOsSuU")
+
+def _ascii_name(name: str) -> str:
+    """Transliterate Turkish/accented characters to ASCII for PDF font safety."""
+    name = name.translate(_TR_MAP)
+    # Strip remaining diacritics (e.g. é→e, ñ→n)
+    nfkd = unicodedata.normalize("NFKD", name)
+    return "".join(c for c in nfkd if not unicodedata.combining(c))
+
+
 def _fmt_tl(val: float) -> str:
     return f"{int(round(val)):,}"
 
@@ -97,7 +108,7 @@ def _build_replacements(req: BookingRequest, conf: str, pin: str) -> dict[str, s
 
     # Map each detected field to its new value
     new_values: dict[str, str | None] = {
-        "guest_name": req.guest_name.upper(),
+        "guest_name": _ascii_name(req.guest_name).upper(),
         "guest_email": req.guest_email.lower() if req.guest_email else None,
         "confirmation_number": conf,
         "pin_code": pin,
