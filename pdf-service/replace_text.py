@@ -121,10 +121,17 @@ def _extend_subsetted_fonts(pdf):
     with the full Segoe UI, ensuring all Latin characters are available."""
     segoe_regular = os.path.join(FONTS_DIR, "segoeui.ttf")
     segoe_bold = os.path.join(FONTS_DIR, "segoeuib.ttf")
+    segoe_italic = os.path.join(FONTS_DIR, "segoeuii.ttf")
 
     if not os.path.exists(segoe_regular):
         print(f"[extend_fonts] WARNING: Segoe UI not found at {segoe_regular}", file=sys.stderr, flush=True)
         return
+
+    segoe_variants = {
+        "regular": segoe_regular,
+        "bold": segoe_bold,
+        "italic": segoe_italic,
+    }
 
     # Cache font data
     segoe_data = {}
@@ -145,7 +152,7 @@ def _extend_subsetted_fonts(pdf):
             return
         seen_fonts.add(font_key)
 
-        _try_extend_font(font_obj, segoe_regular, segoe_bold, segoe_data, segoe_ttfonts, pdf)
+        _try_extend_font(font_obj, segoe_variants, segoe_data, segoe_ttfonts, pdf)
 
     for page in pdf.pages:
         resources = page.get("/Resources")
@@ -173,7 +180,19 @@ def _extend_subsetted_fonts(pdf):
                                 _process_font(xobj_fonts[fn], fn)
 
 
-def _try_extend_font(font_obj, segoe_regular, segoe_bold, segoe_data, segoe_ttfonts, pdf):
+def _pick_segoe_variant(base_font: str, segoe_variants: dict) -> str:
+    """Pick the right Segoe UI variant (regular/bold/italic) based on the original font name."""
+    name_lower = base_font.lower()
+    is_bold = "bold" in name_lower
+    is_italic = "italic" in name_lower or "oblique" in name_lower
+    if is_bold:
+        return segoe_variants["bold"]
+    if is_italic and os.path.exists(segoe_variants["italic"]):
+        return segoe_variants["italic"]
+    return segoe_variants["regular"]
+
+
+def _try_extend_font(font_obj, segoe_variants, segoe_data, segoe_ttfonts, pdf):
     """Extend a single font if it's a subsetted TrueType font."""
     try:
         subtype = str(font_obj.get("/Subtype", ""))
@@ -188,14 +207,14 @@ def _try_extend_font(font_obj, segoe_regular, segoe_bold, segoe_data, segoe_ttfo
         is_subsetted = "+" in clean_name and len(clean_name.split("+")[0]) == 6
 
         if subtype == "/TrueType":
-            _extend_truetype_font(font_obj, is_subsetted, base_font, segoe_regular, segoe_bold, segoe_data, segoe_ttfonts, pdf)
+            _extend_truetype_font(font_obj, is_subsetted, base_font, segoe_variants, segoe_data, segoe_ttfonts, pdf)
         elif subtype == "/Type0":
-            _extend_type0_font(font_obj, is_subsetted, base_font, segoe_regular, segoe_bold, segoe_data, segoe_ttfonts, pdf)
+            _extend_type0_font(font_obj, is_subsetted, base_font, segoe_variants, segoe_data, segoe_ttfonts, pdf)
     except Exception as e:
         print(f"[extend_fonts] ERROR: {base_font}: {e}", file=sys.stderr, flush=True)
 
 
-def _extend_truetype_font(font_obj, is_subsetted, base_font, segoe_regular, segoe_bold, segoe_data, segoe_ttfonts, pdf):
+def _extend_truetype_font(font_obj, is_subsetted, base_font, segoe_variants, segoe_data, segoe_ttfonts, pdf):
     """Extend a simple TrueType font by replacing its FontFile2 with full Segoe UI."""
     descriptor = font_obj.get("/FontDescriptor")
     if descriptor is None:
@@ -205,9 +224,8 @@ def _extend_truetype_font(font_obj, is_subsetted, base_font, segoe_regular, sego
     if font_file is None:
         return
 
-    # Pick Segoe variant based on original font weight
-    is_bold = "bold" in base_font.lower() or "Bold" in base_font
-    segoe_path = segoe_bold if is_bold else segoe_regular
+    # Pick Segoe variant based on original font style (bold/italic/regular)
+    segoe_path = _pick_segoe_variant(base_font, segoe_variants)
 
     if segoe_path not in segoe_data:
         with open(segoe_path, "rb") as f:
@@ -272,7 +290,7 @@ def _extend_truetype_font(font_obj, is_subsetted, base_font, segoe_regular, sego
     font_obj[pikepdf.Name("/Widths")] = pikepdf.Array(new_widths)
 
 
-def _extend_type0_font(font_obj, is_subsetted, base_font, segoe_regular, segoe_bold, segoe_data, segoe_ttfonts, pdf):
+def _extend_type0_font(font_obj, is_subsetted, base_font, segoe_variants, segoe_data, segoe_ttfonts, pdf):
     """Extend a Type0 (CID) font by replacing the descendant's font file."""
     descendants = font_obj.get("/DescendantFonts")
     if descendants is None or len(descendants) == 0:
@@ -293,8 +311,7 @@ def _extend_type0_font(font_obj, is_subsetted, base_font, segoe_regular, segoe_b
     if font_file is None:
         return
 
-    is_bold = "bold" in base_font.lower()
-    segoe_path = segoe_bold if is_bold else segoe_regular
+    segoe_path = _pick_segoe_variant(base_font, segoe_variants)
 
     if segoe_path not in segoe_data:
         with open(segoe_path, "rb") as f:
