@@ -601,12 +601,52 @@ def _adjust_position(result: list, pos_index: int, pos_type: str,
         return True
 
     elif pos_type in ("Td", "TD"):
-        # Relative positioning: adjust dx (operand index 0)
+        # Relative positioning: Td dx is in text-space units.
+        # For centering, find the column center from preceding text (which
+        # is already correctly centered), then position the new text at that center.
         dx = float(pos_operands[0])
-        if alignment == "center":
-            new_dx = dx + width_diff / 2.0
-        else:  # right
-            new_dx = dx + width_diff
+
+        # Find the parent Tm (most recent Tm before this Td in result)
+        parent_tm_tx = None
+        parent_tm_scale = font_size_pt
+        for k in range(pos_index - 1, -1, -1):
+            k_operands, k_op = result[k]
+            if str(k_op) == "Tm" and len(k_operands) >= 6:
+                parent_tm_tx = float(k_operands[4])
+                parent_tm_scale = float(k_operands[0])
+                break
+
+        if parent_tm_tx is not None and parent_tm_scale > 0:
+            if alignment == "center":
+                # Find the column center from the preceding text.
+                # The parent Tm text (e.g. month) is already centered, so
+                # column_center = parent_tm_tx + parent_text_width/2.
+                # We scan backwards to find the preceding Tj/TJ and its font.
+                column_center = _find_column_center(result, pos_index, font_widths, parent_tm_tx, parent_tm_scale)
+                if column_center is not None:
+                    new_abs_x = column_center - new_width_pt / 2.0
+                    new_dx = (new_abs_x - parent_tm_tx) / parent_tm_scale
+                else:
+                    # Fallback: use old position center
+                    old_abs_x = parent_tm_tx + dx * parent_tm_scale
+                    old_center = old_abs_x + old_width_pt / 2.0
+                    new_abs_x = old_center - new_width_pt / 2.0
+                    new_dx = (new_abs_x - parent_tm_tx) / parent_tm_scale
+            else:  # right
+                old_abs_x = parent_tm_tx + dx * parent_tm_scale
+                old_right = old_abs_x + old_width_pt
+                new_abs_x = old_right - new_width_pt
+                new_dx = (new_abs_x - parent_tm_tx) / parent_tm_scale
+        else:
+            # Fallback: simple text-space adjustment
+            if font_size_pt > 0:
+                ts_diff = width_diff / font_size_pt
+            else:
+                ts_diff = 0
+            if alignment == "center":
+                new_dx = dx + ts_diff / 2.0
+            else:
+                new_dx = dx + ts_diff
 
         new_operands = list(pos_operands)
         new_operands[0] = pikepdf.Object.parse(f"{new_dx:.4f}".encode())
@@ -614,6 +654,50 @@ def _adjust_position(result: list, pos_index: int, pos_type: str,
         return True
 
     return False
+
+
+def _find_column_center(result: list, td_index: int, font_widths: dict,
+                        parent_tm_tx: float, parent_tm_scale: float) -> float:
+    """Find the center of the column by looking at the preceding text operator
+    that shares the same parent Tm. The preceding text (e.g. month name) is
+    already centered, so its center IS the column center."""
+    # Scan backwards from the Td to find the most recent text operator
+    for k in range(td_index - 1, max(0, td_index - 10), -1):
+        k_operands, k_op = result[k]
+        k_op_name = str(k_op)
+
+        if k_op_name == "Tm":
+            # We hit the parent Tm — the text right after it is what we want
+            # Continue scanning forward from this Tm to find the text
+            for m in range(k + 1, td_index):
+                m_operands, m_op = result[m]
+                m_op_name = str(m_op)
+                if m_op_name in ("Tj", "TJ"):
+                    # Found the text rendered at the parent Tm position
+                    if m_op_name == "Tj" and isinstance(m_operands[0], pikepdf.String):
+                        text = _pdf_str(m_operands[0])
+                    elif m_op_name == "TJ" and isinstance(m_operands[0], pikepdf.Array):
+                        text = ""
+                        for item in m_operands[0]:
+                            if isinstance(item, pikepdf.String):
+                                text += _pdf_str(item)
+                    else:
+                        break
+
+                    # Find the font used for this text
+                    text_font = ""
+                    for n in range(m, max(0, m - 5), -1):
+                        if str(result[n][1]) == "Tf":
+                            text_font = str(result[n][0][0])
+                            break
+
+                    fw = font_widths.get(text_font, {})
+                    text_width = sum(fw.get(ord(c), 500) for c in text) / 1000.0 * parent_tm_scale
+                    center = parent_tm_tx + text_width / 2.0
+                    return center
+            break
+
+    return None
 
 
 def _detect_alignment(old_text: str, new_text: str, font_size_pt: float) -> str:
