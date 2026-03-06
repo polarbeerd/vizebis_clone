@@ -26,7 +26,7 @@ _jinja_env = Environment(
 # ---------------------------------------------------------------------------
 # Supabase storage base URL (images are in the hotel-assets bucket)
 # ---------------------------------------------------------------------------
-SUPABASE_URL = os.environ.get("SUPABASE_URL", os.environ.get("NEXT_PUBLIC_SUPABASE_URL", ""))
+SUPABASE_URL = os.environ.get("SUPABASE_URL", os.environ.get("NEXT_PUBLIC_SUPABASE_URL", "https://puxhataoolzchfkecqsy.supabase.co"))
 
 
 # ---------------------------------------------------------------------------
@@ -144,7 +144,7 @@ def build_template_context(
         "hotel_name": hotel_config.get("hotel_name", hotel_record.get("name", "")),
         "hotel_address": hotel_config.get("hotel_address", ""),
         "hotel_phone": hotel_config.get("hotel_phone", ""),
-        "hotel_gps": hotel_config.get("hotel_gps", ""),
+        "hotel_gps": hotel_config.get("hotel_gps", hotel_config.get("gps", "")),
 
         # Images & layout
         "photo_url": photo_url,

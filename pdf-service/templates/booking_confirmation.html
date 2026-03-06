@@ -14,9 +14,9 @@
     box-sizing: border-box;
   }
   html, body {
-    font-family: "BlinkMacSystemFont", "Segoe UI", "Roboto", "Helvetica Neue", Arial, sans-serif;
-    font-size: 7.5pt;
-    line-height: 1.35;
+    font-family: "Segoe UI", "BlinkMacSystemFont", "Roboto", "Helvetica Neue", Arial, sans-serif;
+    font-size: 6.5pt;
+    line-height: 1.3;
     color: #333;
     -webkit-font-smoothing: antialiased;
   }
@@ -24,35 +24,30 @@
   /* ===== PAGE CONTAINERS ===== */
   .page {
     width: 210mm;
-    min-height: 297mm;
-    padding: 10mm 15mm 8mm 15mm;
+    height: 297mm;
+    padding: 8mm 12mm 6mm 12mm;
     position: relative;
     overflow: hidden;
   }
   .page-2 {
     page-break-before: always;
     width: 210mm;
-    min-height: 297mm;
-    padding: 14mm 15mm 12mm 15mm;
+    height: 297mm;
+    padding: 10mm 12mm 10mm 12mm;
     position: relative;
   }
-
-  /* ===== COLORS ===== */
-  .navy { color: #003580; }
-  .blue-link { color: #0071c2; }
-  .dark { color: #222; }
 
   /* ===== HEADER ===== */
   .header {
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
-    margin-bottom: 6mm;
-    border-bottom: 1px solid #e0e0e0;
-    padding-bottom: 4mm;
+    margin-bottom: 3mm;
+    padding-bottom: 2.5mm;
+    border-bottom: 0.5pt solid #ccc;
   }
   .logo {
-    font-size: 22pt;
+    font-size: 20pt;
     font-weight: 700;
     letter-spacing: -0.5px;
     line-height: 1;
@@ -61,287 +56,237 @@
   .logo .dot-com { color: #0071c2; }
   .header-right {
     text-align: right;
-    font-size: 7pt;
+    font-size: 6pt;
     line-height: 1.4;
   }
   .header-right .title {
-    font-size: 12pt;
+    font-size: 10pt;
     font-weight: 400;
     color: #333;
-    margin-bottom: 1mm;
+    margin-bottom: 0.5mm;
   }
   .header-right .conf-number {
     font-weight: 700;
-    font-size: 9pt;
+    font-size: 7.5pt;
   }
 
-  /* ===== SIDE-BY-SIDE HERO (photo_map_side_by_side) ===== */
-  .hero-side-by-side {
-    display: flex;
-    gap: 3mm;
-    margin-bottom: 4mm;
-  }
-  .hero-side-by-side img {
-    width: 50%;
-    height: 55mm;
-    object-fit: cover;
-    border-radius: 2px;
-  }
-
-  /* ===== HOTEL INFO + DATE GRID ===== */
+  /* ===== HOTEL INFO + DATE GRID ROW ===== */
   .hotel-date-section {
     display: flex;
     justify-content: space-between;
-    align-items: flex-start;
-    margin-bottom: 4mm;
-    border: 1px solid #d9d9d9;
-    padding: 3mm;
+    align-items: stretch;
+    margin-bottom: 2.5mm;
+    border: 0.5pt solid #d9d9d9;
   }
   .hotel-info {
     flex: 1;
     min-width: 0;
+    padding: 2mm 2.5mm;
   }
   .hotel-info-with-photo {
     display: flex;
-    gap: 3mm;
+    gap: 2.5mm;
     align-items: flex-start;
-    flex: 1;
-    min-width: 0;
   }
   .hotel-photo-small {
-    width: 24mm;
-    height: 24mm;
+    width: 22mm;
+    height: 22mm;
     object-fit: cover;
-    border-radius: 2px;
     flex-shrink: 0;
   }
   .hotel-name {
-    font-size: 9pt;
+    font-size: 8pt;
     font-weight: 700;
     color: #003580;
-    margin-bottom: 1mm;
+    margin-bottom: 0.5mm;
     line-height: 1.2;
   }
   .hotel-detail {
-    font-size: 6.5pt;
+    font-size: 5.5pt;
     color: #555;
-    line-height: 1.4;
-  }
-  .hotel-detail strong {
-    color: #333;
+    line-height: 1.35;
   }
 
   /* ===== DATE GRID ===== */
   .date-grid {
     display: flex;
-    gap: 0;
     flex-shrink: 0;
   }
   .date-box {
-    border: 1px solid #d9d9d9;
+    border-left: 0.5pt solid #d9d9d9;
     text-align: center;
-    padding: 2mm 3mm;
-    min-width: 20mm;
+    padding: 1.5mm 2.5mm;
+    width: 18mm;
   }
   .date-box .label {
-    font-size: 5.5pt;
+    font-size: 4.5pt;
     color: #888;
     text-transform: uppercase;
-    letter-spacing: 0.3px;
-    margin-bottom: 0.5mm;
+    letter-spacing: 0.2px;
+    margin-bottom: 0.3mm;
   }
   .date-box .day {
-    font-size: 20pt;
+    font-size: 18pt;
     font-weight: 700;
     color: #003580;
     line-height: 1;
-    margin-bottom: 0.5mm;
   }
   .date-box .month {
-    font-size: 7pt;
+    font-size: 6pt;
     font-weight: 700;
     text-transform: uppercase;
     color: #333;
-    margin-bottom: 0.5mm;
+    margin-bottom: 0.3mm;
   }
   .date-box .weekday {
-    font-size: 6.5pt;
+    font-size: 5.5pt;
     font-style: italic;
     color: #666;
-    margin-bottom: 0.5mm;
+    margin-bottom: 0.3mm;
   }
   .date-box .time {
-    font-size: 5.5pt;
+    font-size: 4.5pt;
     color: #888;
   }
-  .date-box-nights {
-    border: 1px solid #d9d9d9;
+  .date-box-small {
+    border-left: 0.5pt solid #d9d9d9;
     text-align: center;
-    padding: 2mm 3mm;
-    min-width: 16mm;
+    padding: 1.5mm 2mm;
+    width: 14mm;
     background: #fafafa;
   }
-  .date-box-nights .label {
-    font-size: 5.5pt;
+  .date-box-small .label {
+    font-size: 4.5pt;
     color: #888;
     text-transform: uppercase;
-    letter-spacing: 0.3px;
-    margin-bottom: 0.5mm;
+    letter-spacing: 0.2px;
+    margin-bottom: 0.3mm;
   }
-  .date-box-nights .day {
-    font-size: 20pt;
+  .date-box-small .day {
+    font-size: 18pt;
     font-weight: 700;
     color: #003580;
     line-height: 1;
-    margin-bottom: 0.5mm;
   }
-  .date-box-nights .sub-label {
-    font-size: 5.5pt;
+  .date-box-small .sub {
+    font-size: 4pt;
     color: #888;
     text-transform: uppercase;
+    line-height: 1.2;
   }
-  .date-box-group {
-    border: 1px solid #d9d9d9;
-    text-align: center;
-    padding: 2mm 3mm;
-    min-width: 16mm;
-    background: #fafafa;
+
+  /* ===== HERO: side-by-side images ===== */
+  .hero-side-by-side {
+    display: flex;
+    gap: 2mm;
+    margin-bottom: 2.5mm;
   }
-  .date-box-group .label {
-    font-size: 5.5pt;
-    color: #888;
-    text-transform: uppercase;
-    letter-spacing: 0.3px;
-    margin-bottom: 0.5mm;
+  .hero-side-by-side img {
+    width: 50%;
+    height: 45mm;
+    object-fit: cover;
   }
-  .date-box-group .day {
-    font-size: 20pt;
-    font-weight: 700;
-    color: #003580;
-    line-height: 1;
-    margin-bottom: 0.5mm;
+
+  /* ===== MAP (below content for photo_and_map) ===== */
+  .map-section {
+    margin-bottom: 2.5mm;
   }
-  .date-box-group .sub-label {
-    font-size: 5.5pt;
-    color: #888;
+  .map-section img {
+    width: 100%;
+    height: 40mm;
+    object-fit: cover;
+    border: 0.5pt solid #d9d9d9;
   }
 
   /* ===== PRICE SECTION ===== */
   .price-section {
-    margin-bottom: 3mm;
-    padding-bottom: 3mm;
-    border-bottom: 1px solid #e0e0e0;
+    margin-bottom: 2mm;
+    padding-bottom: 2mm;
+    border-bottom: 0.5pt solid #e0e0e0;
   }
   .price-title {
-    font-size: 9pt;
+    font-size: 7.5pt;
     font-weight: 700;
     color: #003580;
-    margin-bottom: 2mm;
+    margin-bottom: 1mm;
   }
   .price-row {
     display: flex;
     justify-content: space-between;
     align-items: baseline;
-    margin-bottom: 0.5mm;
+    margin-bottom: 0.3mm;
+    font-size: 6pt;
   }
-  .price-row .label {
-    font-size: 7pt;
-    color: #555;
-  }
-  .price-row .amount {
-    font-size: 7pt;
-    font-weight: 700;
-    color: #333;
-    text-align: right;
-  }
+  .price-row .label { color: #555; }
+  .price-row .amount { font-weight: 700; color: #333; }
   .price-total-row {
     display: flex;
     justify-content: space-between;
     align-items: baseline;
-    margin-top: 1.5mm;
-    padding-top: 1.5mm;
+    margin-top: 1mm;
+    padding-top: 1mm;
   }
   .price-total-row .label {
-    font-size: 8pt;
+    font-size: 7pt;
     font-weight: 700;
     color: #333;
   }
   .price-total-row .amount {
-    font-size: 8pt;
+    font-size: 7pt;
     font-weight: 700;
     color: #333;
     text-align: right;
   }
   .price-total-row .sub {
-    font-size: 6.5pt;
+    font-size: 5.5pt;
     font-weight: 400;
     color: #888;
     display: block;
     text-align: right;
   }
   .price-note {
-    font-size: 6.5pt;
-    color: #555;
-    margin-top: 1.5mm;
+    font-size: 5.5pt;
+    color: #333;
+    margin-top: 1mm;
     font-weight: 700;
   }
   .price-note-sub {
-    font-size: 6pt;
+    font-size: 5pt;
     color: #888;
-    margin-top: 0.5mm;
+    margin-top: 0.3mm;
   }
 
   /* ===== INFO SECTIONS ===== */
   .info-section {
-    margin-bottom: 3mm;
-    padding-bottom: 3mm;
-    border-bottom: 1px solid #e0e0e0;
+    margin-bottom: 1.5mm;
+    padding-bottom: 1.5mm;
+    border-bottom: 0.5pt solid #e0e0e0;
   }
-  .info-section:last-child {
+  .info-section:last-of-type {
     border-bottom: none;
   }
   .info-title {
-    font-size: 8pt;
+    font-size: 6.5pt;
     font-weight: 700;
     color: #003580;
-    margin-bottom: 1.5mm;
+    margin-bottom: 0.8mm;
+    text-decoration: underline;
   }
   .info-text {
-    font-size: 6.5pt;
+    font-size: 5.5pt;
     color: #555;
-    line-height: 1.45;
-  }
-  .info-text strong {
-    color: #333;
+    line-height: 1.35;
   }
 
-  /* ===== MAP SECTION ===== */
-  .map-section {
-    margin-bottom: 4mm;
-  }
-  .map-section img {
-    width: 100%;
-    height: 50mm;
-    object-fit: cover;
-    border: 1px solid #d9d9d9;
-    border-radius: 2px;
-  }
-  .map-attribution {
-    font-size: 5pt;
-    color: #999;
-    text-align: right;
-    margin-top: 0.5mm;
-  }
-
-  /* ===== ROOM DETAILS + CANCELLATION (two-column) ===== */
+  /* ===== ROOM + CANCELLATION (two-column) ===== */
   .room-cancel-section {
     display: flex;
-    gap: 4mm;
-    margin-bottom: 3mm;
-    padding-bottom: 3mm;
-    border-top: 2px solid #003580;
-    border-bottom: 1px solid #e0e0e0;
-    padding-top: 3mm;
+    gap: 3mm;
+    margin-bottom: 2mm;
+    padding-bottom: 2mm;
+    border-top: 1.5pt solid #003580;
+    border-bottom: 0.5pt solid #e0e0e0;
+    padding-top: 2mm;
   }
   .room-details {
     flex: 1.1;
@@ -352,128 +297,117 @@
     min-width: 0;
   }
   .room-title {
-    font-size: 8.5pt;
-    font-weight: 700;
-    color: #003580;
-    margin-bottom: 2mm;
-  }
-  .room-icon {
-    display: inline-block;
-    width: 3mm;
-    height: 3mm;
-    margin-right: 1mm;
-  }
-  .room-field {
-    font-size: 6.5pt;
-    color: #555;
-    margin-bottom: 0.8mm;
-  }
-  .room-field strong {
-    color: #333;
-  }
-  .room-amenities {
-    font-size: 6pt;
-    color: #666;
-    margin-top: 1.5mm;
-    line-height: 1.4;
-  }
-  .bed-size {
-    font-size: 6pt;
-    color: #666;
-    margin-top: 1mm;
-  }
-  .cancel-title {
     font-size: 7pt;
     font-weight: 700;
+    color: #003580;
+    margin-bottom: 1mm;
+  }
+  .room-field {
+    font-size: 5.5pt;
+    color: #555;
+    margin-bottom: 0.5mm;
+  }
+  .room-field strong { color: #333; }
+  .room-amenities {
+    font-size: 5pt;
+    color: #666;
+    margin-top: 1mm;
+    line-height: 1.35;
+  }
+  .bed-size {
+    font-size: 5pt;
+    color: #666;
+    margin-top: 0.5mm;
+  }
+  .cancel-title {
+    font-size: 6pt;
+    font-weight: 700;
     color: #333;
-    margin-bottom: 1.5mm;
+    margin-bottom: 0.8mm;
   }
   .cancel-text {
-    font-size: 6.5pt;
+    font-size: 5.5pt;
     color: #555;
-    line-height: 1.45;
-    margin-bottom: 1.5mm;
+    line-height: 1.35;
+    margin-bottom: 1mm;
   }
   .cancel-bold {
     font-weight: 700;
     color: #333;
   }
   .cancel-note {
-    font-size: 6pt;
+    font-size: 5pt;
     font-weight: 700;
     color: #555;
-    margin-top: 1.5mm;
+    font-style: italic;
+    margin-top: 1mm;
   }
   .refund-section {
-    margin-top: 2mm;
+    margin-top: 1.5mm;
   }
   .refund-title {
-    font-size: 6.5pt;
+    font-size: 5.5pt;
     font-weight: 700;
     color: #333;
-    margin-bottom: 1mm;
+    margin-bottom: 0.5mm;
   }
   .refund-text {
-    font-size: 6pt;
+    font-size: 5pt;
     color: #555;
-    line-height: 1.45;
+    line-height: 1.35;
   }
 
   /* ===== IMPORTANT INFO + HOTEL POLICIES (two-column) ===== */
   .bottom-two-col {
     display: flex;
-    gap: 4mm;
-    margin-bottom: 3mm;
-    border-top: 1px solid #e0e0e0;
-    padding-top: 3mm;
+    gap: 3mm;
+    border-top: 0.5pt solid #e0e0e0;
+    padding-top: 2mm;
   }
   .bottom-col {
     flex: 1;
     min-width: 0;
   }
   .bottom-title {
-    font-size: 7.5pt;
+    font-size: 6.5pt;
     font-weight: 700;
     color: #003580;
-    margin-bottom: 2mm;
+    margin-bottom: 1mm;
     display: flex;
     align-items: center;
-    gap: 1.5mm;
+    gap: 1mm;
   }
   .bottom-title .icon {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 4mm;
-    height: 4mm;
-    border: 1.5px solid #003580;
+    width: 3.5mm;
+    height: 3.5mm;
+    border: 1pt solid #003580;
     border-radius: 50%;
-    font-size: 6pt;
+    font-size: 5pt;
     font-weight: 700;
     color: #003580;
     flex-shrink: 0;
   }
   .bottom-text {
-    font-size: 6.5pt;
+    font-size: 5.5pt;
     color: #555;
-    line-height: 1.45;
-  }
-  .bottom-text strong {
-    color: #333;
+    line-height: 1.35;
   }
   .policy-subtitle {
-    font-size: 6.5pt;
+    font-size: 5.5pt;
     font-weight: 700;
     color: #333;
-    margin-top: 1.5mm;
-    margin-bottom: 0.5mm;
+    margin-top: 1mm;
+    margin-bottom: 0.3mm;
   }
   .policy-item {
-    font-size: 6.5pt;
+    font-size: 5.5pt;
     color: #555;
-    padding-left: 3mm;
+    padding-left: 2.5mm;
     position: relative;
-    margin-bottom: 0.5mm;
+    margin-bottom: 0.3mm;
   }
   .policy-item::before {
     content: "\2022";
@@ -483,44 +417,40 @@
 
   /* ===== PAGE 2 ===== */
   .page2-title {
-    font-size: 11pt;
+    font-size: 10pt;
     font-weight: 700;
     color: #003580;
     margin-bottom: 2mm;
   }
   .page2-subtitle {
-    font-size: 8pt;
+    font-size: 7pt;
     font-weight: 700;
     color: #333;
-    margin-bottom: 1.5mm;
+    margin-bottom: 1mm;
   }
   .page2-text {
-    font-size: 7pt;
+    font-size: 6pt;
     color: #555;
-    line-height: 1.5;
+    line-height: 1.45;
     margin-bottom: 2mm;
   }
   .page2-text a {
     color: #0071c2;
     text-decoration: none;
   }
-  .page2-link {
-    color: #0071c2;
-    text-decoration: none;
-  }
   .page2-safety {
-    margin-top: 5mm;
+    margin-top: 4mm;
   }
   .page2-safety-title {
-    font-size: 8pt;
+    font-size: 7pt;
     font-weight: 700;
     color: #003580;
-    margin-bottom: 1.5mm;
+    margin-bottom: 1mm;
   }
   .page2-safety-text {
-    font-size: 7pt;
+    font-size: 6pt;
     color: #555;
-    line-height: 1.5;
+    line-height: 1.45;
   }
   .page2-safety-text a {
     color: #0071c2;
@@ -528,36 +458,20 @@
   }
   .page2-footer {
     position: absolute;
-    bottom: 12mm;
-    left: 15mm;
-    right: 15mm;
-    border-top: 1px solid #e0e0e0;
-    padding-top: 3mm;
-    font-size: 6pt;
-    color: #999;
-    line-height: 1.5;
-    text-align: center;
-  }
-  .page2-footer .icon {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 3.5mm;
-    height: 3.5mm;
-    border: 1px solid #999;
-    border-radius: 50%;
+    bottom: 10mm;
+    left: 12mm;
+    right: 12mm;
+    border-top: 0.5pt solid #e0e0e0;
+    padding-top: 2mm;
     font-size: 5pt;
     color: #999;
-    margin-right: 1mm;
-    vertical-align: middle;
+    line-height: 1.4;
+    text-align: center;
   }
 
-  /* ===== DIVIDER LINE ===== */
-  .thin-line {
-    border: none;
-    border-top: 1px solid #e0e0e0;
-    margin: 2mm 0;
-  }
+  /* ===== UTILITY ===== */
+  img[alt]::after { content: ""; }
+  img { image-rendering: auto; }
 </style>
 </head>
 <body>
@@ -580,8 +494,8 @@
   <!-- HERO: photo_map_side_by_side layout -->
   {% if layout == "photo_map_side_by_side" and photo_url and map_url %}
   <div class="hero-side-by-side">
-    <img src="{{ photo_url }}" alt="{{ hotel_name }}">
-    <img src="{{ map_url }}" alt="Map">
+    <img src="{{ photo_url }}" alt="">
+    <img src="{{ map_url }}" alt="">
   </div>
   {% endif %}
 
@@ -590,7 +504,7 @@
     <div class="hotel-info">
       {% if layout in ["photo_only", "photo_and_map"] and photo_url %}
       <div class="hotel-info-with-photo">
-        <img class="hotel-photo-small" src="{{ photo_url }}" alt="{{ hotel_name }}">
+        <img class="hotel-photo-small" src="{{ photo_url }}" alt="">
         <div>
           <div class="hotel-name">{{ hotel_name }}</div>
           <div class="hotel-detail">
@@ -625,15 +539,15 @@
         <div class="weekday">{{ checkout_weekday }}</div>
         <div class="time">{{ checkout_time }}</div>
       </div>
-      <div class="date-box-group">
-        <div class="label">Units</div>
+      <div class="date-box-small">
+        <div class="label">Rooms</div>
         <div class="day">{{ num_guests }}</div>
-        <div class="sub-label">YOUR GROUP</div>
+        <div class="sub">Your<br>group</div>
       </div>
-      <div class="date-box-nights">
+      <div class="date-box-small">
         <div class="label">Nights</div>
         <div class="day">{{ nights }}</div>
-        <div class="sub-label">{{ your_group }}</div>
+        <div class="sub">{{ your_group }}</div>
       </div>
     </div>
   </div>
@@ -652,7 +566,7 @@
     <div class="price-total-row">
       <div>
         <span class="label">Price</span><br>
-        <span style="font-size: 6pt; color: #888;">(for {{ num_guests }} guest)</span>
+        <span style="font-size: 5pt; color: #888;">(for {{ num_guests }} guest)</span>
       </div>
       <div class="amount">
         approx. TL {{ price_total_tl }}
@@ -666,7 +580,7 @@
   <!-- PAYMENT INFORMATION -->
   <div class="info-section">
     <div class="info-title">Payment Information</div>
-    <div class="info-text">{{ payment_handles_text|replace("\n", "<br>")|safe }}<br>
+    <div class="info-text">{{ payment_handles_text }}<br>
     {{ payment_accepts_text|replace("\n", "<br>")|safe }}</div>
   </div>
 
@@ -682,11 +596,10 @@
     <div class="info-text">{{ additional_info|replace("\n", "<br>")|safe }}</div>
   </div>
 
-  <!-- MAP: photo_and_map layout (map below additional info) -->
+  <!-- MAP: photo_and_map layout -->
   {% if layout == "photo_and_map" and map_url %}
   <div class="map-section">
-    <img src="{{ map_url }}" alt="Map showing {{ hotel_name }}">
-    <div class="map-attribution">Map data &copy;2026 Google</div>
+    <img src="{{ map_url }}" alt="">
   </div>
   {% endif %}
 
@@ -695,9 +608,9 @@
     <div class="room-details">
       <div class="room-title">{{ room_type }} &#9728;</div>
       <div class="room-field"><strong>Guest name:</strong> {{ guest_name }}</div>
-      <div class="room-field"><strong>Number of guests:</strong> {{ num_guests }} adult</div>
+      <div class="room-field"><strong>Number of guests:</strong> {{ your_group }}</div>
       <div class="room-field"><strong>Meal Plan:</strong> {{ meal_plan }}</div>
-      <div class="room-amenities">{{ amenities|replace("\n", "<br>")|safe }}</div>
+      <div class="room-amenities">{{ amenities }}</div>
       <div class="bed-size"><strong>Bed Size(s):</strong> {{ bed_size }}</div>
     </div>
     <div class="cancel-details">
@@ -713,8 +626,8 @@
       <div class="refund-section">
         <div class="refund-title">Refund schedule:</div>
         <div class="refund-text">
-          You'll get a full refund if you cancel before 11:59<br>
-          on {{ refund_until_date }}. If you cancel from 12:00 on<br>
+          You'll get a full refund if you cancel before 11:59
+          on {{ refund_until_date }}. If you cancel from 12:00 on
           {{ refund_from_date }}, you'll get a TL {{ refund_amount_tl }} refund.
         </div>
       </div>
@@ -737,11 +650,11 @@
       </div>
       {% if parking_policy %}
       <div class="policy-subtitle">Guest parking</div>
-      <div class="policy-item">{{ parking_policy|replace("\n", "</div><div class='policy-item'>")|safe }}</div>
+      <div class="policy-item">{{ parking_policy }}</div>
       {% endif %}
       {% if wifi_policy %}
       <div class="policy-subtitle">WiFi</div>
-      <div class="policy-item">{{ wifi_policy|replace("\n", "</div><div class='policy-item'>")|safe }}</div>
+      <div class="policy-item">{{ wifi_policy }}</div>
       {% endif %}
     </div>
   </div>
@@ -766,24 +679,18 @@
   </div>
 
   <div class="page2-text">
-    Find more information about travelling safely in our<br>
+    Find more information about travelling safely in our
     <a href="#">Safety resource centre</a>.
   </div>
 
   <div class="page2-safety">
     <div class="page2-safety-title">Your safety is our top concern.</div>
     <div class="page2-safety-text">
-      In case of an emergency while on<br>
-      holiday, dial 1-1-2 to reach police, the fire brigade, or emergency medical<br>
-      services. This number works in most European countries and is free of<br>
-      charge.<br><br>
-      Find more <a href="#">local emergency phone numbers</a> to help give you complete<br>
-      peace of mind during your stay in Denmark.
+      In case of an emergency while on holiday, dial 1-1-2 to reach police, the fire brigade, or emergency medical services. This number works in most European countries and is free of charge.
     </div>
   </div>
 
   <div class="page2-footer">
-    <span class="icon">c</span>
     This print version of your confirmation contains the most important information about your booking. It can be used to check in when you arrive at {{ hotel_name }}. For further details please refer to your confirmation email sent to {{ guest_email }}.
   </div>
 
