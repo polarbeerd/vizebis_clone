@@ -217,3 +217,38 @@ async def extract_text(file: UploadFile = File(...), x_api_key: str = Header(def
 @app.get("/health")
 async def health():
     return {"status": "ok"}
+
+
+@app.get("/debug")
+async def debug():
+    """Debug endpoint to check environment."""
+    info = {}
+
+    # Check fonttools
+    try:
+        from fontTools.ttLib import TTFont
+        info["fonttools"] = "installed"
+    except ImportError as e:
+        info["fonttools"] = f"MISSING: {e}"
+
+    # Check pikepdf
+    try:
+        import pikepdf
+        info["pikepdf"] = f"installed v{pikepdf.__version__}"
+    except ImportError as e:
+        info["pikepdf"] = f"MISSING: {e}"
+
+    # Check fonts directory
+    fonts_dir = os.path.join(os.path.dirname(__file__), "fonts")
+    if os.path.isdir(fonts_dir):
+        info["fonts_dir"] = os.listdir(fonts_dir)
+    else:
+        info["fonts_dir"] = "MISSING"
+
+    # Check Segoe UI specifically
+    segoe_regular = os.path.join(fonts_dir, "segoeui.ttf")
+    segoe_bold = os.path.join(fonts_dir, "segoeuib.ttf")
+    info["segoeui.ttf"] = os.path.exists(segoe_regular)
+    info["segoeuib.ttf"] = os.path.exists(segoe_bold)
+
+    return info
