@@ -6,6 +6,8 @@ Replacements are applied longest-first to avoid partial matches.
 Before replacement, subsetted fonts are extended with full Segoe UI
 glyphs so that new characters (digits, letters) are always available.
 """
+from __future__ import annotations
+
 import os
 import sys
 import pikepdf
@@ -163,15 +165,16 @@ def _extend_truetype_font(font_obj, is_subsetted, base_font, segoe_regular, sego
     if "/ToUnicode" in font_obj:
         del font_obj[pikepdf.Name("/ToUnicode")]
 
-    # Extend /Widths to cover full WinAnsiEncoding range (32-255)
-    first_char = int(font_obj.get("/FirstChar", 32))
-    last_char = int(font_obj.get("/LastChar", 255))
+    # Extend /Widths: preserve original widths, only add Segoe UI for new chars
+    orig_first = int(font_obj.get("/FirstChar", 32))
+    orig_last = int(font_obj.get("/LastChar", 255))
+    orig_widths = font_obj.get("/Widths")
+    orig_widths_list = [int(w) for w in orig_widths] if orig_widths else []
 
-    # Extend to full range
     new_first = 32
     new_last = 255
 
-    # Build widths array from Segoe UI metrics
+    # Build Segoe UI widths for reference
     cmap = segoe_tt.getBestCmap()
     units_per_em = segoe_tt["head"].unitsPerEm
     hmtx = segoe_tt["hmtx"]
@@ -179,6 +182,15 @@ def _extend_truetype_font(font_obj, is_subsetted, base_font, segoe_regular, sego
 
     new_widths = []
     for code in range(new_first, new_last + 1):
+        # Preserve original width if this char had a non-zero width
+        # (zero width means char wasn't in original subset — use Segoe UI instead)
+        if orig_first <= code <= orig_last and orig_widths_list:
+            idx = code - orig_first
+            if 0 <= idx < len(orig_widths_list) and orig_widths_list[idx] > 0:
+                new_widths.append(orig_widths_list[idx])
+                continue
+
+        # New/missing char: use Segoe UI metrics
         if cmap and code in cmap:
             glyph_name = cmap[code]
             if glyph_name in hmtx.metrics:

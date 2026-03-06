@@ -1,6 +1,7 @@
 import os
 import io
 import unicodedata
+from typing import Optional
 from datetime import datetime, timedelta
 from fastapi import FastAPI, File, Header, HTTPException, UploadFile
 from pydantic import BaseModel
@@ -30,8 +31,8 @@ class BookingRequest(BaseModel):
     guest_email: str = ""
     checkin_date: str          # YYYY-MM-DD
     checkout_date: str         # YYYY-MM-DD
-    confirmation_number: str | None = None
-    pin_code: str | None = None
+    confirmation_number: Optional[str] = None
+    pin_code: Optional[str] = None
     num_guests: int = 1
     price_total_tl: float = 0.0
     price_total_dkk: float = 0.0
@@ -107,7 +108,7 @@ def _build_replacements(req: BookingRequest, conf: str, pin: str) -> dict[str, s
     cancel_deadline = ci - timedelta(days=req.cancel_days_before)
 
     # Map each detected field to its new value
-    new_values: dict[str, str | None] = {
+    new_values: dict[str, Optional[str]] = {
         "guest_name": _ascii_name(req.guest_name).upper(),
         "guest_email": req.guest_email.lower() if req.guest_email else None,
         "confirmation_number": conf,
