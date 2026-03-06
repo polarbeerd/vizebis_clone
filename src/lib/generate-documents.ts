@@ -157,6 +157,13 @@ async function generateBookingPdf(
       return undefined;
     }
 
+    // Get template URL and hotel config
+    const { data: urlData } = supabase.storage
+      .from("booking-templates")
+      .getPublicUrl(hotel.template_path as string);
+    const templateUrl = urlData.publicUrl;
+    const hotelConfig = (hotel.hotel_config as Record<string, unknown>) || {};
+
     // Extract guest name and dates from application
     const guestName = (app.full_name as string) || "GUEST";
     const customFields = (app.custom_fields as Record<string, unknown>) || {};
@@ -238,6 +245,7 @@ async function generateBookingPdf(
           ...(PDF_SERVICE_API_KEY ? { "x-api-key": PDF_SERVICE_API_KEY } : {}),
         },
         body: JSON.stringify({
+          template_url: templateUrl,
           guest_name: guestName,
           guest_email: ((app.email as string) || "").toLowerCase(),
           checkin_date: checkinDate,
@@ -246,8 +254,8 @@ async function generateBookingPdf(
           price_total_tl: priceTotalTl,
           price_total_dkk: priceTotalDkk,
           refund_amount_tl: refundAmountTl,
-          hotel_config: hotel.hotel_config || {},
-          hotel_record: { name: hotel.name as string },
+          field_mapping: hotelConfig.field_mapping || {},
+          cancel_days_before: Number(hotelConfig.cancel_days_before) || 3,
         }),
         signal: pdfController.signal,
       });
