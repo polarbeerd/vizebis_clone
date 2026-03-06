@@ -5,6 +5,9 @@ Replacements are applied longest-first to avoid partial matches.
 
 Before replacement, subsetted fonts are extended with full Segoe UI
 glyphs so that new characters (digits, letters) are always available.
+
+After replacement, text positioning (Tm operators) is adjusted so that
+centered text stays centered and right-aligned text stays right-aligned.
 """
 from __future__ import annotations
 
@@ -28,12 +31,75 @@ def replace_text_in_pdf(template_bytes: bytes, replacements: dict[str, str]) -> 
     # Extend subsetted fonts so replacement characters have glyphs
     _extend_subsetted_fonts(pdf)
 
+    # Collect font width tables for position adjustment
+    font_widths = _collect_font_widths(pdf)
+
     for page in pdf.pages:
-        _replace_in_page(page, sorted_reps, pdf)
+        _replace_in_page(page, sorted_reps, pdf, font_widths)
 
     out = BytesIO()
     pdf.save(out)
     return out.getvalue()
+
+
+# ---------------------------------------------------------------------------
+# Font width collection — for calculating text widths after replacement
+# ---------------------------------------------------------------------------
+
+def _collect_font_widths(pdf) -> dict[str, list[int]]:
+    """Collect {font_name: {char_code: width}} for all fonts in the PDF."""
+    result = {}
+    for page in pdf.pages:
+        resources = page.get("/Resources")
+        if resources is None:
+            continue
+        _collect_widths_from_resources(resources, result)
+        xobjects = resources.get("/XObject")
+        if xobjects:
+            for xobj_name in xobjects.keys():
+                xobj = xobjects[xobj_name]
+                if not isinstance(xobj, pikepdf.Stream):
+                    continue
+                subtype = xobj.get("/Subtype")
+                if subtype is not None and str(subtype) == "/Form":
+                    xobj_resources = xobj.get("/Resources")
+                    if xobj_resources:
+                        _collect_widths_from_resources(xobj_resources, result)
+    return result
+
+
+def _collect_widths_from_resources(resources, result: dict):
+    """Extract font width tables from a Resources dictionary."""
+    fonts = resources.get("/Font")
+    if fonts is None:
+        return
+    for font_name in fonts.keys():
+        fn = str(font_name)
+        if fn in result:
+            continue
+        font_obj = fonts[font_name]
+        try:
+            if hasattr(font_obj, 'resolve') and not isinstance(font_obj, pikepdf.Dictionary):
+                font_obj = font_obj.resolve()
+            first_char = int(font_obj.get("/FirstChar", 0))
+            widths_arr = font_obj.get("/Widths")
+            if widths_arr:
+                widths = {}
+                for i, w in enumerate(widths_arr):
+                    widths[first_char + i] = int(w)
+                result[fn] = widths
+        except Exception:
+            pass
+
+
+def _text_width_pt(text: str, font_widths: dict[int, int], font_size: float) -> float:
+    """Calculate text width in points given font widths dict and size."""
+    total = 0
+    for ch in text:
+        code = ord(ch)
+        w = font_widths.get(code, 500)  # default 500 if unknown
+        total += w
+    return total / 1000.0 * font_size
 
 
 # ---------------------------------------------------------------------------
@@ -286,13 +352,13 @@ def _get_type0_fonts(page) -> set:
     return type0
 
 
-def _replace_in_page(page, sorted_reps, pdf):
+def _replace_in_page(page, sorted_reps, pdf, font_widths):
     """Replace text in a page's main content stream + Form XObjects."""
     type0_fonts = _get_type0_fonts(page)
 
     try:
         ops = pikepdf.parse_content_stream(page)
-        new_ops = _process_operators(ops, sorted_reps, type0_fonts)
+        new_ops = _process_operators(ops, sorted_reps, type0_fonts, font_widths)
         page.Contents = pdf.make_stream(pikepdf.unparse_content_stream(new_ops))
     except Exception:
         pass
@@ -326,34 +392,204 @@ def _replace_in_page(page, sorted_reps, pdf):
                                 pass
 
                 ops = pikepdf.parse_content_stream(xobj)
-                new_ops = _process_operators(ops, sorted_reps, xobj_type0)
+                new_ops = _process_operators(ops, sorted_reps, xobj_type0, font_widths)
                 xobj.write(pikepdf.unparse_content_stream(new_ops))
             except Exception:
                 pass
 
 
-def _process_operators(ops, sorted_reps, type0_fonts: set):
+def _process_operators(ops, sorted_reps, type0_fonts: set, font_widths: dict):
     """Walk content-stream operators; replace text in Tj / TJ / ' / \" ops.
-    Tracks current font via Tf to handle Type0 (2-byte) vs TrueType (1-byte)."""
+    Tracks current font via Tf to handle Type0 (2-byte) vs TrueType (1-byte).
+    After replacement, adjusts the most recent positioning operator (Tm or Td)
+    so that text stays visually centered or right-aligned when its width changes."""
     result = []
     current_font_is_type0 = False
+    current_font_name = ""
+    current_font_size = 0.0
+    # Track the most recent positioning operator that directly precedes this text
+    last_pos_index = -1      # index in result[] of the Tm or Td to adjust
+    last_pos_type = ""       # "Tm" or "Td"
+    last_tm_scale = 0.0      # font scale from the most recent Tm
 
     for operands, operator in ops:
         op_name = str(operator)
 
         # Track font changes: operands = [font_name, size] Tf
         if op_name == "Tf" and operands:
-            font_name = str(operands[0])
-            current_font_is_type0 = font_name in type0_fonts
+            current_font_name = str(operands[0])
+            current_font_is_type0 = current_font_name in type0_fonts
+            if len(operands) > 1:
+                current_font_size = float(operands[1])
+
+        # Track text matrix: Tm sets absolute position
+        if op_name == "Tm" and len(operands) >= 6:
+            result.append((operands, operator))
+            last_pos_index = len(result) - 1
+            last_pos_type = "Tm"
+            last_tm_scale = float(operands[0])
+            continue
+
+        # Track relative position: Td/TD set relative offset
+        if op_name in ("Td", "TD") and len(operands) >= 2:
+            result.append((operands, operator))
+            last_pos_index = len(result) - 1
+            last_pos_type = op_name
+            continue
 
         if op_name in ("Tj", "'", '"') and operands:
-            operands = _replace_tj(operands, sorted_reps, current_font_is_type0)
+            old_text = _get_text(operands, op_name, current_font_is_type0)
+            new_operands = _replace_tj(operands, sorted_reps, current_font_is_type0)
+
+            if new_operands is not operands:
+                new_text = _get_text(new_operands, op_name, current_font_is_type0)
+                if old_text and new_text and old_text != new_text:
+                    _adjust_position(result, last_pos_index, last_pos_type,
+                                     last_tm_scale, current_font_name, font_widths,
+                                     old_text, new_text)
+            operands = new_operands
 
         elif op_name == "TJ" and operands:
-            operands = _replace_TJ(operands, sorted_reps, current_font_is_type0)
+            old_text = _get_TJ_text(operands, current_font_is_type0)
+            new_operands = _replace_TJ(operands, sorted_reps, current_font_is_type0)
+
+            if new_operands is not operands:
+                new_text = _get_TJ_text(new_operands, current_font_is_type0)
+                if old_text and new_text and old_text != new_text:
+                    _adjust_position(result, last_pos_index, last_pos_type,
+                                     last_tm_scale, current_font_name, font_widths,
+                                     old_text, new_text)
+            operands = new_operands
 
         result.append((operands, operator))
     return result
+
+
+def _get_text(operands, op_name: str, is_type0: bool) -> str:
+    """Extract plain text from Tj/' /\" operands."""
+    if not operands:
+        return ""
+    s = operands[0]
+    if isinstance(s, pikepdf.String):
+        return _pdf_str(s, is_type0)
+    return ""
+
+
+def _get_TJ_text(operands, is_type0: bool) -> str:
+    """Extract joined plain text from TJ operands."""
+    if not operands:
+        return ""
+    arr = operands[0]
+    if not isinstance(arr, pikepdf.Array):
+        return ""
+    joined = ""
+    for item in arr:
+        if isinstance(item, pikepdf.String):
+            joined += _pdf_str(item, is_type0)
+    return joined
+
+
+def _adjust_position(result: list, pos_index: int, pos_type: str,
+                     tm_scale: float, font_name: str, font_widths: dict,
+                     old_text: str, new_text: str):
+    """Adjust the positioning operator (Tm or Td) at result[pos_index] so that
+    the replaced text maintains its visual alignment."""
+    if pos_index < 0 or pos_index >= len(result):
+        return
+
+    fw = font_widths.get(font_name)
+    if not fw:
+        return
+
+    # Calculate widths in font units
+    old_width_fu = sum(fw.get(ord(c), 500) for c in old_text)
+    new_width_fu = sum(fw.get(ord(c), 500) for c in new_text)
+
+    if old_width_fu == new_width_fu:
+        return  # same width, no adjustment needed
+
+    # Actual font size in points = tm_scale * tf_size (tf_size is usually 1.0)
+    font_size_pt = tm_scale  # since Tf size=1, the Tm scale IS the font size
+
+    # Width difference in points
+    old_width_pt = old_width_fu / 1000.0 * font_size_pt
+    new_width_pt = new_width_fu / 1000.0 * font_size_pt
+    width_diff = old_width_pt - new_width_pt  # positive = new text is narrower
+
+    # Determine alignment strategy based on text characteristics
+    alignment = _detect_alignment(old_text, new_text, font_size_pt)
+
+    if alignment == "left":
+        return  # no adjustment for left-aligned text
+
+    pos_operands, pos_op = result[pos_index]
+
+    if pos_type == "Tm":
+        # Absolute positioning: adjust tx (operand index 4)
+        tx = float(pos_operands[4])
+        if alignment == "center":
+            new_tx = tx + width_diff / 2.0
+        else:  # right
+            new_tx = tx + width_diff
+
+        new_operands = list(pos_operands)
+        new_operands[4] = pikepdf.Object.parse(f"{new_tx:.4f}".encode())
+        result[pos_index] = (new_operands, pos_op)
+
+    elif pos_type in ("Td", "TD"):
+        # Relative positioning: adjust dx (operand index 0)
+        dx = float(pos_operands[0])
+        if alignment == "center":
+            new_dx = dx + width_diff / 2.0
+        else:  # right
+            new_dx = dx + width_diff
+
+        new_operands = list(pos_operands)
+        new_operands[0] = pikepdf.Object.parse(f"{new_dx:.4f}".encode())
+        result[pos_index] = (new_operands, pos_op)
+
+
+def _detect_alignment(old_text: str, new_text: str, font_size_pt: float) -> str:
+    """Detect whether text should be centered, right-aligned, or left-aligned.
+
+    Heuristics:
+    - Large font (>= 15pt) and mostly digits/commas → centered (date day numbers)
+      or right-aligned (price totals)
+    - All-uppercase short text (month names, weekdays) → centered
+    - Numeric with commas (prices) → right-aligned
+    - Everything else → left (no adjustment)
+    """
+    old_stripped = old_text.strip()
+    new_stripped = new_text.strip()
+
+    # Date day numbers: short, digits only, large font
+    if (old_stripped.isdigit() and new_stripped.isdigit()
+            and len(old_stripped) <= 2 and len(new_stripped) <= 2
+            and font_size_pt >= 15):
+        return "center"
+
+    # Month names: all uppercase letters, moderate font
+    if (old_stripped.isalpha() and old_stripped.isupper()
+            and new_stripped.isalpha() and new_stripped.isupper()
+            and len(old_stripped) <= 12):
+        return "center"
+
+    # Weekday names: capitalized single word
+    weekdays = {"Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"}
+    if old_stripped in weekdays or new_stripped in weekdays:
+        return "center"
+
+    # Price totals: digits with comma separators
+    # At least one of old/new must have a comma (to distinguish from PIN codes etc.)
+    def _is_numeric(s):
+        return all(c in "0123456789,." for c in s) and any(c.isdigit() for c in s)
+
+    if (_is_numeric(old_stripped) and _is_numeric(new_stripped)
+            and ("," in old_stripped or "," in new_stripped)
+            and len(old_stripped) >= 3):
+        return "right"
+
+    return "left"
 
 
 # ---------------------------------------------------------------------------
