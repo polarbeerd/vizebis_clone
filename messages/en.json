@@ -81,7 +81,9 @@
     "portalSetup": "Portal Setup",
     "documentTemplates": "Document Templates",
     "financeHub": "Finance & Tracking",
-    "countriesAndVisaTypes": "Countries & Visa Types"
+    "countriesAndVisaTypes": "Countries & Visa Types",
+    "tools": "Tools",
+    "pdfEditTool": "PDF Edit Tool"
   },
   "auth": {
     "login": "Login",

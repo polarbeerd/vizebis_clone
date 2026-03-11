@@ -22,24 +22,104 @@ export function wrapInA4Template(innerHtml: string): string {
   body {
     font-family: "Georgia", "Times New Roman", serif;
     font-size: 11pt;
-    line-height: 1.5;
-    color: #1a1a1a;
+    line-height: 1.6;
+    color: #2d3748;
     margin: 0;
     padding: 0;
   }
+  /* Consulate header */
+  .consulate-header {
+    font-style: italic;
+    color: #2d3748;
+    margin-bottom: 0.2em;
+    font-size: 11pt;
+  }
+  .consulate-header p {
+    margin: 0;
+    text-align: left;
+  }
+  /* Thick horizontal separator */
+  hr.main-line {
+    border: none;
+    border-top: 2.5px solid #2d3748;
+    margin: 0.6em 0 1em 0;
+  }
+  /* Right-aligned date/location */
+  .date-location {
+    text-align: right;
+    margin-bottom: 1.2em;
+    font-size: 11pt;
+  }
+  /* Bold letter title with decorative underline */
+  .letter-title {
+    font-weight: bold;
+    font-size: 13pt;
+    margin-bottom: 0.3em;
+    color: #2d3748;
+  }
+  .title-underline {
+    border: none;
+    border-top: 1.5px solid #a0aec0;
+    width: 40%;
+    margin: 0 0 1.2em 0;
+  }
+  /* Body paragraphs */
   p {
-    margin-bottom: 0.6em;
+    margin-bottom: 0.7em;
     text-align: justify;
   }
+  /* Allow bold and italic in body */
   strong, b {
+    font-weight: bold;
+  }
+  em, i {
+    font-style: italic;
+  }
+  /* Tables for structured data (flights, details) */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 0.8em 0;
+    font-size: 10.5pt;
+  }
+  table td, table th {
+    padding: 0.35em 0.6em;
+    border: 1px solid #cbd5e0;
+    text-align: left;
+    vertical-align: top;
+  }
+  table th, td:first-child {
     font-weight: normal;
+    color: #4a5568;
   }
-  .date {
-    text-align: right;
-    margin-bottom: 1.5em;
+  /* Bold section headers inside tables */
+  td.section-header {
+    font-weight: bold;
+    background: none;
+    border-bottom: 1px solid #cbd5e0;
+    padding-top: 0.6em;
   }
+  /* Bullet lists */
+  ul {
+    margin: 0.6em 0;
+    padding-left: 1.8em;
+  }
+  li {
+    margin-bottom: 0.4em;
+    text-align: justify;
+  }
+  /* Signature block */
   .signature {
-    margin-top: 1.5em;
+    margin-top: 1.8em;
+  }
+  .signature .name {
+    font-weight: bold;
+    margin-top: 1.2em;
+    margin-bottom: 0.1em;
+  }
+  .signature p {
+    margin-bottom: 0.15em;
+    text-align: left;
   }
 </style>
 </head>
@@ -409,16 +489,53 @@ async function generateLetterOfIntent(
     }
 
     // Build the system prompt
-    const systemPrompt = `You are a visa consultant writing a letter of intent (motivation letter) for a visa application. Write a clear, straightforward letter that:
-- Is addressed to the relevant consulate/embassy
-- Clearly states the purpose of travel
-- Mentions accommodation and travel dates if provided
-- Uses simple, easy-to-read English (B1-B2 level, no fancy vocabulary or complex sentences)
-- MUST fit on a single A4 page — keep it concise: 2-3 short paragraphs maximum
-- Includes date, salutation, body paragraphs, and closing with signature line
-- Uses ONLY plain <p> and <br> tags — absolutely NO <strong>, <b>, <em>, <i>, or any bold/italic formatting
-- Do NOT use headers (h1, h2, etc.)
-- Keep sentences short and direct. Avoid filler phrases and repetition.`;
+    const systemPrompt = `You are a visa consultant writing a letter of intent (motivation letter) for a visa application. Write a professional, well-structured letter following this EXACT HTML structure:
+
+1. CONSULATE HEADER (italic, top-left):
+<div class="consulate-header">
+<p>[Consulate/Embassy Name] in [City]</p>
+<p>Visa Section</p>
+</div>
+<hr class="main-line">
+
+2. DATE/LOCATION (right-aligned):
+<p class="date-location">[Applicant's City], [Country] — [Month Year]</p>
+
+3. LETTER TITLE (bold, with decorative underline):
+<p class="letter-title">[Title — e.g. "Letter of Intent – Tourism Visit to France" or "Goodwill Letter"]</p>
+<hr class="title-underline">
+
+4. SALUTATION:
+<p>Dear Sir/Madam,</p>
+
+5. BODY PARAGRAPHS:
+- First paragraph: introduce yourself (name, passport number), state purpose of visit clearly
+- Middle paragraphs: travel details, accommodation, who is sponsoring, relevant context
+- For structured info (flights, reservations), use <table> with rows, or <ul> bullet lists with <strong> labels
+- Final paragraph: mention strong ties to home country (family, job, property) guaranteeing return
+- Keep it concise — MUST fit on one A4 page (2.5cm margins, 11pt Georgia font)
+- Use simple English (B1-B2 level), short sentences, no filler
+
+6. CLOSING:
+<p>Thank you for your time and consideration.</p>
+
+7. SIGNATURE BLOCK:
+<div class="signature">
+<p>Sincerely,</p>
+<p class="name">[Full Name]</p>
+<p>Passport No: [Number]</p>
+<p>[Contact: Phone or Email]</p>
+</div>
+
+FORMATTING RULES:
+- Use <strong> ONLY for: applicant name in signature, bold labels in bullet lists (e.g. "<strong>Stay:</strong>"), and table section headers
+- Do NOT use <h1>-<h6> tags — use the CSS classes above instead
+- Do NOT use <em> or <i> in body text
+- Keep paragraphs short and justified
+- If flight/travel details are provided, present them in a clean <table>
+- If accommodation details are provided, list hotel name, address, and city on separate lines
+- Always mention the applicant's ties to their home country (family, employment, property)
+- Output ONLY the inner HTML — do NOT include <html>, <head>, <body>, or <style> tags`;
 
     // Build application data for the prompt
     const applicationData: Record<string, unknown> = {
@@ -459,7 +576,7 @@ async function generateLetterOfIntent(
       });
     }
 
-    prompt += `Generate a letter of intent in HTML format. Output ONLY the inner HTML content — do NOT include <html>, <head>, <body>, or <style> tags. Use ONLY <p> and <br> tags — no bold, italic, or any other formatting tags. The letter MUST fit on a single A4 page (2.5cm margins, 11pt font). Keep it short and direct: date on right, consulate address, salutation, 2-3 concise paragraphs, closing with signature. Use simple English throughout.`;
+    prompt += `Generate a letter of intent in HTML format following the EXACT structure from the system prompt. Output ONLY the inner HTML content — do NOT include <html>, <head>, <body>, or <style> tags. The letter MUST fit on a single A4 page (2.5cm margins, 11pt Georgia font). Use the CSS classes specified: consulate-header, main-line, date-location, letter-title, title-underline, signature, name. Use <strong> sparingly (signature name, bullet labels only). Use simple English throughout.`;
 
     // Call Gemini API directly
     const apiKey = process.env.GEMINI_API_KEY;

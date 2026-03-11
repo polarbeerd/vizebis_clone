@@ -15,6 +15,8 @@ import {
   ScrollText,
   Sliders,
   FileStack,
+  FilePenLine,
+  ExternalLink,
   type LucideIcon,
 } from "lucide-react";
 
@@ -22,6 +24,7 @@ interface NavItem {
   label: string;
   href: string;
   icon: LucideIcon;
+  external?: boolean;
 }
 
 interface NavGroup {
@@ -56,6 +59,12 @@ export function useNavGroups(): NavGroup[] {
       ],
     },
     {
+      title: t("tools"),
+      items: [
+        { label: t("pdfEditTool"), href: "https://readonlypdfconverter.vercel.app/", icon: FilePenLine, external: true },
+      ],
+    },
+    {
       title: t("system"),
       items: [
         { label: t("settings"), href: "/settings", icon: SettingsIcon },
@@ -81,6 +90,23 @@ function SidebarNav({ onLinkClick }: { onLinkClick?: () => void }) {
             {group.items.map((item) => {
               const isActive = pathname === item.href;
               const Icon = item.icon;
+
+              if (item.external) {
+                return (
+                  <a
+                    key={item.href}
+                    href={item.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={onLinkClick}
+                    className="flex items-center gap-2.5 rounded-md px-2 py-1.5 text-sm font-medium transition-colors text-muted-foreground hover:bg-muted hover:text-foreground"
+                  >
+                    <Icon className="h-4 w-4 shrink-0" />
+                    <span className="truncate">{item.label}</span>
+                    <ExternalLink className="ml-auto h-3 w-3 shrink-0 opacity-50" />
+                  </a>
+                );
+              }
 
               return (
                 <Link

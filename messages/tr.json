@@ -81,7 +81,9 @@
     "portalSetup": "Portal Ayarları",
     "documentTemplates": "Belge Şablonları",
     "financeHub": "Finans & Takip",
-    "countriesAndVisaTypes": "Ülkeler & Vize Türleri"
+    "countriesAndVisaTypes": "Ülkeler & Vize Türleri",
+    "tools": "Araçlar",
+    "pdfEditTool": "PDF Düzenleme Aracı"
   },
   "auth": {
     "login": "Giriş Yap",
